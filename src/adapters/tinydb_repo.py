@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import List, Optional
-from tinydb import TinyDB
+from tinydb import TinyDB, Query
 from src.domain.entities import IncidentReport
 from src.ports.database_repo import IDatabaseRepo
 
@@ -19,7 +19,7 @@ class TinyDbRepo(IDatabaseRepo):
         # Garante que o diretório pai existe
         db_path_obj = Path(db_path)
         db_path_obj.parent.mkdir(parents=True, exist_ok=True)
-        self.db = TinyDB(db_path_obj)
+        self.db = TinyDB(db_path_obj, encoding="utf-8", ensure_ascii=False)
 
     def save(self, report: IncidentReport) -> str:
         """
@@ -63,3 +63,14 @@ class TinyDbRepo(IDatabaseRepo):
         """
         all_docs = self.db.all()
         return [IncidentReport(**dict(doc)) for doc in all_docs]  # type: ignore
+
+    def exists_by_source_file(self, filename: str) -> bool:
+        """
+        Verifica se um relatório originado do arquivo fornecido já existe no banco de dados.
+
+        :param filename: Nome do arquivo PDF.
+        :return: True se já existir, False caso contrário.
+        """
+        report_query = Query()
+        return self.db.contains(report_query.source_file == filename)
+

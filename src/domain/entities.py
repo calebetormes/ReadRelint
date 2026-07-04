@@ -36,3 +36,5 @@ class IncidentReport(BaseModel):
     vehicles: List[Vehicle] = Field(default_factory=list, description="Lista de veículos envolvidos no incidente")
     attending_officer: Optional[str] = Field(default=None, description="Nome da autoridade policial ou policial que atendeu a ocorrência")
     history_summary: str = Field(description="Resumo do histórico ou narrativa dos fatos extraídos")
+    source_file: Optional[str] = Field(default=None, description="Nome do arquivo PDF de origem")
+

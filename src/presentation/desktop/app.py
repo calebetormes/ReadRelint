@@ -26,7 +26,7 @@ class IncidentEtlApp(ctk.CTk):
 
         # Configurações da janela principal
         self.title("ETL de Boletins de Ocorrência - Painel de Controle")
-        self.geometry("700x550")
+        self.geometry("750x600")
         self.resizable(False, False)
 
         # Estado da aplicação
@@ -39,6 +39,9 @@ class IncidentEtlApp(ctk.CTk):
         self.processing_queue = Queue()
         self.processed_count = 0
         self.total_discovered = 0
+        self.total_bytes = 0
+        self.processed_bytes = 0
+        self.skipped_count = 0
 
         # Inicialização dos adaptadores (Injeção de dependências)
         self.pdf_reader = PdfReader()
@@ -90,26 +93,30 @@ class IncidentEtlApp(ctk.CTk):
         )
         self.status_label.pack(anchor="w", padx=15, pady=5)
 
-        # Container para Contadores Estatísticos em Tempo Real
+        # Container para o Arquivo Atual sendo processado (linha própria)
+        self.curr_file_frame = ctk.CTkFrame(self.status_frame, fg_color="transparent")
+        self.curr_file_frame.pack(pady=(5, 2), padx=15, fill="x")
+
+        self.label_curr_file = ctk.CTkLabel(
+            self.curr_file_frame, 
+            text="Lendo: -", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="grey"
+        )
+        self.label_curr_file.pack(anchor="w", padx=10)
+
+        # Container para Contadores Estatísticos em Tempo Real (outras métricas)
         self.stats_frame = ctk.CTkFrame(self.status_frame, fg_color="transparent")
-        self.stats_frame.pack(pady=5, padx=15, fill="x")
+        self.stats_frame.pack(pady=2, padx=15, fill="x")
 
         # Rótulos dos contadores
-        self.label_curr_file = ctk.CTkLabel(
-            self.stats_frame, 
-            text="Arquivo atual: -", 
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color="lightblue"
-        )
-        self.label_curr_file.pack(side="left", padx=10)
-
         self.label_processed = ctk.CTkLabel(
             self.stats_frame, 
             text="Lidos: 0", 
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color="lightgreen"
         )
-        self.label_processed.pack(side="left", padx=25)
+        self.label_processed.pack(side="left", padx=10)
 
         self.label_pending = ctk.CTkLabel(
             self.stats_frame, 
@@ -117,7 +124,29 @@ class IncidentEtlApp(ctk.CTk):
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color="yellow"
         )
-        self.label_pending.pack(side="left", padx=10)
+        self.label_pending.pack(side="left", padx=25)
+
+        self.label_skipped = ctk.CTkLabel(
+            self.stats_frame, 
+            text="Já Lidos: 0", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="cyan"
+        )
+        self.label_skipped.pack(side="left", padx=10)
+
+        # Rótulo para o progresso em bytes
+        self.label_bytes = ctk.CTkLabel(
+            self.stats_frame, 
+            text="Progresso: 0 B / 0 B (0%)", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="orange"
+        )
+        self.label_bytes.pack(side="right", padx=10)
+
+        # Barra de progresso baseada em bytes
+        self.progress_bar = ctk.CTkProgressBar(self.status_frame, height=10)
+        self.progress_bar.pack(pady=5, padx=15, fill="x")
+        self.progress_bar.set(0.0)
 
         # Caixa de logs em tempo real
         self.log_textbox = ctk.CTkTextbox(
@@ -174,14 +203,35 @@ class IncidentEtlApp(ctk.CTk):
         # Nome do arquivo truncado para caber no layout caso seja muito longo
         if hasattr(self, 'current_filename') and self.current_filename:
             fname = self.current_filename
-            if len(fname) > 25:
-                fname = fname[:22] + "..."
+            if len(fname) > 65:
+                fname = fname[:62] + "..."
             self.label_curr_file.configure(text=f"Lendo: {fname}", text_color="lightblue")
         else:
             self.label_curr_file.configure(text="Lendo: -", text_color="grey")
 
         self.label_processed.configure(text=f"Lidos: {self.processed_count}")
         self.label_pending.configure(text=f"Fila: {pending}")
+        self.label_skipped.configure(text=f"Já Lidos: {self.skipped_count}")
+
+        # Atualiza a barra de progresso e rótulo de bytes
+        def format_size(bytes_val: int) -> str:
+            if bytes_val < 1024:
+                return f"{bytes_val} B"
+            elif bytes_val < 1024 * 1024:
+                return f"{bytes_val / 1024:.1f} KB"
+            else:
+                return f"{bytes_val / (1024 * 1024):.1f} MB"
+
+        if self.total_bytes > 0:
+            progress = self.processed_bytes / self.total_bytes
+        else:
+            progress = 0.0
+
+        progress = min(max(progress, 0.0), 1.0)
+        self.progress_bar.set(progress)
+        self.label_bytes.configure(
+            text=f"Progresso: {format_size(self.processed_bytes)} / {format_size(self.total_bytes)} ({progress * 100:.1f}%)"
+        )
 
     def browse_directory(self):
         """
@@ -207,6 +257,9 @@ class IncidentEtlApp(ctk.CTk):
             # Reset de contadores
             self.processed_count = 0
             self.total_discovered = 0
+            self.total_bytes = 0
+            self.processed_bytes = 0
+            self.skipped_count = 0
             self.current_filename = ""
             
             # Limpa qualquer resíduo na fila de processamento
@@ -220,14 +273,24 @@ class IncidentEtlApp(ctk.CTk):
             try:
                 folder = Path(self.monitoring_path)
                 existing_pdfs = list(folder.glob("*.pdf"))
+                to_process_pdfs = []
                 for pdf_file in existing_pdfs:
+                    if self.db_repo.exists_by_source_file(pdf_file.name):
+                        self.skipped_count += 1
+                        self.log_message(f"[{pdf_file.name}] Já cadastrado no banco de dados. Pulando.")
+                        continue
+                    to_process_pdfs.append(pdf_file)
+                    try:
+                        self.total_bytes += pdf_file.stat().st_size
+                    except Exception:
+                        pass
                     self.processing_queue.put(pdf_file)
                 
-                self.total_discovered = len(existing_pdfs)
+                self.total_discovered = len(to_process_pdfs)
                 self.update_stats_ui()
                 
                 if existing_pdfs:
-                    self.log_message(f"Varredura inicial: Encontrados {self.total_discovered} arquivos PDF pré-existentes.")
+                    self.log_message(f"Varredura inicial: Encontrados {len(existing_pdfs)} arquivos PDF. A processar: {self.total_discovered} (já cadastrados/pulados: {self.skipped_count}).")
 
                 # Inicia o FolderWatcher
                 self.watcher = FolderWatcher(
@@ -265,6 +328,9 @@ class IncidentEtlApp(ctk.CTk):
                 self.watcher = None
             
             self.current_filename = ""
+            self.total_bytes = 0
+            self.processed_bytes = 0
+            self.skipped_count = 0
             self.update_stats_ui()
             
             self.status_label.configure(
@@ -285,8 +351,18 @@ class IncidentEtlApp(ctk.CTk):
         Callback acionado quando o FolderWatcher identifica um novo PDF.
         Adiciona o arquivo à fila de processamento.
         """
+        if self.db_repo.exists_by_source_file(file_path.name):
+            self.skipped_count += 1
+            self.log_message(f"[{file_path.name}] Novo arquivo detectado, mas já consta no banco de dados. Pulando.")
+            self.update_stats_ui()
+            return
+
         self.log_message(f"Novo arquivo detectado pelo monitor: {file_path.name}")
         self.total_discovered += 1
+        try:
+            self.total_bytes += file_path.stat().st_size
+        except Exception:
+            pass
         self.processing_queue.put(file_path)
         self.update_stats_ui()
 
@@ -302,12 +378,19 @@ class IncidentEtlApp(ctk.CTk):
                 continue
 
             self.current_filename = file_path.name
+            
+            try:
+                current_file_size = file_path.stat().st_size
+            except Exception:
+                current_file_size = 0
+                
             self.update_stats_ui()
             
             # Executa o pipeline de processamento para o arquivo atual
             self._run_etl_pipeline(file_path)
             
             self.processed_count += 1
+            self.processed_bytes += current_file_size
             self.current_filename = ""
             self.update_stats_ui()
             self.processing_queue.task_done()
@@ -324,8 +407,9 @@ class IncidentEtlApp(ctk.CTk):
             self.log_message(f"[{filename}] Texto extraído com sucesso ({len(text)} caracteres).")
 
             # Passo 2: Processamento com Ollama (IA)
-            self.log_message(f"[{filename}] [2/3] Enviando texto para estruturação com LLM (Ollama)...")
+            self.log_message(f"[{filename}] [2/3] Enviando text para estruturação com LLM (Ollama)...")
             report = self.llm_processor.process_incident_text(text)
+            report.source_file = filename
             self.log_message(f"[{filename}] IA estruturou os dados com sucesso. Tipo: {report.incident_type}.")
 
             # Passo 3: Persistência no TinyDB

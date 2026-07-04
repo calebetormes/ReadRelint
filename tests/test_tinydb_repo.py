@@ -46,6 +46,13 @@ def test_tinydb_repo_save_and_get_by_id(temp_db_path: Path):
     assert saved_report.attending_officer == "Cabo Oliveira"
     assert saved_report.history_summary == "Subtração de bicicleta que estava presa em poste público."
 
+    # Verifica se os caracteres especiais foram salvos sem escape unicode no arquivo JSON
+    file_content = temp_db_path.read_text(encoding="utf-8")
+    assert "Vítima" in file_content
+    assert "Subtração" in file_content
+    assert "\\u00ed" not in file_content
+
+
 
 def test_tinydb_repo_get_by_invalid_or_nonexistent_id(temp_db_path: Path):
     repo = TinyDbRepo(temp_db_path)
@@ -85,3 +92,25 @@ def test_tinydb_repo_get_all(temp_db_path: Path):
     types = [r.incident_type for r in all_reports]
     assert "Roubo" in types
     assert "Estelionato" in types
+
+
+def test_tinydb_repo_exists_by_source_file(temp_db_path: Path):
+    repo = TinyDbRepo(temp_db_path)
+    
+    # Verifica que não existe antes de inserir
+    assert not repo.exists_by_source_file("bo_123.pdf")
+    
+    report = IncidentReport(
+        incident_type="Roubo",
+        address=Address(street="Av Central"),
+        history_summary="Roubo simples.",
+        source_file="bo_123.pdf"
+    )
+    
+    repo.save(report)
+    
+    # Verifica que agora existe
+    assert repo.exists_by_source_file("bo_123.pdf")
+    # Arquivo com outro nome não deve constar
+    assert not repo.exists_by_source_file("bo_456.pdf")
+
