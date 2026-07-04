@@ -3,7 +3,7 @@
 ## Visão Geral
 - **Objetivo:** Software desktop para Windows que monitora diretórios, extrai texto de Boletins de Ocorrência em PDF, estrutura os dados usando Inteligência Artificial (NLP) e os armazena em um banco NoSQL embutido.
 - **Público-alvo:** Usuários internos que precisam analisar dados de ocorrências policiais de forma estruturada.
-- **Status:** Em desenvolvimento avançado. Camada de domínio, portas de arquitetura, adaptadores concretos (PdfReader, TinyDbRepo, OllamaClient) e testes unitários implementados. Pendente: serviço de monitoramento (watcher) e dashboard Web (Streamlit).
+- **Status:** Em desenvolvimento avançado. Camada de domínio, portas de arquitetura, adaptadores concretos (PdfReader, TinyDbRepo, OllamaClient), monitoramento de diretórios e testes unitários implementados. Pendente: dashboard Web (Streamlit).
 
 ## Regras de Ouro (Core Principles)
 1. **Privacidade e Segurança:** NENHUM dado de ocorrência pode ser enviado para a nuvem. O processamento de IA é estritamente local (Offline).

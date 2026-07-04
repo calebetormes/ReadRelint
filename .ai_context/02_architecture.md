@@ -17,6 +17,8 @@ A Entidade gerada pela IA e salva no TinyDB terá a seguinte estrutura em inglê
 - `vehicles`: lista de objetos com `plate`, `model`, `color`
 - `attending_officer` (string)
 - `history_summary` (string)
+- `source_file` (string ou null)
+
 
 ## Estrutura de Pastas Oficial
 - `/data/logs` e `/data/temp`

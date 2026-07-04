@@ -15,8 +15,10 @@ Este arquivo documenta a organização física de pastas e arquivos no repositó
     *   [07_structure.md](file:///d:/DEV26/ReadRelint/.ai_context/07_structure.md): Este documento de estrutura e estado do projeto.
 *   **[.venv/](file:///d:/DEV26/ReadRelint/.venv)**: Ambiente virtual do Python, isolando as dependências externas do projeto.
 *   **[.vscode/](file:///d:/DEV26/ReadRelint/.vscode)**: Configurações locais do editor VS Code (como o interpretador do Python).
+*   **[.gitignore](file:///d:/DEV26/ReadRelint/.gitignore)**: Regras de exclusão de arquivos e pastas locais para controle de versão do Git.
 *   **[pyrightconfig.json](file:///d:/DEV26/ReadRelint/pyrightconfig.json)**: Configurações de análise estática de tipos do Pyright para garantir a integridade do código Python.
 *   **[requirements.txt](file:///d:/DEV26/ReadRelint/requirements.txt)**: Lista de bibliotecas externas utilizadas no projeto (como `customtkinter`, `pymupdf`, `watchdog`, etc.).
+
 
 ### Pasta de Código Fonte (`/src`)
 O desenvolvimento segue o padrão de **Arquitetura Limpa (Ports & Adapters)**:

@@ -16,9 +16,15 @@
 - [x] Desenvolver a infraestrutura de monitoramento de diretórios em `src/infrastructure/folder_watcher.py`.
 - [x] Integrar o `FolderWatcher` e o Pipeline de ETL (PdfReader, OllamaClient, TinyDbRepo) no painel desktop `src/presentation/desktop/app.py` com console de log.
 - [x] Implementar fila de processamento (`queue.Queue`) e contadores estatísticos em tempo real (Lendo, Lidos, Fila) no painel desktop.
+- [x] Configurar o TinyDB para gravação em UTF-8 e impedir escape de caracteres unicode.
+- [x] Desenvolver barra de carregamento (`CTkProgressBar`) e cálculo de progresso por bytes na UI.
+- [x] Adicionar rastreamento de arquivo de origem (`source_file`) e verificação de duplicidade antes do processamento.
+- [x] Incluir contador visual na UI para arquivos já cadastrados (pulados).
+- [x] Criar configuração de versionamento Git com o arquivo `.gitignore`.
 
 ## O que está sendo feito agora:
-- [ ] Desenvolvimento do Dashboard Web de relatórios usando Streamlit.
+- [ ] Desenvolvimento da interface web de relatórios (UI) com Streamlit em `src/presentation/web_dashboard/app.py` para visualizar e buscar boletins cadastrados na base TinyDB.
 
 ## Próximos Passos Pendentes:
-- [ ] Desenvolver a interface web de relatórios (UI) com Streamlit em `src/presentation/web_dashboard/app.py` para visualizar e buscar boletins cadastrados na base TinyDB.
+- [ ] Implementar recursos de busca por palavras-chave, filtros por tipo de crime, participantes ou cidades no dashboard Streamlit.
+
