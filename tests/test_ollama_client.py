@@ -15,7 +15,8 @@ def test_ollama_client_success(mock_post):
         "model": "llama3",
         "response": (
             '{\n'
-            '  "incident_type": "Roubo",\n'
+            '  "incident_group": "Ocorrências do AVANTE",\n'
+            '  "incident_type": "Roubo de Veículo",\n'
             '  "incident_time": "2026-07-04T15:00:00Z",\n'
             '  "address": {\n'
             '    "street": "Rua Augusta",\n'
@@ -39,7 +40,8 @@ def test_ollama_client_success(mock_post):
     report = client.process_incident_text("Texto do boletim de ocorrência fictício")
 
     assert isinstance(report, IncidentReport)
-    assert report.incident_type == "Roubo"
+    assert report.incident_group == "Ocorrências do AVANTE"
+    assert report.incident_type == "Roubo de Veículo"
     assert report.address.street == "Rua Augusta"
     assert len(report.participants) == 1
     assert report.participants[0].name == "Alice Silva"
@@ -70,7 +72,7 @@ def test_ollama_client_invalid_json_format(mock_post):
     mock_post.return_value = mock_response
 
     client = OllamaClient()
-    with pytest.raises(ValueError, match="Ollma não retornou um JSON de resposta decodificável"):
+    with pytest.raises(ValueError, match="Ollama não retornou um JSON de resposta decodificável"):
         client.process_incident_text("Texto do BO")
 
 
@@ -81,7 +83,7 @@ def test_ollama_client_validation_error(mock_post):
     mock_response.status_code = 200
     mock_response.json.return_value = {
         "model": "llama3",
-        "response": '{"incident_type": "Furto", "history_summary": "Faltando o endereço"}',
+        "response": '{"incident_group": "Ocorrências do AVANTE", "incident_type": "Furto de Veículo", "history_summary": "Faltando o endereço"}',
         "done": True
     }
     mock_post.return_value = mock_response

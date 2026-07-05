@@ -11,6 +11,7 @@ from src.adapters.pdf_reader import PdfReader
 from src.adapters.ollama_client import OllamaClient
 from src.adapters.tinydb_repo import TinyDbRepo
 from src.infrastructure.folder_watcher import FolderWatcher
+from src.application.etl_service import EtlService
 
 # Configurações globais do tema e estilo
 ctk.set_appearance_mode("dark")
@@ -47,6 +48,7 @@ class IncidentEtlApp(ctk.CTk):
         self.pdf_reader = PdfReader()
         self.llm_processor = OllamaClient(model_name="llama3.1")
         self.db_repo = TinyDbRepo(Path("data/database.json"))
+        self.etl_service = EtlService(self.pdf_reader, self.llm_processor, self.db_repo)
 
         # Título da Interface
         self.title_label = ctk.CTkLabel(
@@ -397,34 +399,13 @@ class IncidentEtlApp(ctk.CTk):
 
     def _run_etl_pipeline(self, file_path: Path):
         """
-        Executa os passos do ETL para o arquivo fornecido.
+        Executa os passos do ETL para o arquivo fornecido utilizando o EtlService.
         """
-        filename = file_path.name
-        try:
-            # Passo 1: Extração de texto do PDF
-            self.log_message(f"[{filename}] [1/3] Extraindo texto do arquivo...")
-            text = self.pdf_reader.extract_text(file_path)
-            self.log_message(f"[{filename}] Texto extraído com sucesso ({len(text)} caracteres).")
-
-            # Passo 2: Processamento com Ollama (IA)
-            self.log_message(f"[{filename}] [2/3] Enviando text para estruturação com LLM (Ollama)...")
-            report = self.llm_processor.process_incident_text(text)
-            report.source_file = filename
-            self.log_message(f"[{filename}] IA estruturou os dados com sucesso. Tipo: {report.incident_type}.")
-
-            # Passo 3: Persistência no TinyDB
-            self.log_message(f"[{filename}] [3/3] Persistindo dados no banco local...")
-            doc_id = self.db_repo.save(report)
-            self.log_message(f"[{filename}] Processamento CONCLUÍDO. Salvo no banco com ID: {doc_id}")
-
-        except FileNotFoundError:
-            self.log_message(f"[{filename}] ERRO: Arquivo não pôde ser aberto (removido ou inacessível).")
-        except ValueError as ve:
-            self.log_message(f"[{filename}] ERRO DE ESTRUTURAÇÃO: {ve}")
-        except RuntimeError as re:
-            self.log_message(f"[{filename}] ERRO DE COMUNICAÇÃO (IA): {re}")
-        except Exception as e:
-            self.log_message(f"[{filename}] ERRO INESPERADO: {e}")
+        self.etl_service.process_file(
+            file_path=file_path,
+            on_progress=self.log_message,
+            on_error=self.log_message
+        )
 
 if __name__ == "__main__":
     app = IncidentEtlApp()

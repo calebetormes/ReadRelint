@@ -29,6 +29,15 @@ class IncidentReport(BaseModel):
     """
     Representa a entidade de domínio de um relatório de boletim de ocorrência policial estruturado.
     """
+    # Metadados Gerais do RELINT (Compartilhados por todas as ocorrências do mesmo arquivo)
+    relint_number: Optional[str] = Field(default=None, description="Número de identificação do RELINT")
+    subject: Optional[str] = Field(default=None, description="Assunto do relatório")
+    diffusion: Optional[str] = Field(default=None, description="Canais de difusão do relatório")
+    attachment: Optional[str] = Field(default=None, description="Anexos descritos no relatório")
+
+    # Campos específicos da ocorrência
+    incident_nature: str = Field(default="Ocorrência", description="Natureza do fato (Ocorrência, Denúncia, Resposta a Pedido de Busca, Informação, Outro)")
+    incident_group: str = Field(description="Grupo do incidente (Ocorrências do AVANTE, Ocorrências Importantes fora do AVANTE, Demais Fatos)")
     incident_type: str = Field(description="Tipo de fato ou natureza da ocorrência (ex: Roubo, Furto, Estelionato)")
     incident_time: Optional[str] = Field(default=None, description="Data e horário do incidente no formato ISO 8601 ou null")
     address: Address = Field(description="Endereço detalhado onde ocorreu o incidente")
@@ -37,4 +46,7 @@ class IncidentReport(BaseModel):
     attending_officer: Optional[str] = Field(default=None, description="Nome da autoridade policial ou policial que atendeu a ocorrência")
     history_summary: str = Field(description="Resumo do histórico ou narrativa dos fatos extraídos")
     source_file: Optional[str] = Field(default=None, description="Nome do arquivo PDF de origem")
+
+
+
 

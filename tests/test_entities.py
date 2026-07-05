@@ -61,12 +61,14 @@ def test_incident_report_validation():
     
     # Criando um report mínimo válido
     report = IncidentReport(
-        incident_type="Furto",
+        incident_group="Ocorrências do AVANTE",
+        incident_type="Furto de Veículo",
         address=address_data,
         history_summary="Subtração de bens sem violência."
     )
     
-    assert report.incident_type == "Furto"
+    assert report.incident_group == "Ocorrências do AVANTE"
+    assert report.incident_type == "Furto de Veículo"
     assert report.address.street == "Rua Humaitá"
     assert report.history_summary == "Subtração de bens sem violência."
     assert report.incident_time is None
@@ -76,7 +78,8 @@ def test_incident_report_validation():
 
     # Criando um report completo instanciando as classes explicitamente
     report_full = IncidentReport(
-        incident_type="Roubo",
+        incident_group="Ocorrências do AVANTE",
+        incident_type="Roubo de Veículo",
         incident_time="2026-07-04T12:00:00Z",
         address=Address(street="Av. Brasil", number="500", city="Rio de Janeiro"),
         participants=[
@@ -90,7 +93,8 @@ def test_incident_report_validation():
         history_summary="Roubo de veículo sob ameaça de arma de fogo."
     )
     
-    assert report_full.incident_type == "Roubo"
+    assert report_full.incident_group == "Ocorrências do AVANTE"
+    assert report_full.incident_type == "Roubo de Veículo"
     assert report_full.incident_time == "2026-07-04T12:00:00Z"
     assert report_full.address.city == "Rio de Janeiro"
     assert len(report_full.participants) == 2
@@ -103,10 +107,26 @@ def test_incident_report_validation():
     # Deve falhar sem os campos obrigatórios
     with pytest.raises(ValidationError):
         # Sem address (passando None onde se espera um Address)
-        # Usamos casting ou ignore para testar a validação do Pydantic em tempo de execução
-        # no entanto, para evitar erro de tipo no editor, podemos passar um tipo inválido intencionalmente
-        IncidentReport(incident_type="Furto", address=None, history_summary="Resumo")  # type: ignore
+        IncidentReport(incident_group="Ocorrências do AVANTE", incident_type="Furto de Veículo", address=None, history_summary="Resumo")  # type: ignore
 
     with pytest.raises(ValidationError):
         # Sem incident_type
-        IncidentReport(address=address_data, incident_type=None, history_summary="Resumo")  # type: ignore
+        IncidentReport(incident_group="Ocorrências do AVANTE", address=address_data, incident_type=None, history_summary="Resumo")  # type: ignore
+
+    with pytest.raises(ValidationError):
+        # Sem incident_group
+        IncidentReport(address=address_data, incident_type="Furto de Veículo", history_summary="Resumo")  # type: ignore
+
+def test_incident_report_nature():
+    address_data = Address(street="Rua A", number=None, neighborhood=None, city="Cachoeira")
+    report = IncidentReport(
+        incident_nature="Denúncia",
+        incident_group="Demais Fatos",
+        incident_type="Estelionato",
+        address=address_data,
+        history_summary="Relato de golpe por telefone."
+    )
+    assert report.incident_nature == "Denúncia"
+    assert report.incident_group == "Demais Fatos"
+
+

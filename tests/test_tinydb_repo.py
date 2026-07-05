@@ -15,7 +15,8 @@ def test_tinydb_repo_save_and_get_by_id(temp_db_path: Path):
     repo = TinyDbRepo(temp_db_path)
     
     report = IncidentReport(
-        incident_type="Furto",
+        incident_group="Ocorrências do AVANTE",
+        incident_type="Furto de Veículo",
         address=Address(street="Rua Alegre", number="123", neighborhood="Bairro Feliz", city="Sorocaba"),
         participants=[
             Participant(name="Alice", role="Comunicante"),
@@ -36,7 +37,8 @@ def test_tinydb_repo_save_and_get_by_id(temp_db_path: Path):
     # Recupera o registro do banco
     saved_report = repo.get_by_id(report_id)
     assert saved_report is not None
-    assert saved_report.incident_type == "Furto"
+    assert saved_report.incident_group == "Ocorrências do AVANTE"
+    assert saved_report.incident_type == "Furto de Veículo"
     assert saved_report.address.street == "Rua Alegre"
     assert len(saved_report.participants) == 2
     assert saved_report.participants[0].name == "Alice"
@@ -51,7 +53,6 @@ def test_tinydb_repo_save_and_get_by_id(temp_db_path: Path):
     assert "Vítima" in file_content
     assert "Subtração" in file_content
     assert "\\u00ed" not in file_content
-
 
 
 def test_tinydb_repo_get_by_invalid_or_nonexistent_id(temp_db_path: Path):
@@ -71,12 +72,14 @@ def test_tinydb_repo_get_all(temp_db_path: Path):
     assert repo.get_all() == []
     
     report1 = IncidentReport(
-        incident_type="Roubo",
+        incident_group="Ocorrências do AVANTE",
+        incident_type="Roubo de Veículo",
         address=Address(street="Av Central"),
         history_summary="Roubo simples."
     )
     
     report2 = IncidentReport(
+        incident_group="Demais Fatos",
         incident_type="Estelionato",
         address=Address(street="Internet"),
         history_summary="Golpe do Pix."
@@ -90,7 +93,7 @@ def test_tinydb_repo_get_all(temp_db_path: Path):
     assert len(all_reports) == 2
     
     types = [r.incident_type for r in all_reports]
-    assert "Roubo" in types
+    assert "Roubo de Veículo" in types
     assert "Estelionato" in types
 
 
@@ -101,7 +104,8 @@ def test_tinydb_repo_exists_by_source_file(temp_db_path: Path):
     assert not repo.exists_by_source_file("bo_123.pdf")
     
     report = IncidentReport(
-        incident_type="Roubo",
+        incident_group="Ocorrências do AVANTE",
+        incident_type="Roubo de Veículo",
         address=Address(street="Av Central"),
         history_summary="Roubo simples.",
         source_file="bo_123.pdf"

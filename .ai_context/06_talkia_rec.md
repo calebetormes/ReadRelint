@@ -121,3 +121,143 @@ Este arquivo registra o resumo das interações, decisões e progresso discutido
 - **Status/Próximos Passos**:
   - Prosseguir com a criação do Dashboard Web Streamlit (`src/presentation/web_dashboard/app.py`).
 
+### [2026-07-05] Implementação do Dashboard Streamlit
+
+- **Assuntos Discutidos**:
+  - Estrutura e design do painel web de relatórios usando Streamlit.
+  - Criação de mecanismos de busca livre e filtros por tipo de crime, cidades e datas.
+  - Adição de gráficos analíticos de distribuição de incidentes.
+- **Decisões Tomadas**:
+  - Criação do arquivo [dashboard_app.py](file:///d:/DEV26/ReadRelint/src/presentation/web_dashboard/dashboard_app.py) para o dashboard.
+  - Carregamento de dados cacheado com `@st.cache_data` e integração direta com o adaptador `TinyDbRepo`.
+  - Exibição dos boletins de ocorrência em formato de sanfona expansível (`st.expander`) para fácil visualização das informações estruturadas.
+  - Teste e validação local do dashboard subindo na porta `8501`.
+- **Status/Próximos Passos**:
+  - Permitir a exportação dos dados filtrados para formatos como CSV ou Excel.
+  - Refinar visualizações temporais.
+
+### [2026-07-05] Reestruturação para RELINTs e Classificação do Código Penal (CPB)
+
+- **Assuntos Discutidos**:
+  - Nova modelagem de dados para processar PDFs como RELINTs contendo múltiplos incidentes/ocorrências.
+  - Classificação e estruturação de crimes conforme a estrutura de capítulos do Código Penal Brasileiro.
+  - Atualizações necessárias nos adaptadores de IA, de banco e nas interfaces (desktop/dashboard).
+- **Decisões Tomadas**:
+  - Alteração do domínio: Criação de `RelintReport` e inserção de `crime_category` em `IncidentReport`.
+  - Atualização dos ports `ILlmProcessor` e `IDatabaseRepo`.
+  - Reestruturação do prompt no `OllamaClient` com instruções exaustivas para categorizar as ocorrências em 7 capítulos principais do CPB.
+  - Ajuste do `TinyDbRepo` e do logger no painel desktop `desktop_app.py`.
+  - Redesenho do dashboard Streamlit para achatar os dados e permitir filtragem rica por categoria do CPB, tipo de crime e dados gerais do RELINT.
+  - Atualização completa de todos os testes automatizados (21/21 com 100% de sucesso).
+- **Status/Próximos Passos**:
+  - Testar com PDFs reais de RELINT e refinar prompt da IA.
+  - Adicionar suporte a exportações CSV/Excel no dashboard.
+
+### [2026-07-05] Reversão para Modelo de Ocorrência Simples (IncidentReport)
+
+- **Assuntos Discutidos**:
+  - Solicitação do usuário para desfazer a reestruturação hierárquica complexa de RELINTs e classificação de crimes CPB.
+  - Focar no modelo simples de ocorrência individual com o nome do documento, data e dados originais extraídos.
+- **Decisões Tomadas**:
+  - Reversão completa do domínio: Remoção de `RelintReport` e restauração de `IncidentReport` em `src/domain/entities.py`.
+  - Reversão das portas (`ILlmProcessor` e `IDatabaseRepo`) e adaptadores (`OllamaClient` e `TinyDbRepo`) para utilizarem a assinatura anterior baseada em `IncidentReport`.
+  - Restauração do dashboard Streamlit e do console desktop para a estrutura plana simples original.
+  - Ajuste e validação de todos os testes unitários da suíte (20/20 passando com sucesso).
+- **Status/Próximos Passos**:
+  - Refinar e validar o dashboard com dados simples extraídos.
+
+### [2026-07-05] Classificação e Agrupamento de Ocorrências (AVANTE)
+
+- **Assuntos Discutidos**:
+  - Resolução de alucinações na classificação de crimes (ex: "Uso de impréu").
+  - Mapeamento de ocorrências em grupos de interesse: Ocorrências do AVANTE, Ocorrências Importantes fora do AVANTE e Demais Fatos.
+- **Decisões Tomadas**:
+  - Adição de `incident_group` na entidade `IncidentReport` em `src/domain/entities.py`.
+  - Atualização do prompt de sistema do `OllamaClient` para enquadrar ocorrências em grupos específicos, com lista estrita de tipos para AVANTE e fora do AVANTE, e padronizar outros crimes em "Demais Fatos".
+  - Atualização do dashboard Streamlit com filtro dinâmico por grupo de ocorrência e gráfico de distribuição por grupo.
+  - Correção e execução com 100% de sucesso da suíte de testes (20/20).
+- **Status/Próximos Passos**:
+  - Adicionar suporte a exportações no dashboard.
+
+### [2026-07-05] Proposta e Acessibilidade do Pipeline em Fases
+
+- **Assuntos Discutidos**:
+  - Proposta de quebra do processo de ETL em 4 fases distintas (Metadados, Limpeza, Enquadramento/Segmentação, Extração de Campos) para evitar alucinações da LLM e simplificar a manutenção.
+  - Otimizações como fatiamento de texto programático no Python e limpeza de cabeçalhos/assinaturas via Regex.
+- **Decisões Tomadas**:
+  - Aprovada a divisão do pipeline em 4 etapas estruturais de extração para futuros desenvolvimentos.
+  - Atualização do arquivo `02_architecture.md` e do `04_current_state.md` documentando a definição do pipeline multifásico e seus passos futuros.
+- **Status/Próximos Passos**:
+  - Implementar o fatiamento e chamadas específicas no OllamaClient de acordo com o design multifásico.
+
+### [2026-07-05] Refatoração Sob Princípios de Clean Code e SOLID
+
+- **Assuntos Discutidos**:
+  - Desacoplamento da interface de usuário da lógica de negócios/infraestrutura no pipeline de ETL.
+  - Modularização de prompts e constantes nos adaptadores.
+- **Decisões Tomadas**:
+  - Criação da classe `EtlService` no pacote `src/application` para encapsular a orquestração de leitura, chamada à LLM e persistência de dados.
+  - Refatoração de `src/presentation/desktop/desktop_app.py` para utilizar o serviço injetado de forma limpa via callbacks.
+  - Extração de prompts extensos no `OllamaClient` para a constante de classe `OLLAMA_SYSTEM_PROMPT`.
+  - Atualização com 100% de aprovação da suíte de testes unitários.
+- **Status/Próximos Passos**:
+  - Iniciar a especificação e desenvolvimento físico do pipeline multifásico no OllamaClient.
+
+### [2026-07-05] Resolução de Conflitos de Nomenclatura (Renomeação de app.py)
+
+- **Assuntos Discutidos**:
+  - Conflito e duplicidade na nomenclatura de arquivos principais (dois arquivos `app.py` nas pastas desktop e web_dashboard).
+- **Decisões Tomadas**:
+  - Renomeado `src/presentation/desktop/app.py` para `desktop_app.py`.
+  - Renomeado `src/presentation/web_dashboard/app.py` para `dashboard_app.py`.
+  - Atualizadas as referências no atalho `Iniciar-Painel.bat` e arquivos de contexto (`04_current_state.md`).
+- **Status/Próximos Passos**:
+  - Relaunch do dashboard na nova estrutura.
+
+### [2026-07-05] Implementação do Pré-processamento e Limpeza (Regex)
+
+- **Assuntos Discutidos**:
+  - Detalhes da implementação da Fase 2 de limpeza automatizada de textos para remover assinaturas, listas de distribuição e outros rodapés administrativos dos RELINTs.
+- **Decisões Tomadas**:
+  - Criada a biblioteca utilitária `clean_relint_text` em `src/application/text_cleaner.py` contendo uma regex robusta e tolerante a maiúsculas, minúsculas e acentuações.
+  - Integrada a rotina de limpeza no `EtlService` logo após a leitura física do PDF pelo `PdfReader`.
+  - Escritos testes unitários em `tests/test_text_cleaner.py` (5 testes aprovados).
+  - Execução total da suíte obtendo 100% de sucesso (25/25 testes aprovados).
+- **Status/Próximos Passos**:
+  - Avançar com a divisão física das fases 1, 3 e 4 no OllamaClient.
+
+### [2026-07-05] Desenvolvimento de Pipeline Multifásico e Logs em Tempo Real
+
+- **Assuntos Discutidos**:
+  - Divisão de responsabilidade da extração da IA em Fases: Metadados do Documento (Fase 1), Limpeza/Regex (Fase 2), Segmentação/Enquadramento em grupos (Fase 3), Extração localizada (Fase 4).
+  - Cálculo do tempo de execução por documento e melhoria nos logs da UI.
+- **Decisões Tomadas**:
+  - Atualizada a entidade `IncidentReport` com os campos de metadados administrativos.
+  - Implementados prompts e métodos estruturados em `OllamaClient` para as chamadas em fases.
+  - Atualizada a lógica no `EtlService.process_file` para orquestrar as fases, monitorar a duração com o módulo `time` e emitir os logs descritivos.
+  - Toda a suíte de testes foi adaptada e executada com 100% de sucesso (27/27 testes aprovados).
+- **Status/Próximos Passos**:
+  - Implementar suporte à exportação de dados filtrados para arquivos CSV/Excel.
+
+### [2026-07-05] Classificação da Natureza do Registro (Ocorrência vs Outros)
+
+- **Assuntos Discutidos**:
+  - Distinção entre fatos policiais concretos ocorridos/tentados (Ocorrência) e outros registros de inteligência (Denúncia, Resposta a Pedido de Busca, Informação, Outro).
+- **Decisões Tomadas**:
+  - Adicionado o campo `incident_nature` no `IncidentReport` (com valor padrão `"Ocorrência"`).
+  - Atualizado o prompt de segmentação do `OllamaClient` para mapear a natureza dos registros e ajustada a leitura de forma flexível (objeto ou lista JSON).
+  - Atualizados `EtlService` para passar a natureza capturada e `dashboard_app.py` para incluir filtros interativos e exibições customizadas da natureza na interface do Streamlit.
+  - Testes do sistema atualizados e com sucesso (28/28 testes aprovados).
+- **Status/Próximos Passos**:
+  - Implementar exportação de arquivos CSV/Excel e gráficos de linha temporal no Dashboard.
+
+
+
+
+
+
+
+
+
+
+

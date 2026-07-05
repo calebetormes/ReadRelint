@@ -7,6 +7,7 @@
 - **Banco de Dados (Adapter):** `TinyDB` (NoSQL serverless, armazenado em arquivo JSON local. Sem MongoDB ou servidores externos).
 - **Interface Desktop de Controle (UI):** `CustomTkinter`
 - **Interface Web de Relatórios (UI):** `Streamlit` (rodando em localhost)
+- **Visualizações e Gráficos:** `Plotly` (integrado ao dashboard)
 
 ## Contrato de Dados (Domínio)
 A Entidade gerada pela IA e salva no TinyDB terá a seguinte estrutura em inglês (conforme regra de idioma do código):
@@ -18,6 +19,20 @@ A Entidade gerada pela IA e salva no TinyDB terá a seguinte estrutura em inglê
 - `attending_officer` (string)
 - `history_summary` (string)
 - `source_file` (string ou null)
+
+
+## Pipeline de Processamento de IA em Fases
+
+Para garantir alta precisão, mitigar alucinações e otimizar o uso da LLM local, a extração de dados dos RELINTs é realizada em quatro fases sucessivas:
+
+1. **Fase 1: Extração de Metadados do Documento**
+   - Extrai as informações de cabeçalho do documento: Número do RELINT, Assunto, Difusão e Anexos.
+2. **Fase 2: Pré-processamento e Limpeza**
+   - Extrai o texto bruto do PDF e aplica regras de limpeza automatizadas (ex: remoção de assinaturas e blocos administrativos finais via regex).
+3. **Fase 3: Análise de Enquadramento e Segmentação**
+   - A LLM analisa o texto limpo e classifica-o em grupos: *Ocorrências do AVANTE*, *Ocorrências Importantes fora do AVANTE* ou *Demais Fatos*. Divide os trechos textuais correspondentes a cada ocorrência identificada.
+4. **Fase 4: Extração de Campos Específicos**
+   - Para cada ocorrência segmentada na Fase 3, a LLM realiza uma extração detalhada e localizada dos campos estruturados (Endereço, Participantes, Veículos, Atendente e Resumo).
 
 
 ## Estrutura de Pastas Oficial

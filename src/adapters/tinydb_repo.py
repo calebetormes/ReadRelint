@@ -64,6 +64,7 @@ class TinyDbRepo(IDatabaseRepo):
         all_docs = self.db.all()
         return [IncidentReport(**dict(doc)) for doc in all_docs]  # type: ignore
 
+
     def exists_by_source_file(self, filename: str) -> bool:
         """
         Verifica se um relatório originado do arquivo fornecido já existe no banco de dados.
@@ -73,4 +74,5 @@ class TinyDbRepo(IDatabaseRepo):
         """
         report_query = Query()
         return self.db.contains(report_query.source_file == filename)
+
 
