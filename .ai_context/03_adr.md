@@ -18,3 +18,7 @@
 ## [ADR-005] Adoção do Pytest para Testes Automatizados e Mocks
 - **Decisão:** Adoção do `pytest` como o framework oficial de testes.
 - **Motivo:** Assegurar a integridade do domínio Pydantic e o comportamento de comunicação externa dos adaptadores. O uso de fixtures (`tmp_path`) e mocks (`unittest.mock`) garante isolamento total dos testes sem depender de instâncias externas de IA ou criar arquivos de banco/PDF permanentes no repositório.
+
+## [ADR-006] Simplificação do Pipeline e Contrato de Dados
+- **Decisão:** Unificação e simplificação da entidade `IncidentReport` para exigir apenas os campos `source_file` e o resumo textual `content`. Todos os outros campos complexos (como endereço mapeado por objeto, participantes e veículos) foram marcados como opcionais/legados.
+- **Motivo:** Aumentar a resiliência e estabilidade do processamento por IA, reduzindo a complexidade de validações que geravam erros de parsing em documentos com estruturas heterogêneas. A simplificação também permite que registros salvos com schemas diferentes coexistam sem falhar na leitura do TinyDB.

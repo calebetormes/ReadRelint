@@ -10,29 +10,20 @@
 - **Visualizações e Gráficos:** `Plotly` (integrado ao dashboard)
 
 ## Contrato de Dados (Domínio)
-A Entidade gerada pela IA e salva no TinyDB terá a seguinte estrutura em inglês (conforme regra de idioma do código):
-- `incident_type` (string)
-- `incident_time` (string ISO 8601 ou null)
-- `address`: `street`, `number`, `neighborhood`, `city`
-- `participants`: lista de objetos com `name` e `role`
-- `vehicles`: lista de objetos com `plate`, `model`, `color`
-- `attending_officer` (string)
-- `history_summary` (string)
-- `source_file` (string ou null)
+A Entidade gerada pela IA e salva no TinyDB foi simplificada para focar na essência do fato, mantendo suporte legado para os campos anteriores de forma opcional:
+- `source_file` (string, obrigatório): Nome do arquivo PDF de origem.
+- `content` (string, opcional/conteúdo principal): O conteúdo ou resumo estruturado do fato extraído pela IA.
+- *Campos Legados (opcionais para retrocompatibilidade):* `relint_number`, `subject`, `diffusion`, `attachment`, `incident_nature`, `incident_group`, `incident_type`, `incident_time`, `address`, `participants`, `vehicles`, `attending_officer`, `history_summary`.
 
-
-## Pipeline de Processamento de IA em Fases
-
-Para garantir alta precisão, mitigar alucinações e otimizar o uso da LLM local, a extração de dados dos RELINTs é realizada em quatro fases sucessivas:
-
-1. **Fase 1: Extração de Metadados do Documento**
-   - Extrai as informações de cabeçalho do documento: Número do RELINT, Assunto, Difusão e Anexos.
-2. **Fase 2: Pré-processamento e Limpeza**
-   - Extrai o texto bruto do PDF e aplica regras de limpeza automatizadas (ex: remoção de assinaturas e blocos administrativos finais via regex).
-3. **Fase 3: Análise de Enquadramento e Segmentação**
-   - A LLM analisa o texto limpo e classifica-o em grupos: *Ocorrências do AVANTE*, *Ocorrências Importantes fora do AVANTE* ou *Demais Fatos*. Divide os trechos textuais correspondentes a cada ocorrência identificada.
-4. **Fase 4: Extração de Campos Específicos**
-   - Para cada ocorrência segmentada na Fase 3, a LLM realiza uma extração detalhada e localizada dos campos estruturados (Endereço, Participantes, Veículos, Atendente e Resumo).
+## Pipeline de Processamento de IA Simplificado
+A extração de dados foi consolidada para maximizar a velocidade e a confiabilidade de leitura local:
+1. **Fase 1: Pré-processamento e Limpeza**
+   - Extração do texto do arquivo PDF com PyMuPDF.
+   - Limpeza automática via regex, removendo salvaguardas administrativas e assinaturas repetitivas.
+2. **Fase 2: Extração e Resumo Estruturado**
+   - Processamento do texto limpo pela LLM local para extrair o fato principal (gravado em formato estruturado no campo `content`).
+3. **Fase 3: Persistência de Dados**
+   - Armazenamento em TinyDB validando a unicidade de processamento do arquivo de origem (`source_file`).
 
 
 ## Estrutura de Pastas Oficial

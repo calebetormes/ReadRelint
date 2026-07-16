@@ -5,6 +5,8 @@ import threading
 from pathlib import Path
 from datetime import datetime
 from queue import Queue, Empty
+import sys
+import subprocess
 
 # Importações dos adaptadores e infraestrutura
 from src.adapters.pdf_reader import PdfReader
@@ -35,6 +37,7 @@ class IncidentEtlApp(ctk.CTk):
         self.is_monitoring = False
         self.watcher = None
         self.worker_thread = None
+        self.dashboard_process = None
 
         # Fila de processamento e contadores
         self.processing_queue = Queue()
@@ -159,16 +162,40 @@ class IncidentEtlApp(ctk.CTk):
         self.log_textbox.pack(pady=10, padx=15, fill="both", expand=True)
         self.log_textbox.configure(state="disabled")
 
+        # Frame para botões de ação na parte inferior
+        self.actions_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.actions_frame.pack(pady=20)
+
         # Botão de Ação (Iniciar/Parar)
         self.action_button = ctk.CTkButton(
-            self, 
+            self.actions_frame, 
             text="Iniciar Monitoramento", 
             command=self.toggle_monitoring,
             state="disabled",
             fg_color="green",
             hover_color="#006400"
         )
-        self.action_button.pack(pady=20)
+        self.action_button.pack(side="left", padx=10)
+
+        # Botão para Abrir Dashboard
+        self.dashboard_button = ctk.CTkButton(
+            self.actions_frame,
+            text="Abrir Dashboard",
+            command=self.open_dashboard,
+            fg_color="#1f538d",
+            hover_color="#14375e"
+        )
+        self.dashboard_button.pack(side="left", padx=10)
+
+        # Botão para Encerrar Dashboard
+        self.stop_dashboard_button = ctk.CTkButton(
+            self.actions_frame,
+            text="Encerrar Dashboard",
+            command=self.close_dashboard,
+            fg_color="#a83232",
+            hover_color="#7a2222"
+        )
+        self.stop_dashboard_button.pack(side="left", padx=10)
 
         self.log_message("Sistema inicializado. Pronto para configuração.")
 
@@ -406,6 +433,72 @@ class IncidentEtlApp(ctk.CTk):
             on_progress=self.log_message,
             on_error=self.log_message
         )
+
+    def open_dashboard(self):
+        """
+        Inicia o dashboard web do Streamlit em um subprocesso de forma assíncrona.
+        """
+        if self.dashboard_process is not None and self.dashboard_process.poll() is None:
+            self.log_message("O Dashboard já está em execução.")
+            return
+
+        self.log_message("Iniciando o Dashboard Web do Streamlit...")
+        try:
+            dashboard_path = Path("src/presentation/web_dashboard/dashboard_app.py")
+            python_exe = sys.executable
+            
+            if python_exe.endswith("pythonw.exe"):
+                python_exe = python_exe.replace("pythonw.exe", "python.exe")
+            elif python_exe.endswith("pythonw"):
+                python_exe = python_exe.replace("pythonw", "python")
+                
+            cmd = [python_exe, "-m", "streamlit", "run", str(dashboard_path)]
+            
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = 0x08000000  # CREATE_NO_WINDOW
+                
+            self.dashboard_process = subprocess.Popen(cmd, creationflags=creationflags)
+            self.log_message("Dashboard solicitado com sucesso (abrirá no navegador padrão).")
+        except Exception as e:
+            self.log_message(f"Erro ao abrir o dashboard: {e}")
+
+    def close_dashboard(self):
+        """
+        Encerra o processo do dashboard do Streamlit se ele estiver em execução.
+        """
+        if self.dashboard_process is not None:
+            if self.dashboard_process.poll() is None:
+                self.log_message("Encerrando o Dashboard Web...")
+                try:
+                    self.dashboard_process.terminate()
+                    self.dashboard_process.wait(timeout=2)
+                    self.log_message("Dashboard encerrado com sucesso.")
+                except subprocess.TimeoutExpired:
+                    self.dashboard_process.kill()
+                    self.log_message("Dashboard forçado a encerrar.")
+                except Exception as e:
+                    self.log_message(f"Erro ao encerrar o dashboard: {e}")
+                self.dashboard_process = None
+            else:
+                self.log_message("O Dashboard já está parado.")
+                self.dashboard_process = None
+        else:
+            self.log_message("Nenhum processo de Dashboard ativo encontrado.")
+
+    def destroy(self):
+        """
+        Garante que o watcher e o dashboard sejam fechados ao fechar a janela.
+        """
+        if self.is_monitoring and self.watcher:
+            self.watcher.stop()
+        if self.dashboard_process is not None:
+            if self.dashboard_process.poll() is None:
+                try:
+                    self.dashboard_process.terminate()
+                except Exception:
+                    pass
+        super().destroy()
 
 if __name__ == "__main__":
     app = IncidentEtlApp()

@@ -29,10 +29,12 @@
 - [x] Implementar a extração em fases (Fase 1: metadados, Fase 3: segmentação/enquadramento, Fase 4: estruturação localizada) no `OllamaClient` e `EtlService`.
 - [x] Otimizar a interface do CustomTkinter para logs em tempo real por fase e registro de tempo total.
 - [x] Implementar classificação da natureza do registro (Ocorrência vs Denúncia vs Informação vs Resposta a PB) no OllamaClient, EtlService e Dashboard.
+- [x] Adicionar botão no Painel Desktop (CustomTkinter) para abrir o Dashboard Web (Streamlit) automaticamente no navegador.
+- [x] Resetar a extração multifásica e simplificar o pipeline de leitura da IA (para focar apenas no conteúdo e arquivo de origem).
+- [x] Implementar limpeza automatizada do cabeçalho restrito de salvaguarda administrativa.
 
 ## O que está sendo feito agora:
-- [ ] Implementar exportação de dados (CSV/Excel) e análise temporal.
+- [/] Trabalhando na extração dos dados
 
 ## Próximos Passos Pendentes:
-- [ ] Adicionar suporte a exportação de dados filtrados em formato CSV ou Excel diretamente pelo dashboard do Streamlit.
-- [ ] Refinar a visualização de gráficos com linhas temporais para identificar tendências de ocorrências ao longo dos meses.
+- [ ] Adicionar suporte a exportação de dados em CSV ou Excel diretamente pelo dashboard do Streamlit simplificado.

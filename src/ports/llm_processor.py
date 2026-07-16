@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from src.domain.entities import IncidentReport
 
 class ILlmProcessor(ABC):
     """
@@ -7,33 +6,11 @@ class ILlmProcessor(ABC):
     """
 
     @abstractmethod
-    def extract_metadata(self, text: str) -> dict:
+    def process_text(self, text: str) -> str:
         """
-        Extrai informações administrativas do cabeçalho do RELINT (número, assunto, difusão, anexo).
+        Processa o texto de um boletim de ocorrência e extrai seu conteúdo principal.
 
-        :param text: Texto do cabeçalho ou texto completo.
-        :return: Um dicionário contendo os metadados do documento.
-        """
-        pass
-
-    @abstractmethod
-    def segment_occurrences(self, text: str) -> list:
-        """
-        Analisa o texto e o divide em ocorrências policiais individuais estruturadas por grupo.
-
-        :param text: Texto do RELINT.
-        :return: Lista de dicionários representando as ocorrências identificadas.
+        :param text: Texto completo extraído e limpo do boletim de ocorrência.
+        :return: O conteúdo/resumo estruturado do fato.
         """
         pass
-
-    @abstractmethod
-    def process_incident_text(self, text: str) -> IncidentReport:
-        """
-        Processa o texto bruto de um boletim de ocorrência e extrai as informações estruturadas.
-
-        :param text: Texto completo extraído do boletim de ocorrência.
-        :return: Uma entidade de domínio IncidentReport com os dados estruturados.
-        """
-        pass
-
-

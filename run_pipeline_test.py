@@ -3,6 +3,8 @@ from pathlib import Path
 from src.adapters.pdf_reader import PdfReader
 from src.adapters.ollama_client import OllamaClient
 from src.adapters.tinydb_repo import TinyDbRepo
+from src.domain.entities import IncidentReport
+from src.application.text_cleaner import clean_relint_text
 
 def main():
     if len(sys.argv) < 2:
@@ -21,18 +23,22 @@ def main():
     print(f"\n[1/3] Extraindo texto do PDF: {pdf_path.name}...")
     reader = PdfReader()
     try:
-        extracted_text = reader.extract_text(pdf_path)
-        print(f"-> Texto extraído com sucesso! ({len(extracted_text)} caracteres)")
+        raw_text = reader.extract_text(pdf_path)
+        extracted_text = clean_relint_text(raw_text)
+        print(f"-> Texto extraído e limpo com sucesso! ({len(extracted_text)} caracteres)")
     except Exception as e:
         print(f"Erro ao ler PDF: {e}")
         sys.exit(1)
 
     # 2. Processamento com Ollama (IA Local)
     print("\n[2/3] Enviando texto para o Ollama local (esta etapa pode demorar alguns segundos)...")
-    # Usando o modelo padrão "llama3.1".
     llm = OllamaClient(model_name="llama3.1") 
     try:
-        report = llm.process_incident_text(extracted_text)
+        content = llm.process_text(extracted_text)
+        report = IncidentReport(
+            source_file=pdf_path.name,
+            content=content
+        )
         print("\n=== DADOS ESTRUTURADOS PELA IA ===")
         print(report.model_dump_json(indent=2))
         print("==================================")

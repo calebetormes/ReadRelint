@@ -251,13 +251,45 @@ Este arquivo registra o resumo das interações, decisões e progresso discutido
 - **Status/Próximos Passos**:
   - Implementar exportação de arquivos CSV/Excel e gráficos de linha temporal no Dashboard.
 
+### [2026-07-15] Foco na IA e Regra de Unicidade de Registro
+- **Assuntos Discutidos**:
+  - Mudança de foco para aprimorar a leitura e estruturação da IA.
+  - Alinhamento sobre a regra de que cada documento representa um único registro/fato principal.
+- **Decisões Tomadas**:
+  - Adição da "Regra de Unicidade do Registro por Documento" nas regras de ouro do blueprint.
+  - Atualização do pipeline de processamento de IA em fases no arquivo de arquitetura para focar na extração e classificação de um único fato principal por documento (evitando a geração de múltiplas ocorrências fragmentadas por arquivo).
+- **Status/Próximos Passos**:
+  - Ajustar o prompt de extração da IA em `OllamaClient` para forçar o retorno de um único registro por documento.
+  - Ajustar testes automatizados e o serviço ETL de acordo com essa restrição.
+  - Adicionar o botão "Abrir Dashboard" no painel de controle do CustomTkinter.
 
+### [2026-07-15] Reset e Simplificação da Leitura do ETL
+- **Assuntos Discutidos**:
+  - Reset da extração complexa baseada em quatro fases e regras estritas do Código Penal / AVANTE.
+  - Substituição por uma leitura simplificada do PDF via IA, removendo previamente o cabeçalho administrativo confidencial.
+  - Redução da persistência para guardar apenas o nome do arquivo (`source_file`) e o conteúdo resumido (`content`).
+- **Decisões Tomadas**:
+  - Overwrite de `entities.py` com o esquema simplificado contendo apenas `source_file` e `content`.
+  - Simplificação da interface `ILlmProcessor` e de sua implementação concreta `OllamaClient` para expor o método `process_text`.
+  - Atualização do `EtlService` para rodar o pipeline unificado.
+  - Ajuste de toda a suíte de testes unitários e do script `run_pipeline_test.py` para compatibilidade com o novo modelo.
+  - Atualização do painel Streamlit (`dashboard_app.py`) para renderizar de forma direta os arquivos e seus conteúdos processados.
 
+### [2026-07-15] Botão de Atalho para o Dashboard no Painel Desktop
+- **Assuntos Discutidos**:
+  - Integração visual entre a interface de controle desktop (CustomTkinter) e a interface de visualização web (Streamlit).
+- **Decisões Tomadas**:
+  - Criação de um container de botões de ação (`actions_frame`) contendo o botão de monitoramento e o novo botão "Abrir Dashboard".
+  - Implementação do método `open_dashboard` que invoca de forma assíncrona o Streamlit em um processo em segundo plano (usando a mesma instalação de Python da `.venv` de forma thread-safe).
 
-
-
-
-
-
-
-
+### [2026-07-16] Correção de Erros de Validação e Simplificação Visual do Dashboard
+- **Assuntos Discutidos**:
+  - Erros de validação (`ValidationError`) no Streamlit decorrentes de dados legados no TinyDB e processos do Streamlit travados em cache/background.
+  - Implementação de um controle robusto de ciclo de vida do processo Streamlit na aplicação desktop.
+  - Simplificação total da interface e da lógica do dashboard do Streamlit.
+- **Decisões Tomadas**:
+  - Criação do botão **"Encerrar Dashboard"** e controle robusto via subprocesso (`subprocess.Popen`), integrando a terminação do Streamlit ao fechar o painel desktop.
+  - Reescrever o Streamlit (`dashboard_app.py`) com um design premium simplificado e escuro (Dark Mode + Glassmorphism), removendo lógicas complexas de dataframes e oferecendo tolerância elegante a falhas de carregamento de esquemas de banco legados.
+  - Limpeza dos caches e encerramento de processos em conflito em segundo plano.
+- **Status/Próximos Passos**:
+  - Continuar com o desenvolvimento refinado de extração e otimizações.

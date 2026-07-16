@@ -4,6 +4,9 @@ from tinydb import TinyDB, Query
 from src.domain.entities import IncidentReport
 from src.ports.database_repo import IDatabaseRepo
 
+print("TINYDB_REPO DEBUG - IncidentReport fields:", {k: v.is_required() for k, v in IncidentReport.model_fields.items()})
+
+
 class TinyDbRepo(IDatabaseRepo):
     """
     Implementação concreta (Adapter) para persistência de relatórios de incidentes
