@@ -3,7 +3,7 @@
 ## Tecnologias Principais
 - **Linguagem Base:** Python 3.10+
 - **Leitura de PDF (Adapter):** `PyMuPDF` (fitz)
-- **Motor de IA NLP (Adapter):** `Ollama` local (forçando saída estruturada via parâmetro `format='json'`, temperatura baixa).
+- **Motor de IA NLP (Adapter):** QA Extrativo local (Hugging Face `transformers` com modelo BERT adaptado para Português, ex: `pierreguillou/bert-large-cased-squad-v1.1-portuguese`).
 - **Banco de Dados (Adapter):** `TinyDB` (NoSQL serverless, armazenado em arquivo JSON local. Sem MongoDB ou servidores externos).
 - **Interface Desktop de Controle (UI):** `CustomTkinter`
 - **Interface Web de Relatórios (UI):** `Streamlit` (rodando em localhost)

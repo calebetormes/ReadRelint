@@ -4,7 +4,7 @@
 
 ## 1. Prompt de Inicialização
 ```text
-Olá! Vamos trabalhar no ETL de Boletins de Ocorrência. Leia os arquivos da pasta `.ai_context` para absorver a arquitetura (Python, TinyDB, Ollama, Clean Architecture, Interface Híbrida). 
+Olá! Vamos trabalhar no ETL de Boletins de Ocorrência. Leia os arquivos da pasta `.ai_context` para absorver a arquitetura. 
 Lembre-se da REGRA DE IDIOMA: Código-fonte sempre em Inglês; Documentação e comentários sempre em pt-BR. Não escreva código ainda. Responda apenas confirmando o entendimento e me diga qual é o primeiro item da lista de "Próximos Passos Pendentes".
 ```
 

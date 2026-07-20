@@ -46,5 +46,15 @@ class IDatabaseRepo(ABC):
         """
         pass
 
+    @abstractmethod
+    def delete_by_source_file(self, filename: str) -> bool:
+        """
+        Remove um relatório do banco de dados a partir do nome do arquivo original.
+
+        :param filename: Nome do arquivo PDF original.
+        :return: True se algo foi removido, False caso contrário.
+        """
+        pass
+
 
 

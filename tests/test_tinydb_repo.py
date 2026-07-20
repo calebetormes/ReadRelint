@@ -87,3 +87,23 @@ def test_tinydb_repo_exists_by_source_file(temp_db_path: Path):
     assert repo.exists_by_source_file("bo_123.pdf")
     # Arquivo com outro nome não deve constar
     assert not repo.exists_by_source_file("bo_456.pdf")
+
+def test_tinydb_repo_delete_by_source_file(temp_db_path: Path):
+    repo = TinyDbRepo(temp_db_path)
+    
+    report = IncidentReport(
+        source_file="bo_delete.pdf",
+        content="Conteúdo a ser deletado."
+    )
+    repo.save(report)
+    
+    assert repo.exists_by_source_file("bo_delete.pdf")
+    
+    # Deleta e verifica se retorna True
+    assert repo.delete_by_source_file("bo_delete.pdf") is True
+    
+    # Verifica que não existe mais
+    assert not repo.exists_by_source_file("bo_delete.pdf")
+    
+    # Deletar de novo retorna False
+    assert repo.delete_by_source_file("bo_delete.pdf") is False

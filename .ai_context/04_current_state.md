@@ -32,9 +32,25 @@
 - [x] Adicionar botão no Painel Desktop (CustomTkinter) para abrir o Dashboard Web (Streamlit) automaticamente no navegador.
 - [x] Resetar a extração multifásica e simplificar o pipeline de leitura da IA (para focar apenas no conteúdo e arquivo de origem).
 - [x] Implementar limpeza automatizada do cabeçalho restrito de salvaguarda administrativa.
+- [x] Criação de um Motor de Regras (Rule Engine) na camada de domínio (`IncidentRule` e `HomicideRule`).
+- [x] Desenvolvimento da filtragem rápida de texto bruto (pré-filtro) no `EtlService` para evitar processamento desnecessário na LLM local.
+- [x] Suporte a gravação em múltiplos arquivos de banco do TinyDB baseado no tipo de fato monitorado (ex: `homicides.json`).
+- [x] Atualização do painel desktop (botão "Monitorar Homicídios") e do dashboard Streamlit para leitura focada do banco de homicídios.
+- [x] Implementação de filtro inteligente pós-LLM (Double-Check) validando o campo booleano `is_target_incident` no JSON gerado pelo Ollama para descartar falsos positivos semânticos.
+- [x] Refinamento das regras de Homicídios para abranger Feminicídios (tentados/consumados) e Encontros de Cadáver violentos.
+- [x] Implementação de pré-filtro de exclusão rápida (excluindo lesões leves, investigações sociais, etc., sem óbitos) para otimizar o reprocessamento de diretórios.
+- [x] Criação de registro central de histórico de processamento (`processed_registry.json`) para evitar re-análise de PDFs processados ou descartados.
+- [x] Criação de aba única "Relatórios de Leitura" com tela de carregamento animada durante monitoramento ativo e renderização estática otimizada ao finalizar.
+- [x] Criação de contadores e listas estáticas para o relatório de Homicídios (Totais, Já Lidos, Descartados em Pré-Filtro, Descartados por LLM, e Confirmados) com busca e reprocessamento individual de arquivos.
+
 
 ## O que está sendo feito agora:
-- [/] Trabalhando na extração dos dados
+- [ ] Implementação do adaptador `TransformersQaClient` para substituir a dependência do Ollama.
+- [ ] Configuração do pipeline de Question Answering em português do Hugging Face.
 
 ## Próximos Passos Pendentes:
+- [ ] Atualizar o arquivo `requirements.txt` com as dependências do `transformers` e `torch`.
+- [ ] Refatorar a classe controladora ou de serviço para orquestrar as perguntas do QA (ex: extrair o fato principal diretamente).
 - [ ] Adicionar suporte a exportação de dados em CSV ou Excel diretamente pelo dashboard do Streamlit simplificado.
+- [ ] [Discussão de Arquitetura] Avaliar regra de precedência para que fatos classificados como Homicídio não sejam reprocessados para outras regras de menor prioridade.
+

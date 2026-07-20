@@ -125,7 +125,7 @@ st.markdown("""
 
 # Carregamento de dados com TinyDbRepo
 def load_data():
-    db_path = Path("data/database.json")
+    db_path = Path("data/homicides.json")
     if not db_path.exists():
         return []
     repo = TinyDbRepo(db_path)

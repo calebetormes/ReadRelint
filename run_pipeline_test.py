@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from src.adapters.pdf_reader import PdfReader
-from src.adapters.ollama_client import OllamaClient
+from src.adapters.transformers_qa_client import TransformersQaClient
 from src.adapters.tinydb_repo import TinyDbRepo
 from src.domain.entities import IncidentReport
 from src.application.text_cleaner import clean_relint_text
@@ -30,14 +30,18 @@ def main():
         print(f"Erro ao ler PDF: {e}")
         sys.exit(1)
 
-    # 2. Processamento com Ollama (IA Local)
-    print("\n[2/3] Enviando texto para o Ollama local (esta etapa pode demorar alguns segundos)...")
-    llm = OllamaClient(model_name="llama3.1") 
+    # 2. Processamento com QA Local
+    print("\n[2/3] Enviando texto para o pipeline de QA local (pode demorar alguns segundos)...")
+    llm = TransformersQaClient()
     try:
-        content = llm.process_text(extracted_text)
+        questions = {
+            "natureza": "Qual o crime ou fato principal?",
+            "content": "Qual é a descrição resumida dos fatos ocorridos?"
+        }
+        res = llm.process_text(extracted_text, questions=questions)
         report = IncidentReport(
             source_file=pdf_path.name,
-            content=content
+            content=res.get("content", "")
         )
         print("\n=== DADOS ESTRUTURADOS PELA IA ===")
         print(report.model_dump_json(indent=2))

@@ -6,11 +6,13 @@ class ILlmProcessor(ABC):
     """
 
     @abstractmethod
-    def process_text(self, text: str) -> str:
+    def process_text(self, text: str, questions: dict = None) -> dict:
         """
-        Processa o texto de um boletim de ocorrência e extrai seu conteúdo principal.
+        Processa o texto de um boletim de ocorrência respondendo a perguntas estruturadas.
 
         :param text: Texto completo extraído e limpo do boletim de ocorrência.
-        :return: O conteúdo/resumo estruturado do fato.
+        :param questions: Dicionário mapeando chaves para perguntas de linguagem natural.
+        :return: Dicionário contendo as respostas extraídas correspondentes a cada chave.
         """
         pass
+

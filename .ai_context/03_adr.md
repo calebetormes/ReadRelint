@@ -22,3 +22,8 @@
 ## [ADR-006] Simplificação do Pipeline e Contrato de Dados
 - **Decisão:** Unificação e simplificação da entidade `IncidentReport` para exigir apenas os campos `source_file` e o resumo textual `content`. Todos os outros campos complexos (como endereço mapeado por objeto, participantes e veículos) foram marcados como opcionais/legados.
 - **Motivo:** Aumentar a resiliência e estabilidade do processamento por IA, reduzindo a complexidade de validações que geravam erros de parsing em documentos com estruturas heterogêneas. A simplificação também permite que registros salvos com schemas diferentes coexistam sem falhar na leitura do TinyDB.
+
+## [ADR-007] Transição de LLM (Ollama) para QA Extrativo Local (Transformers)
+- **Decisão:** Substituição do cliente Ollama por um pipeline local de Question Answering (QA) extrativo utilizando a biblioteca `transformers` e um modelo BERT específico para pt-BR.
+- **Motivo:** Reduzir a dependência de um serviço externo rodando em paralelo (Ollama background service), diminuir o consumo de recursos computacionais (memória RAM/VRAM), permitir execução ágil em CPU e obter respostas direcionadas diretamente do texto original, eliminando alucinações comuns em LLMs gerativas.
+

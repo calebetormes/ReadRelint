@@ -78,4 +78,12 @@ class TinyDbRepo(IDatabaseRepo):
         report_query = Query()
         return self.db.contains(report_query.source_file == filename)
 
+    def delete_by_source_file(self, filename: str) -> bool:
+        """
+        Remove um relatório do TinyDB com base no nome do arquivo de origem.
+        """
+        report_query = Query()
+        removed_ids = self.db.remove(report_query.source_file == filename)
+        return len(removed_ids) > 0
+
 
