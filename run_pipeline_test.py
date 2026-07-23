@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from src.adapters.pdf_reader import PdfReader
-from src.adapters.transformers_qa_client import TransformersQaClient
+from src.adapters.local_regex_processor import LocalRegexProcessor
 from src.adapters.tinydb_repo import TinyDbRepo
 from src.domain.entities import IncidentReport
 from src.application.text_cleaner import clean_relint_text
@@ -31,8 +31,8 @@ def main():
         sys.exit(1)
 
     # 2. Processamento com QA Local
-    print("\n[2/3] Enviando texto para o pipeline de QA local (pode demorar alguns segundos)...")
-    llm = TransformersQaClient()
+    print("\n[2/3] Processando com Regex local (sem LLM)...")
+    llm = LocalRegexProcessor()
     try:
         questions = {
             "natureza": "Qual o crime ou fato principal?",

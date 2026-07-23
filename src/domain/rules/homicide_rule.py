@@ -33,114 +33,40 @@ class HomicideRule(IncidentRule):
 
     def matches_filter(self, text: str) -> bool:
         """
-        Verifica se o texto descreve um homicídio ou tentativa legítima no fato principal atual.
-        1. Trunca o texto antes do histórico de antecedentes criminais dos envolvidos.
-        2. Procura termos-chave de homicídio/latrocínio/feminicídio/óbito/cadáver.
-        3. Se contiver termos de exclusão (como lesão corporal, ameaça ou apreensão),
-           exige a presença de termos de confirmação explícita de óbito ou tentativa de homicídio.
+        Verifica se o texto descreve preliminarmente um homicídio ou fato com óbito/violência.
+        Busca por termos-chave básicos de homicídio, feminicídio, latrocínio, óbito ou cadáver.
+        A validação precisa e detalhada ocorre posteriormente na etapa pós-filtro (validate_qa_results).
         """
         if not text:
             return False
 
         text_lower = text.lower()
-
-        # 1. Truncar texto antes das seções de antecedentes e históricos criminais
-        antecedent_patterns = [
-            r"antecedentes\s+criminais",
-            r"hist[oó]rico\s+criminal",
-            r"registros\s+policiais",
-            r"ocorr[eê]ncias\s+anteriores",
-            r"passagens\s+policiais",
-            r"prontu[aá]rio",
-            r"outros\s+fatos",
-            r"outras\s+ocorr[eê]ncias",
-            r"consulta\s+integrada",
-            r"antecedentes\s+de",
-            r"possui\s+registro",
-            r"registro\s+de\s+outras",
-            r"hist[oó]rico\s+de\s+ocorr[eê]ncias"
-        ]
-
         import re
-        first_antecedent_idx = len(text_lower)
-        for pattern in antecedent_patterns:
-            match = re.search(pattern, text_lower)
-            if match:
-                first_antecedent_idx = min(first_antecedent_idx, match.start())
 
-        current_fact_text = text_lower[:first_antecedent_idx]
-
-        # 2. Exclusões Rápidas: Crimes que NÃO são homicídios/tentativas por padrão
-        # (mas que podem conter palavras-chave como disparo, arma ou morte)
-        exclusions = [
-            r"les[aã]o\s+corporal",
-            r"ferimentos\s+superficiais",
-            r"amea[cç]a",
-            r"uso\s+de\s+ainm",
-            r"impo",
-            r"apreens[aã]o\s+de\s+objeto",
-            r"investiga[cç][aã]o\s+social",
-            r"resposta\s+ao\s+pb",
-            r"resposta\s+ao\s+pedido\s+de\s+busca",
-            r"porte\s+ilegal",
-            r"repasse\s+disque\s+den[uú]ncia",
-            r"sem\s+conte[uú]do\s+dispon[ií]vel"
-        ]
-
-        # 3. Termos fortes que confirmam de fato um óbito ou uma legítima tentativa de assassinato
-        strong_confirmations = [
-            r"homic[ií]dio\s+consumado",
-            r"tentativa\s+de\s+homic[ií]dio",
-            r"homic[ií]dio\s+tentado",
-            r"feminic[ií]dio\s+consumado",
-            r"tentativa\s+de\s+feminic[ií]dio",
-            r"feminic[ií]dio\s+tentado",
-            r"latroc[ií]nio\s+consumado",
-            r"tentativa\s+de\s+latroc[ií]nio",
-            r"latroc[ií]nio\s+tentado",
-            r"veio\s+a\s+[oó]bito",
-            r"encontro\s+de\s+cad[aá]ver",
-            r"encontro\s+de\s+corpo",
-            r"corpo\s+sem\s+vida",
-            r"v[ií]tima\s+fatal",
-            r"assassinado",
-            r"assassinada",
-            r"encontrado\s+morto",
-            r"encontrada\s+morta",
-            r"[oó]bito\s+no\s+local",
-            r"encontrou\s+morto",
-            r"encontrou\s+morta"
-        ]
-
-        # Se houver um termo de exclusão rápida no fato atual
-        has_exclusion = any(re.search(exc, current_fact_text) for exc in exclusions)
-        if has_exclusion:
-            # Só aceita se houver confirmação explícita de óbito ou de tentativa de homicídio/feminicídio/latrocínio no fato atual
-            return any(re.search(conf, current_fact_text) for conf in strong_confirmations)
-
-        # 4. Caso contrário, verifica se tem ao menos uma palavra-chave básica de homicídio/óbito/cadáver/morte
-        # (evita falsos positivos de furtos/roubos que não envolvem morte)
-        primary_keywords = [
+        # Padrões essenciais de homicídio, mortes violentas e óbito
+        target_patterns = [
             r"homic[ií]dio",
-            r"latroc[ií]nio",
             r"feminic[ií]dio",
-            r"cad[aá]ver",
-            r"[oó]bito",
+            r"latroc[ií]nio",
+            r"\b[oó]bito\b",
+            r"\bcad[aá]ver\b",
             r"assassinat",
-            r"morte\s+violenta"
+            r"\bmorte\b", r"\bmorto\b", r"\bmorta\b",
+            r"\bcorpo\b",
+            r"alvejado", r"alvejada",
+            r"executado", r"executada",
+            r"disparo",
+            r"arma de fogo",
+            r"arma branca"
         ]
-        
-        # Aceita se contiver palavra-chave primária OU se for uma tentativa explícita
-        has_primary = any(re.search(kw, current_fact_text) for kw in primary_keywords)
-        if has_primary:
-            return True
-            
-        return any(re.search(conf, current_fact_text) for conf in strong_confirmations)
+
+        return any(re.search(pat, text_lower) for pat in target_patterns)
 
     @property
     def questions(self) -> dict:
         return {
             "natureza": "Qual o crime ou fato principal ocorrido?",
+            "resultado_morte": "Houve óbito, morte, cadáver ou vítima fatal?",
             "content": "Qual é a descrição resumida dos fatos ocorridos?"
         }
 
@@ -150,15 +76,55 @@ class HomicideRule(IncidentRule):
         ou uma tentativa de homicídio/latrocínio/feminicídio/óbito.
         """
         natureza = qa_results.get("natureza", "").lower()
+        resultado_morte = qa_results.get("resultado_morte", "").lower()
         content = qa_results.get("content", "").lower()
         
         # Lista de termos válidos para confirmar
         valid_terms = [
             "homicidio", "homicídio", "óbito", "obito", "cadáver", "cadaver", 
             "morte", "morto", "morta", "assassinado", "assassinada", 
-            "latrocínio", "latrocinio", "feminicídio", "feminicidio"
+            "latrocínio", "latrocinio", "feminicídio", "feminicidio",
+            "encontro de corpo", "corpo sem vida", "vítima fatal", "vitima fatal"
         ]
         
-        # Verifica se alguma das palavras-chave de confirmação está presente na resposta de natureza ou de conteúdo
-        return any(term in natureza or term in content for term in valid_terms)
+        # Verifica se alguma das palavras-chave de confirmação está presente nas respostas da IA
+        has_valid_term = any(
+            term in natureza or term in resultado_morte or term in content 
+            for term in valid_terms
+        )
+        
+        # Exclusões pós-QA: crimes que não são homicídios/tentativas a menos que haja óbito/morte real confirmado
+        exclusions_post = [
+            "ameaça", "ameaca",
+            "vias de fato",
+            "lesão corporal leve", "lesao corporal leve",
+            "dano",
+            "porte de arma", "porte ilegal",
+            "apreensão", "apreensao",
+            "furto"
+        ]
+        
+        is_excluded_nature = any(exc in natureza for exc in exclusions_post)
+        
+        # Se a natureza contiver termos que confirmam diretamente homicídio/morte, não deve cair na exclusão automática
+        strong_homicide_terms = ["homicidio", "homicídio", "latrocínio", "latrocinio", "feminicídio", "feminicidio", "óbito", "obito", "cadáver", "cadaver"]
+        has_strong_term_in_nature = any(term in natureza for term in strong_homicide_terms)
+        
+        if is_excluded_nature and not has_strong_term_in_nature:
+            # Se a natureza for um crime de exclusão (ex: ameaça ou lesão leve),
+            # só aceitamos se houver menção explícita de óbito ou cadáver no resultado ou conteúdo
+            has_confirmed_death = any(
+                term in resultado_morte for term in ["óbito", "obito", "cadáver", "cadaver", "morto", "morta", "corpo sem vida", "vítima fatal", "vitima fatal"]
+            ) or (
+                any(term in content for term in ["óbito", "obito", "cadáver", "cadaver", "vítima fatal", "vitima fatal"])
+                and not any(neg in content for neg in ["não houve óbito", "não houve obito", "sem óbito", "sem obito"])
+            )
+            if not has_confirmed_death:
+                return False
+
+        # Tratar roubo sem latrocínio
+        if "roubo" in natureza and not any(term in natureza or term in resultado_morte for term in ["latrocinio", "latrocínio", "óbito", "obito", "morte", "morto", "morta", "cadáver", "cadaver"]):
+            return False
+        
+        return has_valid_term
 

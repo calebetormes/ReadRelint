@@ -126,10 +126,22 @@ class EtlService:
                 return None
 
 
-            # 5. Instanciação da entidade com apenas nome do arquivo e conteúdo resumido e filtrado pela IA
+            # 5. Verifica se o usuário já editou esse fato manualmente no histórico central para priorizar
+            user_edit = self.processed_registry.get_user_edit(filename, rule.name) if rule else None
+            if user_edit and isinstance(user_edit, str):
+                final_fact = user_edit
+                is_user_edited = True
+            else:
+                final_fact = response_dict.get("natureza", "Não identificado")
+                is_user_edited = False
+
+            # 5.5. Instanciação da entidade com nome do arquivo, fato ocorrido, conteúdo limpo e conteúdo legado
             report = IncidentReport(
                 source_file=filename,
-                content=processed_content
+                occurred_fact=final_fact,
+                clean_content=cleaned_text,
+                content=f"Arquivo: {filename}\nConteúdo:\n{processed_content}",
+                user_edited=is_user_edited
             )
 
             # 6. Salvamento no banco de dados

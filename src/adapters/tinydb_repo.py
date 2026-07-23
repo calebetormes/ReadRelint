@@ -86,4 +86,14 @@ class TinyDbRepo(IDatabaseRepo):
         removed_ids = self.db.remove(report_query.source_file == filename)
         return len(removed_ids) > 0
 
+    def get_by_source_file(self, filename: str) -> Optional[IncidentReport]:
+        """
+        Busca um relatório de incidente no TinyDB pelo nome do arquivo original.
+        """
+        report_query = Query()
+        doc = self.db.get(report_query.source_file == filename)
+        if doc is None:
+            return None
+        return IncidentReport(**dict(doc))  # type: ignore
+
 

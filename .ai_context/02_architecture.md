@@ -10,9 +10,12 @@
 - **Visualizações e Gráficos:** `Plotly` (integrado ao dashboard)
 
 ## Contrato de Dados (Domínio)
-A Entidade gerada pela IA e salva no TinyDB foi simplificada para focar na essência do fato, mantendo suporte legado para os campos anteriores de forma opcional:
+A Entidade gerada pela IA e salva no TinyDB possui os seguintes campos principais:
 - `source_file` (string, obrigatório): Nome do arquivo PDF de origem.
-- `content` (string, opcional/conteúdo principal): O conteúdo ou resumo estruturado do fato extraído pela IA.
+- `occurred_fact` (string, opcional): Fato ocorrido (natureza classificada ou editada).
+- `clean_content` (string, opcional): Texto limpo e completo extraído do PDF.
+- `user_edited` (boolean, padrão False): Indica se o fato foi modificado manualmente pelo usuário.
+- `content` (string, opcional/legado): O conteúdo ou resumo formatado.
 - *Campos Legados (opcionais para retrocompatibilidade):* `relint_number`, `subject`, `diffusion`, `attachment`, `incident_nature`, `incident_group`, `incident_type`, `incident_time`, `address`, `participants`, `vehicles`, `attending_officer`, `history_summary`.
 
 ## Pipeline de Processamento de IA Simplificado

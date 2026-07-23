@@ -30,7 +30,19 @@ def clean_relint_text(text: str) -> str:
     )
     cleaned_text = re.sub(header_pattern, "", cleaned_text)
 
-    # 3. Padrão regex cobrindo termos de corte comuns (case-insensitive e tolerante a acentuação)
+    # 3. Remover numeração de páginas (ex: "Página 1 de 5", "Pág. 2", "Pg 3", "Page 1 of 2")
+    page_pattern = re.compile(
+        r'(?i)\b(?:p[aá]g(?:ina)?|pg|page)\.?[ \t]*\d+(?:[ \t]+(?:de|of)[ \t]+\d+)?\b'
+    )
+    cleaned_text = re.sub(page_pattern, "", cleaned_text)
+
+    # 4. Remover números de páginas isolados em uma única linha
+    isolated_number_pattern = re.compile(
+        r'(?m)^\s*\d+\s*$'
+    )
+    cleaned_text = re.sub(isolated_number_pattern, "", cleaned_text)
+
+    # 5. Padrão regex cobrindo termos de corte comuns (case-insensitive e tolerante a acentuação)
     pattern = re.compile(
         r'(?:^|\n)\s*(?:distribui[çc][ãa]o|assinatura|instru[çc][õo]es)\s*:.*',
         re.IGNORECASE | re.DOTALL

@@ -7,7 +7,10 @@ class IncidentReport(BaseModel):
     Suporta campos novos (content) e campos legados de forma opcional para retrocompatibilidade.
     """
     source_file: str = Field(description="Nome do arquivo PDF de origem")
+    occurred_fact: Optional[str] = Field(default=None, description="Fato ocorrido (natureza ou fato principal)")
+    clean_content: Optional[str] = Field(default=None, description="Texto limpo e completo extraído do PDF")
     content: Optional[str] = Field(default=None, description="Conteúdo ou resumo estruturado do fato extraído pela IA")
+    user_edited: bool = Field(default=False, description="Indica se o relatório foi editado manualmente pelo usuário")
 
     # Campos legados (opcionais) para manter compatibilidade com dados já cadastrados
     relint_number: Optional[str] = Field(default=None)

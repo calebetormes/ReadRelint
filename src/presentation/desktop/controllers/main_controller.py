@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 from src.adapters.pdf_reader import PdfReader
-from src.adapters.transformers_qa_client import TransformersQaClient
+from src.adapters.local_regex_processor import LocalRegexProcessor
 from src.adapters.tinydb_repo import TinyDbRepo
 from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
@@ -48,7 +48,7 @@ class MainController:
 
         # Injeção de Dependências do Domínio e Aplicação
         self.pdf_reader = PdfReader()
-        self.llm_processor = TransformersQaClient()
+        self.llm_processor = LocalRegexProcessor()
         self.active_rule = HomicideRule()
         self.db_repo = TinyDbRepo(Path("data") / self.active_rule.db_name)
         self.processed_registry = JsonProcessedRegistry(Path("data/processed_registry.json"))

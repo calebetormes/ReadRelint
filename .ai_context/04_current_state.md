@@ -42,15 +42,19 @@
 - [x] Criação de registro central de histórico de processamento (`processed_registry.json`) para evitar re-análise de PDFs processados ou descartados.
 - [x] Criação de aba única "Relatórios de Leitura" com tela de carregamento animada durante monitoramento ativo e renderização estática otimizada ao finalizar.
 - [x] Criação de contadores e listas estáticas para o relatório de Homicídios (Totais, Já Lidos, Descartados em Pré-Filtro, Descartados por LLM, e Confirmados) com busca e reprocessamento individual de arquivos.
-
+- [x] Transição de LLM para processamento local: substituição do `TransformersQaClient` pelo `LocalRegexProcessor` para remover dependências de IA (Hugging Face / PyTorch).
+- [x] Otimização e alívio do pré-filtro em `HomicideRule` para evitar falsos negativos em casos com múltiplos fatos (ex: lesão seguida de morte).
+- [x] Aprimoramento do pós-filtro local para descartar falsos positivos semânticos (ex: "ameaça de morte" sem óbito) com regras detalhadas de cruzamento de natureza e letalidade.
+- [x] Aprimoramento da limpeza de texto bruto para remover numerações de página em diversos formatos (Página X de Y, Pág X, etc.) e números isolados.
+- [x] Alteração no formato do campo `content` salvo no TinyDB para conter o prefixo `"Arquivo: {filename}\nConteúdo:\n"`.
+- [x] Adição do campo `user_edited` em `IncidentReport` e métodos no repositório/registro para suportar rastreamento de modificações manuais do usuário.
+- [x] Implementação no `EtlService` de lógica para priorizar as edições do usuário sobre o processamento da IA/Regex ao reprocessar arquivos.
+- [x] Criação de formulário interativo de edição de Fato (Natureza) para cada ocorrência no Dashboard Streamlit, salvando as alterações no TinyDB e no histórico central.
 
 ## O que está sendo feito agora:
-- [ ] Implementação do adaptador `TransformersQaClient` para substituir a dependência do Ollama.
-- [ ] Configuração do pipeline de Question Answering em português do Hugging Face.
+- [ ] Classificação dos RELINTs (ajustes finos nas heurísticas de classificação).
 
 ## Próximos Passos Pendentes:
-- [ ] Atualizar o arquivo `requirements.txt` com as dependências do `transformers` e `torch`.
-- [ ] Refatorar a classe controladora ou de serviço para orquestrar as perguntas do QA (ex: extrair o fato principal diretamente).
+- [ ] Melhorias no Layout e Design Visual do Dashboard Streamlit.
 - [ ] Adicionar suporte a exportação de dados em CSV ou Excel diretamente pelo dashboard do Streamlit simplificado.
 - [ ] [Discussão de Arquitetura] Avaliar regra de precedência para que fatos classificados como Homicídio não sejam reprocessados para outras regras de menor prioridade.
-

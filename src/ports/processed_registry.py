@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 class IProcessedRegistry(ABC):
     """
@@ -48,5 +49,27 @@ class IProcessedRegistry(ABC):
     def get_all_records(self) -> dict:
         """
         Retorna todo o dicionário de registros salvos no histórico.
+        """
+        pass
+
+    @abstractmethod
+    def save_user_edit(self, filename: str, rule_name: str, fact: str) -> None:
+        """
+        Salva a edição manual do usuário para o fato ocorrido de um arquivo específico.
+
+        :param filename: Nome do arquivo original.
+        :param rule_name: Nome da regra de incidentes.
+        :param fact: Novo fato ocorrido definido pelo usuário.
+        """
+        pass
+
+    @abstractmethod
+    def get_user_edit(self, filename: str, rule_name: str) -> Optional[str]:
+        """
+        Recupera a edição manual do usuário para o fato ocorrido se existir.
+
+        :param filename: Nome do arquivo original.
+        :param rule_name: Nome da regra de incidentes.
+        :return: O fato editado ou None.
         """
         pass

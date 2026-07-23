@@ -1,5 +1,6 @@
 import json
 import threading
+from typing import Optional
 from pathlib import Path
 from src.ports.processed_registry import IProcessedRegistry
 
@@ -69,3 +70,23 @@ class JsonProcessedRegistry(IProcessedRegistry):
     def get_all_records(self) -> dict:
         with self.lock:
             return self._read_data()
+
+    def save_user_edit(self, filename: str, rule_name: str, fact: str) -> None:
+        with self.lock:
+            data = self._read_data()
+            if filename not in data:
+                data[filename] = {}
+            if "user_edits" not in data[filename]:
+                data[filename]["user_edits"] = {}
+            data[filename]["user_edits"][rule_name] = fact
+            self._write_data(data)
+
+    def get_user_edit(self, filename: str, rule_name: str) -> Optional[str]:
+        with self.lock:
+            data = self._read_data()
+            file_record = data.get(filename)
+            if isinstance(file_record, dict):
+                user_edits = file_record.get("user_edits")
+                if isinstance(user_edits, dict):
+                    return user_edits.get(rule_name)
+            return None

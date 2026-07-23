@@ -142,21 +142,31 @@ else:
     # Filtra relatórios com base no termo buscado
     filtered_reports = []
     for r in reports:
-        # Extrai conteúdo (respeita novos e legados de forma simplificada)
-        content = getattr(r, "content", None)
-        if not content:
-            # Reconstrói conteúdo simples para registros legados
-            parts = []
-            if getattr(r, "incident_nature", None): parts.append(f"Natureza: {r.incident_nature}")
-            if getattr(r, "incident_type", None): parts.append(f"Tipo: {r.incident_type}")
-            if getattr(r, "history_summary", None): parts.append(f"Histórico:\n{r.history_summary}")
-            content = "\n\n".join(parts) if parts else "Sem conteúdo disponível."
-        
+        # Extrai campos novos ou legados
+        occurred_fact = getattr(r, "occurred_fact", None)
+        clean_content = getattr(r, "clean_content", None)
         source_file = getattr(r, "source_file", "Desconhecido")
         
-        # Filtro de busca simples
-        if not search_query or (search_query.lower() in source_file.lower() or search_query.lower() in content.lower()):
-            filtered_reports.append((source_file, content))
+        if occurred_fact and clean_content:
+            content = clean_content
+        else:
+            # Fallback para registros legados
+            occurred_fact = getattr(r, "incident_nature", None) or "Fato Não Identificado"
+            content = getattr(r, "content", None)
+            if not content:
+                parts = []
+                if getattr(r, "incident_nature", None): parts.append(f"Natureza: {r.incident_nature}")
+                if getattr(r, "incident_type", None): parts.append(f"Tipo: {r.incident_type}")
+                if getattr(r, "history_summary", None): parts.append(f"Histórico:\n{r.history_summary}")
+                content = "\n\n".join(parts) if parts else "Sem conteúdo disponível."
+        
+        # Filtro de busca simples (pesquisa no nome do arquivo, fato ocorrido ou conteúdo)
+        if not search_query or (
+            search_query.lower() in source_file.lower() or 
+            search_query.lower() in occurred_fact.lower() or 
+            search_query.lower() in content.lower()
+        ):
+            filtered_reports.append((source_file, occurred_fact, content))
 
     # Exibição de Métricas
     col1, col2 = st.columns(2)
@@ -169,12 +179,42 @@ else:
     if not filtered_reports:
         st.warning("Nenhum documento atende aos critérios da sua pesquisa.")
     else:
-        for idx, (source_file, content) in enumerate(filtered_reports):
+        for idx, (source_file, occurred_fact, content) in enumerate(filtered_reports):
             # Renderiza cada documento de forma elegante usando HTML personalizado
             st.markdown(f"""
-            <div class="document-card">
+            <div class="document-card" style="margin-bottom: 0px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;">
                 <div class="document-badge">Documento #{idx + 1}</div>
+                <div class="document-badge" style="background-color: #10b981; margin-left: 0.5rem; color: #ffffff;">{occurred_fact}</div>
                 <div class="document-filename">📄 {source_file}</div>
                 <div class="document-content">{content}</div>
             </div>
             """, unsafe_allow_html=True)
+
+            # Formulário de edição interativo abaixo do card de HTML
+            with st.container():
+                with st.expander(f"✏️ Editar Fato Ocorrido (Natureza)", expanded=False):
+                    with st.form(key=f"edit_form_{idx}_{source_file}"):
+                        new_fact = st.text_input("Alterar Fato Ocorrido (Natureza):", value=occurred_fact)
+                        submit_button = st.form_submit_button(label="💾 Salvar Alteração")
+                        
+                        if submit_button:
+                            if new_fact.strip() and new_fact != occurred_fact:
+                                # 1. Atualizar banco TinyDB
+                                db_path = Path("data/homicides.json")
+                                repo = TinyDbRepo(db_path)
+                                report = repo.get_by_source_file(source_file)
+                                if report:
+                                    report.occurred_fact = new_fact.strip()
+                                    report.user_edited = True
+                                    repo.delete_by_source_file(source_file)
+                                    repo.save(report)
+                                    
+                                    # 2. Gravar no registro central para priorização futura
+                                    from src.adapters.json_processed_registry import JsonProcessedRegistry
+                                    registry = JsonProcessedRegistry(Path("data/processed_registry.json"))
+                                    registry.save_user_edit(source_file, "Homicídio", new_fact.strip())
+                                    
+                                    st.success(f"Sucesso: Fato atualizado para '{new_fact}'!")
+                                    st.rerun()
+                                else:
+                                    st.error("Erro: Não foi possível localizar o registro no banco de dados.")

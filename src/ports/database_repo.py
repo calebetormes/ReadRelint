@@ -56,5 +56,15 @@ class IDatabaseRepo(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_by_source_file(self, filename: str) -> Optional[IncidentReport]:
+        """
+        Busca um relatório de incidente a partir do nome do arquivo original.
+
+        :param filename: Nome do arquivo PDF original.
+        :return: A entidade IncidentReport correspondente, ou None se não for encontrada.
+        """
+        pass
+
 
 
