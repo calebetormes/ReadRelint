@@ -59,7 +59,7 @@ class ReportTab(ctk.CTkFrame):
 
         self.val_total = create_card(self.cards_frame, "Total na Pasta", "#c084fc", 0, 0)
         self.val_skipped = create_card(self.cards_frame, "Lidos Anteriormente", "#06b6d4", 0, 1)
-        self.val_confirmed = create_card(self.cards_frame, "Homicídios (Sessão)", "#4ade80", 0, 2)
+        self.val_confirmed = create_card(self.cards_frame, "RELINTs Salvos (Sessão)", "#4ade80", 0, 2)
         
         self.val_pref = create_card(self.cards_frame, "Descartes Pré-Filtro", "#fb923c", 1, 0)
         self.val_llmf = create_card(self.cards_frame, "Descartes IA", "#f87171", 1, 1)
@@ -155,7 +155,7 @@ class ReportTab(ctk.CTkFrame):
             else:
                 file_record = records.get(filename, {}).get(self.controller.active_rule.name)
                 if file_record == "confirmed":
-                    status_text = "Confirmado (Homicídio Salvo)"
+                    status_text = "Confirmado (RELINT Salvo)"
                     status_color = "#4ade80"
                 elif file_record == "filtered_pre_llm":
                     status_text = "Descartado no Pré-Filtro"

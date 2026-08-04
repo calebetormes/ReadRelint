@@ -34,11 +34,12 @@ def test_homicide_rule_keywords():
     assert rule.matches_filter("Resposta ao pedido de busca PB 1490-2026-CI-DINT referente a investigação social.") is False
 
 def test_etl_service_with_rule_skips_processing():
-    # Mocking dependencies
+    # Mocking dependencies - agora o processo NÃO pula e processa tudo
     mock_parser = Mock()
     mock_parser.extract_text.return_value = "Furto de veículo na garagem da residência."
     
     mock_llm = Mock()
+    mock_llm.process_text.return_value = {"natureza": "furto", "content": "Texto do furto."}
     mock_db = Mock()
     mock_db.exists_by_source_file.return_value = False
     
@@ -64,16 +65,13 @@ def test_etl_service_with_rule_skips_processing():
         on_sent_to_llm=lambda f: sent_calls.append(f)
     )
     
-    # Deve retornar None pois foi pulado pelo filtro rápido
-    assert report is None
-    # A LLM não deve ter sido chamada
-    mock_llm.process_text.assert_not_called()
-    # O banco de dados não deve ter sido alterado
-    mock_db.save.assert_not_called()
-    # Deve conter mensagem informando que foi pulado
-    assert any("Pulado:" in msg for msg in progress_calls)
-    assert len(filtered_calls) == 1
-    assert len(sent_calls) == 0
+    # Não deve retornar None pois não há mais descarte
+    assert report is not None
+    assert report.main_fact == "furto"
+    mock_llm.process_text.assert_called_once()
+    mock_db.save.assert_called_once()
+    assert len(filtered_calls) == 0
+    assert len(sent_calls) == 1
 
 def test_etl_service_with_rule_processes_matching_file():
     mock_parser = Mock()
@@ -102,9 +100,8 @@ def test_etl_service_with_rule_processes_matching_file():
     )
     
     assert report is not None
-    assert report.content == "Arquivo: dummy_homicidio.pdf\nConteúdo:\nResumo estruturado do homicídio."
-    assert report.occurred_fact == "homicídio consumado"
-    assert report.clean_content == "Suspeito desferiu tiros e cometeu homicídio."
+    assert report.content == "Suspeito desferiu tiros e cometeu homicídio."
+    assert report.main_fact == "homicídio consumado"
     # A LLM deve ter sido chamada com as perguntas específicas da regra
     mock_llm.process_text.assert_called_once_with("Suspeito desferiu tiros e cometeu homicídio.", questions=rule.questions)
     # O banco de dados deve ter sido salvo
@@ -114,11 +111,11 @@ def test_etl_service_with_rule_processes_matching_file():
  
 def test_etl_service_with_rule_discards_post_llm_false_positive():
     mock_parser = Mock()
-    # Contém palavra de homicídio que passa no pré-filtro
+    # Contém palavra de homicídio
     mock_parser.extract_text.return_value = "Foi registrado um homicídio consumado no local."
     
     mock_llm = Mock()
-    # A LLM avalia semanticamente que NÃO é homicídio de verdade por algum motivo ou erro
+    # A LLM avalia semanticamente que é lesão leve, mas o ETL não descarta mais nada
     mock_llm.process_text.return_value = {"natureza": "lesão corporal leve", "content": "Apenas lesão leve."}
     
     mock_db = Mock()
@@ -142,14 +139,13 @@ def test_etl_service_with_rule_discards_post_llm_false_positive():
         on_sent_to_llm=lambda f: sent_calls.append(f)
     )
     
-    assert report is None
-    # A LLM deve ter sido chamada
+    assert report is not None
+    assert report.main_fact == "lesão corporal leve"
     mock_llm.process_text.assert_called_once()
-    # Mas o banco de dados NÃO deve ter sido salvo
-    mock_db.save.assert_not_called()
-    assert len(filtered_calls) == 1  # Conta como filtrado após LLM
+    mock_db.save.assert_called_once()
+    assert len(filtered_calls) == 0
+    assert len(sent_calls) == 1
     assert len(sent_calls) == 1      # E foi enviado ao LLM
-    assert any("Descartado pelo QA" in msg for msg in progress_calls)
 
 def test_etl_service_skips_when_already_processed_in_registry():
     mock_parser = Mock()
@@ -234,7 +230,7 @@ def test_etl_service_prioritizes_user_manual_edits():
 
     assert report is not None
     # Deve usar "Feminicídio Tentado" em vez de "homicídio consumado" sugerido pela LLM
-    assert report.occurred_fact == "Feminicídio Tentado"
+    assert report.main_fact == "Feminicídio Tentado"
     assert report.user_edited is True
     # O mock_registry deve ter sido consultado
     mock_registry.get_user_edit.assert_called_once_with("dummy_homicidio.pdf", "Homicídio")

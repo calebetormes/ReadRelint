@@ -92,7 +92,7 @@ class ControlPanelTab(ctk.CTkFrame):
         # Esquerda (Monitoramento e Atualização)
         self.action_button = ctk.CTkButton(
             self.action_frame, 
-            text="Monitorar Homicídios", 
+            text="Monitorar RELINTs", 
             command=self.toggle_monitoring,
             fg_color="green", hover_color="#006400", state="disabled"
         )
@@ -100,7 +100,7 @@ class ControlPanelTab(ctk.CTkFrame):
 
         self.btn_update = ctk.CTkButton(
             self.action_frame, 
-            text="Atualizar Homicídios (Novo Filtro)", 
+            text="Atualizar RELINTs (Forçar Processamento)", 
             command=self.controller.update_homicides_only,
             fg_color="#8b5cf6", hover_color="#7c3aed", state="disabled"
         )
@@ -148,7 +148,7 @@ class ControlPanelTab(ctk.CTkFrame):
             self.controller.start_monitoring()
         else:
             self.status_label.configure(text=f"Monitoramento parado em: {self.controller.monitoring_path}", text_color="orange")
-            self.action_button.configure(text="Monitorar Homicídios", fg_color="green", hover_color="#006400")
+            self.action_button.configure(text="Monitorar RELINTs", fg_color="green", hover_color="#006400")
             self.dir_entry.configure(state="normal")
             self.browse_button.configure(state="normal")
             self.btn_update.configure(state="normal")

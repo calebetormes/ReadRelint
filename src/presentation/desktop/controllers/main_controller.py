@@ -6,11 +6,11 @@ import subprocess
 import sys
 
 from src.adapters.pdf_reader import PdfReader
-from src.adapters.local_regex_processor import LocalRegexProcessor
+from src.adapters.ollama_client import OllamaClient
 from src.adapters.tinydb_repo import TinyDbRepo
 from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
-from src.domain.rules.homicide_rule import HomicideRule
+from src.domain.rules.relint_rule import RelintRule
 from src.adapters.json_processed_registry import JsonProcessedRegistry
 
 class MainController:
@@ -48,8 +48,8 @@ class MainController:
 
         # Injeção de Dependências do Domínio e Aplicação
         self.pdf_reader = PdfReader()
-        self.llm_processor = LocalRegexProcessor()
-        self.active_rule = HomicideRule()
+        self.llm_processor = OllamaClient()
+        self.active_rule = RelintRule()
         self.db_repo = TinyDbRepo(Path("data") / self.active_rule.db_name)
         self.processed_registry = JsonProcessedRegistry(Path("data/processed_registry.json"))
         self.etl_service = EtlService(

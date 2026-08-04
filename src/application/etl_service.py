@@ -87,18 +87,7 @@ class EtlService:
             if not cleaned_text.strip():
                 raise ValueError("O arquivo PDF está vazio ou não contém texto legível após a limpeza.")
 
-            # 3.5. Pré-filtragem rápida baseada na regra ativa
-            if rule:
-                if not rule.matches_filter(cleaned_text):
-                    msg = f"[{filename}] Pulado: Não corresponde aos critérios da regra '{rule.name}'."
-                    if on_progress:
-                        on_progress(msg)
-                    if on_filtered:
-                        on_filtered(filename)
-                    self.processed_registry.register_processed(filename, rule.name, "filtered_pre_llm")
-                    return None
-
-            # 4. Leitura do arquivo via IA (Processamento LLM - Segundo Filtro e Resumo)
+            # 4. Leitura do arquivo via IA (Processamento LLM)
             if on_progress:
                 on_progress(f"[{filename}] -> Processando com Inteligência Artificial local...")
             
@@ -108,39 +97,24 @@ class EtlService:
             questions = rule.questions if rule else None
             response_dict = self.llm_processor.process_text(cleaned_text, questions=questions)
 
-            # 4.5. Validação pós-QA (Double-Check inteligente)
-            is_target = True
-            if rule:
-                is_target = rule.validate_qa_results(response_dict)
-                
-            processed_content = response_dict.get("content", "")
-
-            if not is_target:
-                msg = f"[{filename}] Descartado pelo QA: Fato não confirmado como '{rule.name if rule else 'esperado'}'."
-                if on_progress:
-                    on_progress(msg)
-                if on_filtered:
-                    on_filtered(filename)
-                if rule:
-                    self.processed_registry.register_processed(filename, rule.name, "filtered_post_llm")
-                return None
-
-
             # 5. Verifica se o usuário já editou esse fato manualmente no histórico central para priorizar
-            user_edit = self.processed_registry.get_user_edit(filename, rule.name) if rule else None
+            user_edit = self.processed_registry.get_user_edit(filename, rule.name if rule else "Geral")
             if user_edit and isinstance(user_edit, str):
-                final_fact = user_edit
+                final_subject = user_edit
                 is_user_edited = True
             else:
-                final_fact = response_dict.get("natureza", "Não identificado")
+                final_subject = response_dict.get("subject") or response_dict.get("natureza") or response_dict.get("main_fact")
                 is_user_edited = False
 
-            # 5.5. Instanciação da entidade com nome do arquivo, fato ocorrido, conteúdo limpo e conteúdo legado
+            # 5.5. Instanciação da entidade com a nova estrutura de dados do RELINT
             report = IncidentReport(
                 source_file=filename,
-                occurred_fact=final_fact,
-                clean_content=cleaned_text,
-                content=f"Arquivo: {filename}\nConteúdo:\n{processed_content}",
+                subject=final_subject,
+                date_of_fact=response_dict.get("date_of_fact"),
+                participants=response_dict.get("participants", []),
+                content=cleaned_text,  # Histórico completo e literal
+                summary=response_dict.get("summary") or response_dict.get("content"),
+                bm_group=response_dict.get("bm_group", "Outros"),
                 user_edited=is_user_edited
             )
 

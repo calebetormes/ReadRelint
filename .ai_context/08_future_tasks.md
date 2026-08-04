@@ -13,8 +13,14 @@ Este arquivo serve como repositório de ideias, discussões de arquitetura e fut
 
 ---
 
-## 2. Regra de Precedência de Fatos (Homicídio como Bloqueador)
-* **Objetivo:** Evitar que um mesmo documento seja fragmentado ou analisado para múltiplos fatos de menor gravidade se ele já foi identificado como um Homicídio consumado/tentado ou Feminicídio.
+## 2. Visualização de Grafos de Vínculos no Dashboard
+* **Objetivo:** Facilitar a análise de inteligência através da visualização gráfica das conexões entre participantes e relatórios.
 * **Proposta de Solução:**
-  * Ao rodar qualquer regra (ex: escolas, roubos), o sistema consulta se o arquivo já possui o status `"confirmed"` na regra `"Homicídio"`.
-  * Caso positivo, o arquivo é ignorado de forma global para outras regras menores, protegendo a integridade da catalogação de crimes violentos letais intencionais.
+  * Usar bibliotecas como `streamlit-agraph` ou renderizações em HTML/D3 para plotar um grafo interativo de nós (Participantes e Arquivos) conectando-os por vínculos comuns (nomes ou documentos iguais).
+
+---
+
+## 3. Exportação de Relatórios Estruturados
+* **Objetivo:** Permitir ao analista exportar as informações consolidadas no dashboard.
+* **Proposta de Solução:**
+  * Implementar botões de download para arquivos Excel (`.xlsx`), CSV ou PDF formatados com o resumo dos casos selecionados ou filtrados no painel.

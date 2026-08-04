@@ -27,3 +27,14 @@
 - **Decisão:** Substituição do cliente Ollama por um pipeline local de Question Answering (QA) extrativo utilizando a biblioteca `transformers` e um modelo BERT específico para pt-BR.
 - **Motivo:** Reduzir a dependência de um serviço externo rodando em paralelo (Ollama background service), diminuir o consumo de recursos computacionais (memória RAM/VRAM), permitir execução ágil em CPU e obter respostas direcionadas diretamente do texto original, eliminando alucinações comuns em LLMs gerativas.
 
+## [ADR-008] Priorização de Edição Manual do Usuário
+- **Decisão:** Criação de métodos no registro central de histórico (`JsonProcessedRegistry`) para persistir modificações de "Fato Principal" efetuadas pelos usuários e priorizá-las sobre as extrações da IA/Regex em qualquer reprocessamento futuro.
+- **Motivo:** Garantir que o trabalho de curadoria manual do usuário tenha precedência absoluta e não seja sobrescrito se o sistema reanalisar os PDFs.
+
+## [ADR-009] Processamento Completo de Documentos Sem Descarte
+- **Decisão:** Remoção dos filtros de descarte no pipeline do ETL (pré-filtro e pós-filtro), transferindo a responsabilidade de exclusão e filtragem de tipos de fatos para a interface do usuário (Dashboard Streamlit via multiselect).
+- **Motivo:** Evitar a perda de boletins de ocorrência legítimos por falsos negativos de classificação automatizada, mantendo uma base de dados completa de todas as leituras e permitindo visualização sob demanda.
+
+## [ADR-010] Retorno ao Ollama para Extração Estruturada no Administrador de RELINTs
+- **Decisão:** Retorno ao uso do adaptador `Ollama` com LLM local para extração estruturada multicampos, definindo um novo schema estruturado (`RelintReport`) para a aplicação.
+- **Motivo:** Heurísticas puras ou QA extrativo local simples não possuem flexibilidade suficiente para identificar participantes dispersos no texto (capturando correlações entre nomes, alcunhas e CPFs), resumir de forma coesa a ocorrência em um único parágrafo e classificar o fato em categorias semânticas complexas como "Grupo BM" (Roubos, Furtos, Homicídios, Outros) com alta precisão. O uso do Ollama local em modo de saída estruturada (JSON) resolve esses pontos mantendo a segurança dos dados.
