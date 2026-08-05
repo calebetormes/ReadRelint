@@ -9,18 +9,25 @@
 - **Interface Web de Relatórios e Curadoria (UI):** `Streamlit` (rodando em localhost).
 
 ## Contrato de Dados (Domínio)
-A Entidade gerada no domínio (`RelintReport`) e salva no TinyDB possui a seguinte estrutura de campos:
-- `source_file` (string, obrigatório): Nome do arquivo PDF de origem.
-- `subject` (string, obrigatório): Assunto Principal sugerido pela IA ou editado pelo usuário.
-- `date_of_fact` (string, obrigatório): Data do Fato identificada pela IA ou corrigida.
-- `participants` (lista de objetos, obrigatório): Lista de pessoas citadas, onde cada elemento contém:
-  - `name` (string): Nome completo da pessoa.
-  - `nickname` (string): Alcunha ou vulgo.
-  - `document` (string): CPF ou RG.
-- `content` (string, obrigatório): Histórico completo literal igual ao contido no RELINT (extraído diretamente do PDF).
-- `summary` (string, obrigatório): Resumo de um parágrafo sobre do que se trata o RELINT, gerado pela IA.
-- `bm_group` (string, obrigatório): Enquadramento do fato em um dos grupos pré-definidos: `Roubos`, `Furtos`, `Homicídios`, `Outros`.
-- `user_edited` (boolean, obrigatório): Flag que indica se o registro foi editado manualmente pelo usuário no Dashboard.
+A Entidade gerada no domínio (`IncidentReport`) e salva no TinyDB (`relints.json`) possui a seguinte estrutura de campos:
+- `source_file`: Nome do arquivo PDF de origem.
+- `modification_date_history`: Sequência/histórico de datas de alteração do arquivo.
+- `subject`: Texto extraído do campo ASSUNTO da seção introdutória do RELINT.
+- `main_fact`: O evento central do relatório deduzido do assunto/contexto.
+- `relint_type`: Classificação estrita em Enum (`Ocorrência`, `Disk Denúncia`, `Resposta a PB`, `Outros`).
+- `bm_group`: Enquadramento em Enum restrito (`Roubo a Estabelecimento`, `Roubo a Residência`, etc).
+- `location_types`: Lista identificando os tipos de local do fato.
+- `address`: Endereço completo mencionado no fato.
+- `coordinates`: Coordenadas geográficas, se presentes.
+- `content`: Histórico literal e integral do arquivo, extraído pós-corte limpo (ex: após a seção ANEXOS).
+- `summary`: Resumo em um parágrafo do fato.
+- `user_edited`: Flag que indica edição manual.
+- `participants` (lista de objetos, `Participant`):
+  - `name`: Nome completo da pessoa.
+  - `nickname`: Alcunha, apelido ou vulgo.
+  - `document`: CPF ou RG.
+  - `background`: Antecedentes criminais citados.
+  - `participation_type`: Enum (`Vítima`, `Testemunha`, `Acusado`, `Parte da Guarnição`).
 
 ## Pipeline de Processamento de ETL
 1. **Fase 1: Extração e Limpeza**
@@ -38,11 +45,18 @@ A Entidade gerada no domínio (`RelintReport`) e salva no TinyDB possui a seguin
    - Realiza o cruzamento de vínculos (cross-referencing) de participantes: verifica se um mesmo documento/nome/alcunha aparece em outros arquivos processados e cria badges/tags de alerta de vínculo.
    - Fornece formulário completo para alteração de qualquer campo da entidade com salvamento persistente.
 
+## Estrutura de Armazenamento de Dados (/data/)
+A persistência local é dividida em arquivos JSON dedicados (TinyDB):
+1. **`relints.json`**: Histórico completo e literal de relatórios, resumos e classificações.
+2. **`participants.json`**: Cadastro unificado de pessoas de interesse, alcunhas, documentos e lista de RELINTs vinculados (`linked_relints`).
+3. **`municipalities.json`**: Registro consolidado de municípios, estatísticas criminais locais e relatórios vinculados (`linked_relints`).
+4. **`processed_registry.json`**: Registro de controle para prevenção de reprocessamento.
+
 ## Estrutura de Pastas Oficial
-- `/data/` (Armazenamento dos bancos `.json` e histórico de processamento)
-- `/src/domain` (Entidade `RelintReport` e regras de domínio em Python puro)
+- `/data/` (Armazenamento dos bancos `.json`: `relints.json`, `participants.json`, `municipalities.json`, `processed_registry.json`)
+- `/src/domain` (Entidades `IncidentReport`, `Person`, `Municipality` e regras de domínio em Python puro)
 - `/src/ports` (Interfaces de `IFileParser`, `ILlmProcessor`, `IDatabaseRepo`, `IProcessedRegistry`)
 - `/src/adapters` (Implementações concretas dos adaptadores)
 - `/src/application` (Serviço orquestrador `EtlService`)
 - `/src/presentation/desktop` (Painel em CustomTkinter para iniciar/parar monitoramento)
-- `/src/presentation/web_dashboard` (Painel Streamlit para visualização, cruzamento e edição)
+- `/src/presentation/web_dashboard` (Painel Streamlit para visualização, cruzamento, dossiês e edição)

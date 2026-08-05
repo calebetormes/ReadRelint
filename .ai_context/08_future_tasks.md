@@ -24,3 +24,29 @@ Este arquivo serve como repositório de ideias, discussões de arquitetura e fut
 * **Objetivo:** Permitir ao analista exportar as informações consolidadas no dashboard.
 * **Proposta de Solução:**
   * Implementar botões de download para arquivos Excel (`.xlsx`), CSV ou PDF formatados com o resumo dos casos selecionados ou filtrados no painel.
+
+---
+
+## 4. Dossiê Unificado de Pessoas (UI Dashboard)
+* **Objetivo:** Criar uma tela dedicada no Streamlit para pesquisar e visualizar a ficha completa de uma pessoa.
+* **Proposta de Solução:**
+  * Ler o banco `participants.json`.
+  * Mostrar uma página de busca focada em indivíduos, consolidando todas as suas passagens e alertas por nome, vulgos conhecidos e documentos.
+
+---
+
+## 5. Mancha Criminal Territorial (UI Dashboard)
+* **Objetivo:** Criar uma visualização agregada da distribuição dos RELINTs por município.
+* **Proposta de Solução:**
+  * Ler o banco `municipalities.json`.
+  * Mostrar estatísticas agregadas por cidade e filtros rápidos, possivelmente adicionando um pequeno mapa ou gráfico de barras.
+
+---
+
+## 6. Extração e Galeria de Fotos dos Participantes
+* **Objetivo:** Extrair imagens/fotos dos quadros de envolvidos nos PDFs do RELINT e associá-las aos participantes.
+* **Proposta de Solução:**
+  * Usar a capacidade do PyMuPDF (`fitz`) para extrair raster de imagens dos PDFs durante a leitura.
+  * Armazenar os arquivos de imagem em `data/media/<relint_filename>/`.
+  * Associar fotos aos participantes por proximidade de coordenadas no layout do PDF ou confirmação no Dashboard.
+  * Exibir galeria de fotos acumulada no Dossiê Unificado de Pessoas (`Person`).

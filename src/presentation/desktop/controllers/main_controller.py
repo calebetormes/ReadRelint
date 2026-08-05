@@ -1,17 +1,18 @@
 import threading
 from pathlib import Path
 from queue import Queue, Empty
-from typing import Callable, Optional, Set, Any
-import subprocess
-import sys
+from typing import Callable, Optional, Set
 
 from src.adapters.pdf_reader import PdfReader
 from src.adapters.ollama_client import OllamaClient
 from src.adapters.tinydb_repo import TinyDbRepo
+from src.adapters.tinydb_person_repo import TinyDbPersonRepo
+from src.adapters.tinydb_municipality_repo import TinyDbMunicipalityRepo
 from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
 from src.domain.rules.relint_rule import RelintRule
 from src.adapters.json_processed_registry import JsonProcessedRegistry
+from src.presentation.desktop.controllers.dashboard_manager import DashboardManager
 
 class MainController:
     """
@@ -25,7 +26,6 @@ class MainController:
         self.is_monitoring: bool = False
         self.watcher: Optional[FolderWatcher] = None
         self.worker_thread: Optional[threading.Thread] = None
-        self.dashboard_process: Optional[subprocess.Popen] = None
 
         # Fila de processamento e Contadores Globais
         self.processing_queue: Queue = Queue()
@@ -50,14 +50,23 @@ class MainController:
         self.pdf_reader = PdfReader()
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()
+        
         self.db_repo = TinyDbRepo(Path("data") / self.active_rule.db_name)
+        self.person_repo = TinyDbPersonRepo(Path("data/participants.json"))
+        self.municipality_repo = TinyDbMunicipalityRepo(Path("data/municipalities.json"))
         self.processed_registry = JsonProcessedRegistry(Path("data/processed_registry.json"))
+        
         self.etl_service = EtlService(
-            self.pdf_reader, 
-            self.llm_processor, 
-            self.db_repo, 
-            self.processed_registry
+            file_parser=self.pdf_reader, 
+            llm_processor=self.llm_processor, 
+            database_repo=self.db_repo, 
+            processed_registry=self.processed_registry,
+            person_repo=self.person_repo,
+            municipality_repo=self.municipality_repo
         )
+
+        # Gerenciador do Dashboard
+        self.dashboard_manager = DashboardManager(log_callback=self.log)
 
         # Callbacks para atualizar a UI (devem ser configurados pela view)
         self.on_log_message: Optional[Callable[[str], None]] = None
@@ -348,51 +357,15 @@ class MainController:
         self.update_ui()
 
     def open_dashboard(self):
-        """Inicia o dashboard web Streamlit."""
-        if self.dashboard_process is not None and self.dashboard_process.poll() is None:
-            self.log("O Dashboard já está em execução.")
-            return
-        
-        self.log("Iniciando o Dashboard Web do Streamlit...")
-        try:
-            dashboard_path = Path("src/presentation/web_dashboard/dashboard_app.py")
-            python_exe = sys.executable
-            if python_exe.endswith("pythonw.exe"):
-                python_exe = python_exe.replace("pythonw.exe", "python.exe")
-            elif python_exe.endswith("pythonw"):
-                python_exe = python_exe.replace("pythonw", "python")
-                
-            cmd = [python_exe, "-m", "streamlit", "run", str(dashboard_path)]
-            creationflags = 0x08000000 if sys.platform == "win32" else 0
-            self.dashboard_process = subprocess.Popen(cmd, creationflags=creationflags)
-            self.log("Dashboard solicitado com sucesso (abrirá no navegador padrão).")
-        except Exception as e:
-            self.log(f"Erro ao abrir o dashboard: {e}")
+        """Inicia o dashboard web Streamlit via gerenciador."""
+        self.dashboard_manager.open_dashboard()
 
     def close_dashboard(self):
-        """Encerra o dashboard web."""
-        if self.dashboard_process is not None:
-            if self.dashboard_process.poll() is None:
-                self.log("Encerrando o Dashboard Web...")
-                try:
-                    self.dashboard_process.terminate()
-                    self.dashboard_process.wait(timeout=2)
-                    self.log("Dashboard encerrado com sucesso.")
-                except subprocess.TimeoutExpired:
-                    self.dashboard_process.kill()
-                    self.log("Dashboard forçado a encerrar.")
-                except Exception as e:
-                    self.log(f"Erro ao encerrar o dashboard: {e}")
-                self.dashboard_process = None
-            else:
-                self.dashboard_process = None
+        """Encerra o dashboard web via gerenciador."""
+        self.dashboard_manager.close_dashboard()
 
     def destroy(self):
         """Cleanup."""
         if self.is_monitoring and self.watcher:
             self.watcher.stop()
-        if self.dashboard_process is not None and self.dashboard_process.poll() is None:
-            try:
-                self.dashboard_process.terminate()
-            except Exception:
-                pass
+        self.dashboard_manager.destroy()

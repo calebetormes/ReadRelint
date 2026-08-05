@@ -51,3 +51,17 @@ def clean_relint_text(text: str) -> str:
     # Substitui todo o trecho casado a partir da palavra-chave por nada
     cleaned_text = re.sub(pattern, "", cleaned_text)
     return cleaned_text.strip()
+
+def extract_history_from_annex(text: str) -> str:
+    """
+    Extrai o histórico integral caso encontre a palavra 'ANEXOS:'.
+    Se não encontrar, retorna vazio (deixando para a IA deduzir se necessário).
+    """
+    if not text:
+        return ""
+    
+    # Procura 'ANEXOS:' e captura tudo que vier depois
+    match = re.search(r'(?i)ANEXOS?\s*:\s*(.*)', text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return ""

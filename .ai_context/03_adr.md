@@ -38,3 +38,15 @@
 ## [ADR-010] Retorno ao Ollama para Extração Estruturada no Administrador de RELINTs
 - **Decisão:** Retorno ao uso do adaptador `Ollama` com LLM local para extração estruturada multicampos, definindo um novo schema estruturado (`RelintReport`) para a aplicação.
 - **Motivo:** Heurísticas puras ou QA extrativo local simples não possuem flexibilidade suficiente para identificar participantes dispersos no texto (capturando correlações entre nomes, alcunhas e CPFs), resumir de forma coesa a ocorrência em um único parágrafo e classificar o fato em categorias semânticas complexas como "Grupo BM" (Roubos, Furtos, Homicídios, Outros) com alta precisão. O uso do Ollama local em modo de saída estruturada (JSON) resolve esses pontos mantendo a segurança dos dados.
+
+## [ADR-011] Repositório Central Unificado sem Descarte e Taxonomia de Enquadramentos
+- **Decisão:** Ingestão e persistência de 100% dos relatórios de inteligência (RELINTs) processados, eliminando descartes automáticos de arquivos, aliada à aplicação de uma Taxonomia Oficial de Enquadramentos de Ocorrências no domínio.
+- **Motivo:** Garantir a criação de um repositório centralizado completo para inteligência policial, viabilizando a busca universal e o cruzamento de vínculos (pessoas, alcunhas e documentos) entre diferentes tipos de delitos, enquanto a IA classifica cada ocorrência semântica e juridicamente para filtragem sob demanda na interface.
+
+## [ADR-012] Bancos Dedicados para Entidades de Inteligência (Participantes e Municípios)
+- **Decisão:** Separação do armazenamento dos dados de **Participantes** (`participants.json`) e **Municípios** (`municipalities.json`) em bancos/tabelas dedicados, desacoplados da coleção de relatórios (`relints.json`).
+- **Motivo:** Permitir a consolidação de cadastros únicos de pessoas de interesse (com apelidos, documentos e histórico de envolvimentos) e de manchas territoriais (estatísticas por cidade e relatórios vinculados), otimizando a velocidade de cruzamento de vínculos e possibilitando a navegação por dossiês de pessoas e municípios no Dashboard.
+
+## [ADR-013] Exclusão de Policiais da Guarnição dos Dossiês e Garantia do Histórico Transcrito no ETL
+- **Decisão:** (1) Filtragem e exclusão automática de Policiais Militares que integram a guarnição/atendimento dos cadastros de participantes. (2) Isolamento da captura do histórico integral (`content`) para ser executado exclusivamente por código determinístico (Python / Regex pós-ANEXOS), removendo o campo `content` da solicitação de extração enviada à LLM.
+- **Motivo:** (1) Apenas civis (vítimas, suspeitos, testemunhas, acusados) devem formar dossiês criminais e redes de vínculos operacionais no `participants.json`. A presença de policiais poluia a rede de conexões. (2) LLMs gerativas tentam resumir ou truncar o texto integral ou alucinar o valor da descrição do schema Pydantic. Delegar a transcrição ao Python garante integridade de 100% no histórico exibido no dashboard.

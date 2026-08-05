@@ -25,9 +25,16 @@ class RelintRule(IncidentRule):
 
     @property
     def questions(self) -> dict:
-        # Vazio, já que o OllamaClient usará um prompt estruturado geral
-        return {}
+        return {
+            "system_prompt": (
+                "Você é um Analista de Inteligência Policial. Sua tarefa é analisar o Relatório de Inteligência "
+                "(RELINT) fornecido e extrair os dados conforme o esquema JSON obrigatório.\n"
+                "ETAPA 1: Ignore cabeçalhos institucionais, marcas d'água e avisos de confidencialidade.\n"
+                "ETAPA 2: Extraia os campos com rigor, obedecendo às restrições de formatação e valores listados."
+            )
+        }
 
     def validate_qa_results(self, qa_results: dict) -> bool:
         # Não descarta nenhum arquivo após o processamento
         return True
+

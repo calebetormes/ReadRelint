@@ -3,6 +3,7 @@ import logging
 import requests
 from typing import Dict, Optional
 from src.ports.llm_processor import ILlmProcessor
+from src.domain.entities import IncidentReport
 
 logger = logging.getLogger(__name__)
 
@@ -24,40 +25,40 @@ class OllamaClient(ILlmProcessor):
 
     def process_text(self, text: str, questions: Optional[Dict[str, str]] = None) -> dict:
         """
-        Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON.
+        Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON
+        baseado no JSON Schema do modelo IncidentReport.
         """
+        system_prompt = ""
+        if questions and "system_prompt" in questions:
+            system_prompt = questions["system_prompt"]
+        
+        # Gera o JSON Schema do modelo Pydantic para orientar a extração
+        schema = IncidentReport.model_json_schema()
+        # Remove campos mantidos pelo sistema Python para não poluir nem confundir o Ollama
+        if "properties" in schema:
+            schema["properties"].pop("source_file", None)
+            schema["properties"].pop("content", None)
+            schema["properties"].pop("user_edited", None)
+            
+        schema_str = json.dumps(schema, indent=2, ensure_ascii=False)
+
         prompt = f"""
-        Você é um analista de inteligência especializado. Analise o documento RELINT abaixo e extraia as informações estruturadas no formato JSON especificado.
+{system_prompt}
 
-        REGRAS DE EXTRAÇÃO:
-        1. "subject" (Assunto Principal): Identifique o assunto principal ou o fato principal do relatório em uma frase curta de até 15 palavras.
-        2. "date_of_fact" (Data do Fato): Identifique a data em que os fatos relatados ocorreram no formato DD/MM/AAAA. Se houver mais de uma data (como a data de emissão ou data de nascimento), identifique a data principal da ocorrência dos fatos. Se não encontrar nenhuma data de ocorrência, retorne null.
-        3. "bm_group" (Grupo BM): Enquadre o fato estritamente em uma destas opções: "Roubos", "Furtos", "Homicídios" ou "Outros". Use lógica jurídica básica (se houver agressão/ameaça/violência para roubar, enquadre como Roubos; se houver morte violenta, tentativa de homicídio ou encontro de cadáver, enquadre como Homicídios; se houver furto simples/arrombamento sem contato ou violência, enquadre como Furtos; senão, Outros).
-        4. "summary" (Resumo): Escreva um resumo conciso do caso de exatamente um único parágrafo simples e explicativo.
-        5. "participants" (Participantes): Extraia a lista de todas as pessoas citadas (vítimas, suspeitos, autores, testemunhas). Para cada participante, preencha:
-           - "name" (Nome completo da pessoa, se disponível. Se houver apenas prenome, use-o).
-           - "nickname" (Alcunha, vulgo ou apelido, se citado. Caso contrário, null).
-           - "document" (CPF no formato 000.000.000-00 ou número de RG se citado. Caso contrário, null).
+INSTRUÇÕES DE SAÍDA:
+1. Você DEVE retornar EXATAMENTE UM objeto JSON válido que obedeça ao seguinte JSON Schema.
+2. Não inclua comentários, explicações ou texto fora do JSON.
+3. Se um campo do tipo Enum for exigido, você só pode usar os valores listados em 'enum'.
+4. PARTICIPANTES: Extraia apenas civis envolvidos (vítimas, acusados, suspeitos, testemunhas). NUNCA inclua os Policiais Militares que atenderam a ocorrência.
+5. RESUMO (summary): Escreva um resumo narrativo explicativo em 1 parágrafo com os fatos principais.
 
-        Retorne estritamente um objeto JSON válido, sem comentários e sem formatação markdown extra, contendo exatamente as chaves abaixo:
-        {{
-            "subject": "Resumo do assunto principal",
-            "date_of_fact": "DD/MM/AAAA ou null",
-            "bm_group": "Roubos / Furtos / Homicídios / Outros",
-            "summary": "Resumo em um parágrafo...",
-            "participants": [
-                {{
-                    "name": "Nome Completo ou null",
-                    "nickname": "Vulgo ou null",
-                    "document": "CPF/RG ou null"
-                }}
-            ]
-        }}
+JSON SCHEMA:
+{schema_str}
 
-        TEXTO DO RELINT:
-        ---
-        {text}
-        ---
+TEXTO DO RELINT:
+---
+{text}
+---
         """
 
         url = f"{self.base_url}/api/generate"
@@ -73,7 +74,7 @@ class OllamaClient(ILlmProcessor):
 
         try:
             logger.info(f"Enviando texto do RELINT para processamento local via Ollama ({self.model_name})...")
-            response = requests.post(url, json=payload, timeout=60)
+            response = requests.post(url, json=payload, timeout=90)
             
             # Recuperação Automática: Se der 404 (model not found), tenta buscar modelos ativos no Ollama
             if response.status_code == 404:
@@ -88,7 +89,7 @@ class OllamaClient(ILlmProcessor):
                         payload["model"] = alternative_model
                         
                         # Segunda tentativa
-                        response = requests.post(url, json=payload, timeout=60)
+                        response = requests.post(url, json=payload, timeout=90)
             
             response.raise_for_status()
             
@@ -96,23 +97,9 @@ class OllamaClient(ILlmProcessor):
             response_text = response_json.get("response", "{}")
             
             extracted_data = json.loads(response_text)
+            return extracted_data
             
-            # Formata e higieniza a saída estruturada
-            return {
-                "subject": extracted_data.get("subject"),
-                "date_of_fact": extracted_data.get("date_of_fact"),
-                "bm_group": extracted_data.get("bm_group", "Outros"),
-                "summary": extracted_data.get("summary"),
-                "participants": extracted_data.get("participants", []),
-                "content": text
-            }
         except Exception as e:
             logger.error(f"Erro ao processar texto com Ollama: {e}")
-            return {
-                "subject": "Erro de processamento da IA",
-                "date_of_fact": None,
-                "bm_group": "Outros",
-                "summary": f"Erro de processamento local da LLM: {str(e)}",
-                "participants": [],
-                "content": text
-            }
+            return {}
+
