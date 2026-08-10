@@ -25,8 +25,8 @@ Este documento unifica a visão geral, as regras de ouro, a arquitetura e a estr
 ### Pipeline ETL
 1. **Extração:** Monitoramento de diretório. PyMuPDF extrai texto integral e varre imagens. Limpeza via regex de cabeçalhos institucionais.
 2. **Cognitivo (Ollama):** Envio para a IA com instruções Pydantic JSON para estruturar metadados, ignorando transcrição literal que é mantida pelo Python.
-3. **Persistência:** Entidades `IncidentReport`, `Person` e `Municipality` validadas por Pydantic e salvas via SQLite.
-4. **Dashboard:** Streamlit cruza relacionamentos (pessoas/documentos) e mostra Dossiês, Manchas Criminais e Galerias.
+3. **Persistência:** Entidades `IncidentReport` e `Person` validadas por Pydantic e salvas via SQLite.
+4. **Dashboard:** Streamlit cruza relacionamentos (pessoas/documentos) e mostra Dossiês, Manchas Criminais (agregadas dinamicamente) e Galerias.
 
 ---
 

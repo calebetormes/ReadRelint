@@ -7,7 +7,6 @@ from src.adapters.pdf_reader import PdfReader
 from src.adapters.ollama_client import OllamaClient
 from src.adapters.sqlite_repo import SqliteRepo
 from src.adapters.sqlite_person_repo import SqlitePersonRepo
-from src.adapters.sqlite_municipality_repo import SqliteMunicipalityRepo
 from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
 from src.domain.rules.relint_rule import RelintRule
@@ -54,7 +53,6 @@ class MainController:
         db_path = Path("data/relints.db")
         self.db_repo = SqliteRepo(db_path)
         self.person_repo = SqlitePersonRepo(db_path)
-        self.municipality_repo = SqliteMunicipalityRepo(db_path)
         self.processed_registry = JsonProcessedRegistry(Path("data/processed_registry.json"))
         
         self.etl_service = EtlService(
@@ -62,8 +60,7 @@ class MainController:
             llm_processor=self.llm_processor, 
             database_repo=self.db_repo, 
             processed_registry=self.processed_registry,
-            person_repo=self.person_repo,
-            municipality_repo=self.municipality_repo
+            person_repo=self.person_repo
         )
 
 
@@ -299,8 +296,6 @@ class MainController:
             self.db_repo.clear_all()
         if hasattr(self.person_repo, "clear_all"):
             self.person_repo.clear_all()
-        if hasattr(self.municipality_repo, "clear_all"):
-            self.municipality_repo.clear_all()
 
         self.confirmed_homicides_count = 0
         self.processed_count = 0

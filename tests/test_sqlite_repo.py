@@ -1,9 +1,8 @@
 import pytest
 from pathlib import Path
-from src.domain.entities import IncidentReport, Person, Municipality
+from src.domain.entities import IncidentReport, Person
 from src.adapters.sqlite_repo import SqliteRepo
 from src.adapters.sqlite_person_repo import SqlitePersonRepo
-from src.adapters.sqlite_municipality_repo import SqliteMunicipalityRepo
 
 
 def test_sqlite_repo_crud(tmp_path: Path):
@@ -95,34 +94,4 @@ def test_sqlite_person_repo_crud(tmp_path: Path):
     assert len(person_repo.get_all()) == 1
 
 
-def test_sqlite_municipality_repo_crud(tmp_path: Path):
-    db_file = tmp_path / "test_muns.db"
-    mun_repo = SqliteMunicipalityRepo(db_file)
-
-    mun = Municipality(
-        name="Panambi",
-        linked_relints=["relint_01.pdf"],
-        stats_by_group={"Roubo": 2}
-    )
-
-    # Save
-    name = mun_repo.save(mun)
-    assert name == "Panambi"
-
-    # Get by Name (Case Insensitive)
-    fetched = mun_repo.get_by_name("panambi")
-    assert fetched is not None
-    assert fetched.name == "Panambi"
-    assert fetched.stats_by_group.get("Roubo") == 2
-
-    # Update
-    mun.stats_by_group["Furtos"] = 1
-    mun_repo.update(mun)
-    updated = mun_repo.get_by_name("PANAMBI")
-    assert updated is not None
-    assert updated.stats_by_group.get("Furtos") == 1
-
-    # Clear All
-    mun_repo.clear_all()
-    assert len(mun_repo.get_all()) == 0
 

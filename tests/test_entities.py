@@ -3,7 +3,6 @@ from pydantic import ValidationError
 from src.domain.entities import (
     IncidentReport,
     Person,
-    Municipality,
     Participant,
     RelintType,
     BmGroup,
@@ -76,13 +75,4 @@ def test_person_entity():
     assert "Zé" in person.aliases
     assert "relint_completo.pdf" in person.linked_relints
 
-def test_municipality_entity():
-    municipality = Municipality(
-        name="Panambi",
-        state="RS",
-        linked_relints=["relint_completo.pdf"],
-        stats_by_group={"Roubo a Residência": 1}
-    )
-    assert municipality.name == "Panambi"
-    assert municipality.stats_by_group["Roubo a Residência"] == 1
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 from typing import List, Dict, Any, Tuple
-from src.adapters.tinydb_repo import TinyDbRepo
+
 from src.application.text_cleaner import (
     extract_date_of_fact,
     extract_time_of_fact,
@@ -18,8 +18,21 @@ def clean_html(html_str: str) -> str:
 def get_participant_field(p: Any, field_name: str, default: str = "") -> str:
     """Extrai campo de participante de forma segura, seja ele dicionário ou objeto Pydantic."""
     if isinstance(p, dict):
-        return p.get(field_name) or default
-    return getattr(p, field_name, default) or default
+        val = p.get(field_name)
+    else:
+        val = getattr(p, field_name, default)
+
+    if val is None or str(val).strip() in ["", "None"]:
+        return default
+
+    if hasattr(val, "value"):
+        val = val.value
+
+    val_str = str(val).strip()
+    if val_str.startswith("ParticipationType."):
+        val_str = val_str.replace("ParticipationType.", "").title()
+
+    return val_str if val_str else default
 
 
 def get_report_date_of_fact(r: Any) -> str:
@@ -239,6 +252,7 @@ def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
                     "name": p.name,
                     "aliases": p.aliases,
                     "documents": p.documents,
+                    "photos": getattr(p, "photos", []) or [],
                     "linked_relints": p.linked_relints,
                     "participation_types": [],
                     "backgrounds": []
@@ -296,27 +310,10 @@ def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
 
 def get_municipalities_data(reports: List[Any]) -> List[Dict[str, Any]]:
     """
-    Carrega ou agrega dados de municípios (Mancha Criminal Territorial).
+    Carrega ou agrega dados de municípios (Mancha Criminal Territorial) dinamicamente a partir dos relatórios.
     """
     muni_map: Dict[str, Dict[str, Any]] = {}
 
-    # 1. Tentar ler do banco dedicado se existir (SQLite)
-    db_path = Path("data/relints.db")
-    if db_path.exists():
-        try:
-            from src.adapters.sqlite_municipality_repo import SqliteMunicipalityRepo
-            repo = SqliteMunicipalityRepo(db_path)
-            for m in repo.get_all():
-                muni_map[m.name.upper()] = {
-                    "name": m.name,
-                    "state": m.state,
-                    "linked_relints": m.linked_relints,
-                    "stats_by_group": m.stats_by_group
-                }
-        except Exception:
-            pass
-
-    # 2. Agregar dos relatórios
     cidades_conhecidas = [
         "VITÓRIA", "VILA VELHA", "SERRA", "CARIACICA", "VIANA", "GUARAPARI",
         "CACHOEIRO DE ITAPEMIRIM", "LINHARES", "SÃO MATEUS", "COLATINA",
@@ -324,6 +321,7 @@ def get_municipalities_data(reports: List[Any]) -> List[Dict[str, Any]]:
     ]
 
     for r in reports:
+        muni_field = getattr(r, "municipality", "") or ""
         address = getattr(r, "address", "") or ""
         content = getattr(r, "content", "") or ""
         bm_group = getattr(r, "bm_group", "Outros")
@@ -332,26 +330,32 @@ def get_municipalities_data(reports: List[Any]) -> List[Dict[str, Any]]:
         elif not bm_group:
             bm_group = "Outros"
 
-        # Tentar extrair cidade do endereço ou texto
+        # Prioridade 1: Campo estruturado r.municipality
         found_city = None
-        combined_text = (address + " " + content).upper()
-        for c in cidades_conhecidas:
-            if c in combined_text:
-                found_city = c.capitalize()
-                break
+        if muni_field and muni_field.strip() not in ["Não Informado", "None", ""]:
+            found_city = muni_field.strip().title()
+
+        # Prioridade 2: Busca por cidades conhecidas no endereço/conteúdo
+        if not found_city:
+            combined_text = (address + " " + content).upper()
+            for c in cidades_conhecidas:
+                if c in combined_text:
+                    found_city = c.title()
+                    break
 
         if not found_city:
             found_city = "Não Identificado"
 
-        if found_city not in muni_map:
-            muni_map[found_city] = {
+        key = found_city.upper()
+        if key not in muni_map:
+            muni_map[key] = {
                 "name": found_city,
                 "state": "ES",
                 "linked_relints": [r.source_file],
                 "stats_by_group": {bm_group: 1}
             }
         else:
-            entry = muni_map[found_city]
+            entry = muni_map[key]
             if r.source_file not in entry["linked_relints"]:
                 entry["linked_relints"].append(r.source_file)
             stats = entry["stats_by_group"]

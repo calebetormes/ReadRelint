@@ -9,7 +9,7 @@ project_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.adapters.tinydb_repo import TinyDbRepo
+from src.adapters.sqlite_repo import SqliteRepo
 from src.domain.entities import IncidentReport, Participant, BmGroup
 from src.application.text_cleaner import clean_relint_text
 from src.presentation.web_dashboard.styles import inject_styles, get_badge_class
@@ -54,6 +54,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 reports, active_db_path = load_data()
+persons_data = get_persons_data(reports) if reports else []
 
 if not reports:
     st.info("Nenhum RELINT processado até o momento. Por favor, inicie o monitorador de pasta para analisar arquivos.")
@@ -245,8 +246,7 @@ else:
                             p_nick = get_participant_field(p, "nickname", "-")
                             p_doc = get_participant_field(p, "document", "-")
                             p_type = get_participant_field(p, "participation_type", "-")
-                            p_photo = get_participant_field(p, "photo_path", "")
-                            
+
                             links = find_vinculos(r_filename, p_name, p_doc, reports)
                             links_str = f'<div class="vinculo-badge-alert">🔗 Vinculado a outros arquivos: {", ".join(links)}</div>' if links else ""
                             
@@ -261,8 +261,6 @@ else:
                                     {links_str}
                                 </div>
                                 """), unsafe_allow_html=True)
-                                if p_photo and Path(p_photo).exists():
-                                    st.image(p_photo, caption=f"Foto: {p_name}", width=140)
 
                 with subtab_images:
                     st.markdown('<div class="detail-section-title">🖼️ Galeria de Imagens do Fato / Cenas do Local</div>', unsafe_allow_html=True)
@@ -292,13 +290,13 @@ else:
                     st.markdown('<div class="detail-section-title">Editar Informações e Salvar</div>', unsafe_allow_html=True)
                     with st.form(key=f"edit_form_{r_filename}"):
                         col_ed1, col_ed2 = st.columns(2)
-                        edit_subject = col_ed1.text_input("Assunto Principal:", value=r_subject)
-                        edit_date = col_ed1.text_input("Data do Histórico:", value=r_date_of_fact)
+                        edit_subject = (col_ed1.text_input("Assunto Principal:", value=r_subject) or "").strip()
+                        edit_date = (col_ed1.text_input("Data do Histórico:", value=r_date_of_fact) or "").strip()
                         
                         bm_options = [g.value for g in BmGroup]
                         edit_bm_group = col_ed2.selectbox("Grupo BM:", options=bm_options, index=bm_options.index(r_bm_group) if r_bm_group in bm_options else 7)
                         
-                        edit_summary = st.text_area("Resumo (1 Parágrafo):", value=r_summary, height=100)
+                        edit_summary = (st.text_area("Resumo (1 Parágrafo):", value=r_summary, height=100) or "").strip()
                         edit_content = st.text_area("Histórico Completo Literal:", value=r_content, height=180)
                         
                         st.write("**Editar Participantes:**")
@@ -325,23 +323,23 @@ else:
                         new_pdoc = col_new_p3.text_input("Doc (CPF/RG)", value="", key="form_newdoc")
                         if new_pname.strip() or new_pnick.strip() or new_pdoc.strip():
                             updated_participants.append(Participant(name=new_pname.strip(), nickname=new_pnick.strip(), document=new_pdoc.strip()))
-
+ 
                         submit_btn = st.form_submit_button(label="💾 Salvar Alterações no Banco", use_container_width=True)
                         
                         if submit_btn:
                             updated_report = IncidentReport(
                                 source_file=r_filename,
-                                subject=edit_subject.strip(),
-                                modification_date_history=edit_date.strip(),
+                                subject=edit_subject,
+                                modification_date_history=edit_date,
                                 participants=updated_participants,
                                 images=getattr(selected_report, "images", []),
                                 content=edit_content,
-                                summary=edit_summary.strip(),
+                                summary=edit_summary,
                                 bm_group=edit_bm_group,
                                 user_edited=True
                             )
                             
-                            repo = TinyDbRepo(active_db_path)
+                            repo = SqliteRepo(active_db_path)
                             repo.delete_by_source_file(r_filename)
                             repo.save(updated_report)
                             
@@ -421,15 +419,7 @@ else:
                     </div>
                     """), unsafe_allow_html=True)
                     
-                    # Exibe galeria de fotos do indivíduo no dossiê
-                    p_photos = p.get("photos", [])
-                    valid_photos = [ph for ph in p_photos if Path(ph).exists()]
-                    if valid_photos:
-                        with st.expander(f"🖼️ Ver Fotos do Indivíduo ({len(valid_photos)})"):
-                            photo_cols = st.columns(min(3, len(valid_photos)))
-                            for ph_idx, ph_path in enumerate(valid_photos):
-                                with photo_cols[ph_idx % 3]:
-                                    st.image(ph_path, caption=f"Foto #{ph_idx+1}", use_container_width=True)
+
 
                     with st.expander(f"📁 Ver RELINTs vinculados ({len(p['linked_relints'])})"):
                         for relint_file in p["linked_relints"]:

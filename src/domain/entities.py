@@ -80,14 +80,3 @@ class Person(BaseModel):
     linked_relints: List[str] = Field(default=[], description="Lista de nomes de arquivos PDF (RELINTs) vinculados a esta pessoa")
     last_updated: str = Field(default_factory=lambda: datetime.now().isoformat())
 
-
-
-class Municipality(BaseModel):
-    """
-    Representa a entidade geográfica consolidada e contagem de manchas criminais.
-    """
-    name: str = Field(description="Nome limpo do município")
-    state: str = Field(default="ES", description="UF / Estado")
-    linked_relints: List[str] = Field(default=[], description="Lista de RELINTs vinculados a este município")
-    stats_by_group: Dict[str, int] = Field(default={}, description="Dicionário com a contagem de RELINTs por grupo BM")
-    last_updated: str = Field(default_factory=lambda: datetime.now().isoformat())

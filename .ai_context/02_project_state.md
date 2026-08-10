@@ -5,13 +5,13 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
 ## 1. O que já foi implementado (Checklist Final)
 - [x] Configuração da Clean Architecture (Portas, Adaptadores, Domínio, Aplicação e Apresentação).
 - [x] Leitura de PDF (`PyMuPDF`) e monitoramento em tempo real (CustomTkinter + FolderWatcher).
-- [x] Migração de Banco de Dados de JSON (TinyDB) para **SQLite nativo (WAL)**, com tabelas específicas (`relints`, `persons`, `municipalities`). Refatoração final (Clean Code) realizada para expurgo total de código legado.
+- [x] Migração de Banco de Dados de JSON (TinyDB) para **SQLite nativo (WAL)**, com tabelas dedicadas (`relints` e `persons`). Refatoração final (Clean Code) para remoção da tabela redundante de municípios, calculando manchas criminais dinamicamente on-the-fly.
 - [x] Pipeline ETL com NLP Local (Ollama) para estruturação semântica, mantendo a extração literal (`content`) 100% via código Python.
 - [x] Tratamento de histórico (Self-Healing de modelos IA, fallback de JSON Pydantic e tolerância a erros).
 - [x] Dashboard Streamlit com 4 Abas Especializadas:
   - `📄 RELINTs`: Master-Detail, formulário de edição persistente.
   - `👤 Participantes`: Dossiê de cruzamento de pessoas (cross-referencing de RG/CPF/Nomes).
-  - `🗺️ Municípios`: Mancha criminal com ranking geográfico e alertas de precisão visual (Verde, Azul, Laranja).
+  - `🗺️ Municípios`: Mancha criminal dinâmica com ranking geográfico por cidade e alertas de precisão visual.
   - `🚨 Crimes`: Gráficos estatísticos por Grupo BM.
 - [x] Sanitização automática e avançada via Regex de rodapés, disclaimers legais e isolamento da seção "ANEXOS".
 - [x] Extração *lazy* de imagens do PDF para pastas locais `data/media/` com integração nativa de galeria no Painel Streamlit.

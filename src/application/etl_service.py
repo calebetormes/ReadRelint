@@ -5,8 +5,7 @@ from src.ports.file_parser import IFileParser
 from src.ports.llm_processor import ILlmProcessor
 from src.ports.database_repo import IDatabaseRepo
 from src.ports.person_repo import IPersonRepo
-from src.ports.municipality_repo import IMunicipalityRepo
-from src.domain.entities import IncidentReport, Person, Municipality
+from src.domain.entities import IncidentReport, Person
 from src.application.text_cleaner import (
     clean_relint_text,
     extract_history_from_annex,
@@ -29,15 +28,13 @@ class EtlService:
         llm_processor: ILlmProcessor,
         database_repo: IDatabaseRepo,
         processed_registry: IProcessedRegistry,
-        person_repo: IPersonRepo,
-        municipality_repo: IMunicipalityRepo
+        person_repo: IPersonRepo
     ):
         self.file_parser = file_parser
         self.llm_processor = llm_processor
         self.database_repo = database_repo
         self.processed_registry = processed_registry
         self.person_repo = person_repo
-        self.municipality_repo = municipality_repo
 
     def process_file(
         self,
@@ -140,7 +137,7 @@ class EtlService:
                 if not is_pm and p_name.strip():
                     filtered_participants.append(p)
 
-            # 6. Extração e Classificação de Imagens do PDF (Fotos de Participantes vs Cenas do Fato)
+            # 6. Extração de Imagens do PDF (Galeria do RELINT)
             media_dir = Path("data/media") / file_path.stem
             extracted_images = []
             try:
@@ -151,7 +148,6 @@ class EtlService:
             except Exception:
                 extracted_images = []
 
-
             general_scene_images = []
             for img_info in extracted_images:
                 path_str = img_info.get("file_path", "")
@@ -159,7 +155,6 @@ class EtlService:
                 if path_str:
                     general_scene_images.append({"path": path_str, "caption": caption_str})
 
-            # Atribuição de participantes (sem foto individual nesta etapa)
             parsed_participants = []
             for p in filtered_participants:
                 p_dict = p if isinstance(p, dict) else p.model_dump()
@@ -227,31 +222,6 @@ class EtlService:
                     )
                     self.person_repo.save(new_person)
 
-
-            # Upsert de Locais no banco de Municípios (baseado nos Tipos de Local ou extraindo cidade, 
-            # Como a extração de cidade exata é complexa e não temos um campo 'city', usaremos 
-            # uma aproximação no futuro. Por enquanto, criamos uma lógica mockada pro endereço.)
-            # Nota: Podemos extrair da string de 'address', ou futuramente exigir da IA.
-            # Vamos buscar no address se tem algum municipio, pra fim de teste:
-            if report.address:
-                # Mock simplificado: pegar primeira palavra do endereço como se fosse município
-                city_mock = report.address.split(',')[0].strip()[:20] if ',' in report.address else "Não Informado"
-                
-                mun = self.municipality_repo.get_by_name(city_mock)
-                if not mun:
-                    mun = Municipality(name=city_mock, linked_relints=[])
-                
-                if filename not in mun.linked_relints:
-                    mun.linked_relints.append(filename)
-                
-                bm_val = getattr(report.bm_group, "value", report.bm_group)
-                group = str(bm_val) if bm_val else "Outros"
-                mun.stats_by_group[group] = mun.stats_by_group.get(group, 0) + 1
-                
-                if self.municipality_repo.get_by_name(city_mock):
-                    self.municipality_repo.update(mun)
-                else:
-                    self.municipality_repo.save(mun)
 
 
             if rule:

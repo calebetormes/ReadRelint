@@ -49,7 +49,7 @@ def test_etl_service_with_rule_skips_processing():
     mock_municipality_repo = Mock()
     mock_municipality_repo.get_by_name.return_value = None
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo)
     rule = HomicideRule()
     
     progress_calls = []
@@ -92,7 +92,7 @@ def test_etl_service_with_rule_processes_matching_file():
     mock_municipality_repo = Mock()
     mock_municipality_repo.get_by_name.return_value = None
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo)
     rule = HomicideRule()
     
     filtered_calls = []
@@ -133,7 +133,7 @@ def test_etl_service_with_rule_discards_post_llm_false_positive():
     mock_municipality_repo = Mock()
     mock_municipality_repo.get_by_name.return_value = None
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo)
     rule = HomicideRule()
     
     filtered_calls = []
@@ -165,7 +165,7 @@ def test_etl_service_skips_when_already_processed_in_registry():
     mock_person_repo = Mock()
     mock_municipality_repo = Mock()
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo)
     rule = HomicideRule()
     
     progress_calls = []
@@ -225,7 +225,7 @@ def test_etl_service_skips_when_exists_in_database():
     mock_person_repo = Mock()
     mock_municipality_repo = Mock()
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo)
     rule = HomicideRule()
 
     progress_calls = []
