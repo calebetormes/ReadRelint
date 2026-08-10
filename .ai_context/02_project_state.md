@@ -17,11 +17,26 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
 - [x] Extração *lazy* de imagens do PDF para pastas locais `data/media/` com integração nativa de galeria no Painel Streamlit.
 - [x] Suíte de Testes Automatizados 100% funcional (Pytest).
 
-## 2. O que está sendo feito agora
-- [x] Refatoração da pasta `.ai_context` para reduzir redundância e aglutinar arquivos em um padrão de 3 documentos.
+## 2. Próximas Etapas (Prioridade)
 
-## 3. Backlog e Tarefas Futuras
-- [ ] **Exportação de Relatórios Estruturados:** Criar botões no dashboard para exportar o Dossiê e os Casos Selecionados para Excel, CSV ou PDF.
-- [ ] **Extração de Fotos Específicas de Participantes (Rostos):** Evoluir a galeria geral do caso para recortar/associar rostos diretamente às entidades de pessoas e exibir no dossiê `Person`.
-- [ ] **Grafos de Vínculos (Visualização Gráfica):** Adicionar um plot interativo (ex: `streamlit-agraph`) mostrando conexões em rede entre Pessoas e Relatórios.
-- [ ] **Check de Hashes (SHA-256):** Hashing dos PDFs durante ingestão para que modificações posteriores do mesmo arquivo triggerem re-processamento automático.
+### ETAPA 1 — Redesign de Interface (UX/UI)
+- [ ] Substituir o Streamlit por uma interface custom com **FastAPI (backend API REST) + Frontend HTML/CSS/JS**.
+- [ ] Estudo de UX: definir layout, paleta de cores, tipografia, responsividade e micro-animações.
+- [ ] Recriar as 4 abas do dashboard (RELINTs, Participantes, Municípios, Crimes) com design premium.
+- [ ] Manter o app desktop (CustomTkinter) para monitoramento de pastas (ETL local).
+
+### ETAPA 2 — Acesso Online Seguro (Cloudflare Tunnel + E2EE)
+- [ ] Configurar **Cloudflare Tunnel** para expor o FastAPI local via domínio fixo com HTTPS.
+- [ ] Implementar **Criptografia Ponta-a-Ponta (E2EE)** na camada da aplicação:
+  - Backend (Python): criptografar respostas da API com AES-256-GCM usando chave derivada da senha do usuário (PBKDF2/HKDF).
+  - Frontend (JavaScript): descriptografar dados no navegador via Web Crypto API.
+  - Cloudflare vê apenas blobs cifrados — dados de inteligência nunca expostos em trânsito.
+- [ ] Autenticação de usuário com hash seguro (bcrypt/argon2) separado da chave de criptografia.
+
+## 3. Backlog Futuro
+- [ ] **Exportação de Relatórios Estruturados:** Botões para exportar Dossiê e Casos para Excel, CSV ou PDF.
+- [ ] **Grafos de Vínculos (Visualização Gráfica):** Plot interativo mostrando conexões em rede entre Pessoas e Relatórios.
+- [ ] **Check de Hashes (SHA-256):** Hashing dos PDFs para re-processamento automático ao detectar modificações.
+
+## 4. Decisões Descartadas
+- ~~**Extração de Fotos de Participantes (Rostos):**~~ Descartada por complexidade excessiva na associação heurística de imagens a indivíduos. Imagens extraídas dos PDFs vão todas para a galeria geral do RELINT.
