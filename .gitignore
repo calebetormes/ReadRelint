@@ -15,8 +15,8 @@ ENV/
 .coverage
 htmlcov/
 
-# Local database and raw files (data directory)
-data/*.json
+# Local database and media files (data directory)
+data/
 
 # Operating System Files
 desktop.ini
