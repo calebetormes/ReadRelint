@@ -202,6 +202,106 @@ CSS_STYLES = """
         gap: 0.4rem;
         font-weight: 500;
     }
+    /* Card de Dossiê de Pessoas (Participantes) */
+    .dossier-card {
+        background: linear-gradient(145deg, #0d1322 0%, #070a14 100%);
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .dossier-card:hover {
+        transform: translateY(-2px);
+        border-color: #6366f1;
+    }
+    .dossier-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #1e293b;
+        padding-bottom: 0.75rem;
+    }
+    .dossier-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: white;
+        flex-shrink: 0;
+    }
+    .dossier-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #f8fafc;
+        margin: 0;
+    }
+    .dossier-vulgo {
+        font-size: 0.9rem;
+        color: #fbbf24;
+        font-weight: 600;
+    }
+    .dossier-doc {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Card de Município / Mancha Territorial */
+    .muni-card {
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .muni-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #38bdf8;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .muni-badge {
+        background-color: #0284c7;
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    /* Card Estatístico de Crimes */
+    .crime-card {
+        background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+        border: 1px solid #312e81;
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .crime-title {
+        font-size: 0.9rem;
+        color: #a5b4fc;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .crime-count {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #f43f5e;
+        margin-top: 0.3rem;
+    }
 </style>
 """
 
@@ -211,7 +311,12 @@ def inject_styles():
 
 def get_badge_class(bm_group: str) -> str:
     """Retorna a classe CSS correspondente ao grupo BM."""
-    bg_class = f"badge-{(bm_group or 'Outros').lower()}"
-    if bg_class not in ["badge-roubos", "badge-furtos", "badge-homicidios", "badge-outros"]:
-        return "badge-outros"
-    return bg_class
+    val = (bm_group or 'Outros').lower()
+    if 'roubo' in val:
+        return "badge-roubos"
+    elif 'furto' in val:
+        return "badge-furtos"
+    elif 'homic' in val or 'pris' in val or 'tráf' in val or 'traf' in val:
+        return "badge-homicidios"
+    return "badge-outros"
+

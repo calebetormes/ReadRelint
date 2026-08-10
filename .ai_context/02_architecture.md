@@ -14,12 +14,19 @@ A Entidade gerada no domínio (`IncidentReport`) e salva no TinyDB (`relints.jso
 - `modification_date_history`: Sequência/histórico de datas de alteração do arquivo.
 - `subject`: Texto extraído do campo ASSUNTO da seção introdutória do RELINT.
 - `main_fact`: O evento central do relatório deduzido do assunto/contexto.
+- `date_of_fact`: Data da ocorrência do fato (ex: "01/01/2026" ou "01 de janeiro de 2026").
+- `time_of_fact`: Hora da ocorrência do fato (ex: "01h30min", "14:30").
 - `relint_type`: Classificação estrita em Enum (`Ocorrência`, `Disk Denúncia`, `Resposta a PB`, `Outros`).
 - `bm_group`: Enquadramento em Enum restrito (`Roubo a Estabelecimento`, `Roubo a Residência`, etc).
 - `location_types`: Lista identificando os tipos de local do fato.
-- `address`: Endereço completo mencionado no fato.
-- `coordinates`: Coordenadas geográficas, se presentes.
-- `content`: Histórico literal e integral do arquivo, extraído pós-corte limpo (ex: após a seção ANEXOS).
+- `address`: Endereço bruto mencionado no fato.
+- `municipality`: Nome do município do fato.
+- `street`: Logradouro/Rua/Avenida.
+- `number`: Número residencial ou S/N.
+- `neighborhood`: Bairro da ocorrência.
+- `map_url`: URL direta ou gerada do Google Maps.
+- `coordinates`: Coordenadas geográficas exatas (Latitude, Longitude), se presentes.
+- `content`: Histórico literal e integral do arquivo, extraído com preservação da tabela introdutória e corte de disclaimers.
 - `summary`: Resumo em um parágrafo do fato.
 - `user_edited`: Flag que indica edição manual.
 - `participants` (lista de objetos, `Participant`):
@@ -28,6 +35,7 @@ A Entidade gerada no domínio (`IncidentReport`) e salva no TinyDB (`relints.jso
   - `document`: CPF ou RG.
   - `background`: Antecedentes criminais citados.
   - `participation_type`: Enum (`Vítima`, `Testemunha`, `Acusado`, `Parte da Guarnição`).
+
 
 ## Pipeline de Processamento de ETL
 1. **Fase 1: Extração e Limpeza**

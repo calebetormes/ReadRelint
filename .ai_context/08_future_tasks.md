@@ -27,19 +27,16 @@ Este arquivo serve como repositório de ideias, discussões de arquitetura e fut
 
 ---
 
-## 4. Dossiê Unificado de Pessoas (UI Dashboard)
+## 4. Dossiê Unificado de Pessoas (UI Dashboard) [CONCLUÍDO]
 * **Objetivo:** Criar uma tela dedicada no Streamlit para pesquisar e visualizar a ficha completa de uma pessoa.
-* **Proposta de Solução:**
-  * Ler o banco `participants.json`.
-  * Mostrar uma página de busca focada em indivíduos, consolidando todas as suas passagens e alertas por nome, vulgos conhecidos e documentos.
+* **Status:** Implementado na Aba 2 (`👤 Participantes`) do Dashboard Streamlit com cartões de dossiê, avatares, apelidos, documentos e cross-referencing de vínculos.
 
 ---
 
-## 5. Mancha Criminal Territorial (UI Dashboard)
+## 5. Mancha Criminal Territorial (UI Dashboard) [CONCLUÍDO]
 * **Objetivo:** Criar uma visualização agregada da distribuição dos RELINTs por município.
-* **Proposta de Solução:**
-  * Ler o banco `municipalities.json`.
-  * Mostrar estatísticas agregadas por cidade e filtros rápidos, possivelmente adicionando um pequeno mapa ou gráfico de barras.
+* **Status:** Implementado na Aba 3 (`🗺️ Municípios`) do Dashboard Streamlit com estatísticas por cidade, ranking de incidência e mancha espacial.
+
 
 ---
 

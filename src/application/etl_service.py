@@ -7,7 +7,14 @@ from src.ports.database_repo import IDatabaseRepo
 from src.ports.person_repo import IPersonRepo
 from src.ports.municipality_repo import IMunicipalityRepo
 from src.domain.entities import IncidentReport, Person, Municipality
-from src.application.text_cleaner import clean_relint_text, extract_history_from_annex
+from src.application.text_cleaner import (
+    clean_relint_text,
+    extract_history_from_annex,
+    extract_date_of_fact,
+    extract_time_of_fact,
+    extract_map_url,
+    resolve_coordinates_and_map_info
+)
 from src.domain.rules.base_rule import IncidentRule
 from src.ports.processed_registry import IProcessedRegistry
 
@@ -79,18 +86,44 @@ class EtlService:
             questions = rule.questions if rule else None
             response_dict = self.llm_processor.process_text(cleaned_text, questions=questions)
 
-            # 1. Definir o conteúdo integral do histórico (prioridade para ANEXOS, senão o texto limpo do PDF)
-            final_content = history_from_annex.strip() if history_from_annex and history_from_annex.strip() else cleaned_text.strip()
+            # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT (RELATÓRIO DE INTELIGÊNCIA Nº, ASSUNTO, ORIGEM, DIFUSÃO, ANEXOS)
+            final_content = clean_relint_text(cleaned_text)
             if "content" in response_dict:
                 del response_dict["content"]
 
-            # 2. Sanitiza o resumo caso venha nulo ou com texto de placeholder
+            # 2. Extração / Sanitização da data e hora do fato (date_of_fact, time_of_fact)
+            extracted_date = extract_date_of_fact(final_content)
+            date_val = response_dict.get("date_of_fact") or response_dict.get("modification_date_history")
+            if not date_val or str(date_val).strip() in ["Não Informado", "None", ""]:
+                date_val = extracted_date if extracted_date else "Não Informado"
+            
+            response_dict["date_of_fact"] = date_val
+            response_dict["modification_date_history"] = date_val
+
+            time_val = response_dict.get("time_of_fact")
+            if not time_val or str(time_val).strip() in ["Não Informado", "None", ""]:
+                extracted_time = extract_time_of_fact(final_content)
+                time_val = extracted_time if extracted_time else "Não Informado"
+            response_dict["time_of_fact"] = time_val
+
+            # 3. Extração / Resolução de Links de Mapa e Coordenadas
+            map_url = response_dict.get("map_url")
+            coords = response_dict.get("coordinates")
+            resolved_map, resolved_coords = resolve_coordinates_and_map_info(final_content, map_url=map_url or "")
+            
+            if not map_url or map_url == "None":
+                response_dict["map_url"] = resolved_map
+            if not coords or coords == "None":
+                response_dict["coordinates"] = resolved_coords
+
+            # 4. Sanitiza o resumo caso venha nulo ou com texto de placeholder
             summary_val = response_dict.get("summary")
             if not summary_val or "Resumo do Histórico" in str(summary_val) or len(str(summary_val).strip()) < 5:
                 summary_val = response_dict.get("main_fact") or response_dict.get("subject") or (final_content[:300] + "...")
             response_dict["summary"] = summary_val
 
-            # 3. Filtragem de participantes: EXCLUIR Policiais Militares (PM / Guarnição)
+            # 5. Filtragem de participantes: EXCLUIR Policiais Militares (PM / Guarnição)
+
             raw_participants = response_dict.get("participants", [])
             filtered_participants = []
             pm_keywords = ["SD PM", "SGT PM", "CB PM", "CAP PM", "MAJ PM", "TEN PM", "POLICIAL MILITAR", "GUARNICAO", "GUARNICÃO", "2° SGT", "1° SGT", "3° SGT", " VTR "]
@@ -131,8 +164,11 @@ class EtlService:
                     summary=summary_val,
                     main_fact=response_dict.get("main_fact", ""),
                     address=response_dict.get("address", ""),
+                    date_of_fact=date_val,
+                    modification_date_history=date_val,
                     participants=filtered_participants
                 )
+
 
             # Salva o RELINT no banco central
             self.database_repo.save(report)

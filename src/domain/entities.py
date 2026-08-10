@@ -41,7 +41,10 @@ class IncidentReport(BaseModel):
     Representa a entidade de domínio de um relatório de inteligência (RELINT) processado.
     """
     source_file: str = Field(description="Nome do arquivo PDF de origem")
-    modification_date_history: Optional[str] = Field(default=None, description="Mapear a sequência/histórico de datas de alteração do arquivo, se disponível")
+    date_of_fact: Optional[str] = Field(default=None, description="Extraia a data de ocorrência do fato (ex: DD/MM/AAAA ou DD de mês de AAAA) mencionada na introdução ou primeira frase do histórico")
+    time_of_fact: Optional[str] = Field(default=None, description="Extraia a hora exata ou aproximada do fato (ex: 14h30min, 01:30h, por volta das 18h) mencionada no primeiro parágrafo")
+    modification_date_history: Optional[str] = Field(default=None, description="Mapear a sequência/histórico de datas de alteração do arquivo ou data do fato")
+
     subject: Optional[str] = Field(default=None, description="Extraia exatamente o texto do campo ASSUNTO: presente na seção introdutória do RELINT")
     main_fact: Optional[str] = Field(default=None, description="Determine a partir do Assunto qual é o evento central do relatório")
     relint_type: Optional[RelintType] = Field(default=RelintType.OUTROS, description="Classifique estritamente em Ocorrência, Disk Denúncia, Resposta a PB ou Outros")
@@ -49,10 +52,16 @@ class IncidentReport(BaseModel):
     location_types: Optional[List[str]] = Field(default=[], description="Identifique o local do fato (ex: Propriedade Rural, Escolas, Residência)")
     participants: Optional[List[Participant]] = Field(default=[], description="Lista de pessoas de interesse citadas (vítimas, suspeitos, acusados, testemunhas). NUNCA inclua Policiais Militares da guarnição que atenderam o fato.")
     address: Optional[str] = Field(default=None, description="Endereço completo mencionado no fato")
-    coordinates: Optional[str] = Field(default=None, description="Coordenadas geográficas, se presentes")
+    municipality: Optional[str] = Field(default=None, description="Nome da cidade/município da ocorrência (ex: Panambi, Palmeira das Missões, Ibirubá)")
+    street: Optional[str] = Field(default=None, description="Nome do logradouro/rua/avenida da ocorrência (ex: Rua Oscar Waeschter, Av. Brasil)")
+    number: Optional[str] = Field(default=None, description="Número do imóvel ou S/N")
+    neighborhood: Optional[str] = Field(default=None, description="Nome do bairro da ocorrência (ex: Arco-Íris, Centro)")
+    map_url: Optional[str] = Field(default=None, description="URL ou link do Google Maps presente no texto")
+    coordinates: Optional[str] = Field(default=None, description="Coordenadas geográficas no formato Latitude, Longitude (ex: -28.2612, -53.4912)")
     content: Optional[str] = Field(default=None, description="Histórico completo e literal do RELINT")
     summary: Optional[str] = Field(default=None, description="Escreva um resumo claro e explicativo dos fatos descritos no RELINT em 1 parágrafo")
     user_edited: bool = Field(default=False, description="Indica se o relatório foi editado manualmente pelo usuário")
+
 
 
 class Person(BaseModel):

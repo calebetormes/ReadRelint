@@ -50,3 +50,11 @@
 ## [ADR-013] Exclusão de Policiais da Guarnição dos Dossiês e Garantia do Histórico Transcrito no ETL
 - **Decisão:** (1) Filtragem e exclusão automática de Policiais Militares que integram a guarnição/atendimento dos cadastros de participantes. (2) Isolamento da captura do histórico integral (`content`) para ser executado exclusivamente por código determinístico (Python / Regex pós-ANEXOS), removendo o campo `content` da solicitação de extração enviada à LLM.
 - **Motivo:** (1) Apenas civis (vítimas, suspeitos, testemunhas, acusados) devem formar dossiês criminais e redes de vínculos operacionais no `participants.json`. A presença de policiais poluia a rede de conexões. (2) LLMs gerativas tentam resumir ou truncar o texto integral ou alucinar o valor da descrição do schema Pydantic. Delegar a transcrição ao Python garante integridade de 100% no histórico exibido no dashboard.
+
+## [ADR-014] Extração Híbrida de Geolocalização de 3 Níveis e Indicador Visual de Precisão por Cores
+- **Decisão:** (1) Captura da Hora do Fato (`time_of_fact`), Endereço Estruturado (`municipality`, `street`, `number`, `neighborhood`), Links de Mapas e Coordenadas Geográficas (`coordinates`). (2) Construção de uma hierarquia de prioridades de localização no Dashboard com esquema de cores e alertas de precisão garantidos:
+  - **Nível 1 - Verde Esmeralda (#059669):** Coordenadas Exatas (Latitude/Longitude) capturadas no relatório (Prioridade Máxima). Gera URL exata no Google Maps e exibe alerta em Verde.
+  - **Nível 2 - Azul Cyan (#0284c7):** Link direto do Google Maps citado no RELINT.
+  - **Nível 3 - Laranja Âmbar (#d97706):** Busca do Google Maps gerada via Endereço Estruturado (`rua + número + bairro + município`).
+- **Motivo:** Garantir a geolocalização visual de 100% das ocorrências policiais. O botão do Google Maps e o alerta de precisão permanecem sempre visíveis, dando transparência aos analistas sobre o nível de precisão da informação espacial.
+

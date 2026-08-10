@@ -27,12 +27,26 @@
   - [x] **Ajustes Finais de Qualidade do ETL:**
     - [x] Remoção do campo `content` da consulta LLM, atribuindo a transcrição integral diretamente via código Python/Regex.
     - [x] Tratamento de fallback de sanitização para o campo `summary`.
-    - [x] Implementação de filtro em código para ignorar/remover Policiais Militares (PM / Guarnição) dos cadastros de participantes.
+    - [x] **Redesenho do Dashboard Streamlit em 4 Abas Especializadas:**
+  - [x] `📄 RELINTs (Edição)`: Interface Split Screen (Master-Detail) com busca, atalhos de seleção, histórico literal limpo, resumo e formulário de edição TinyDB.
+  - [x] `👤 Participantes`: Dossiê de pessoas com apelidos/vulgos, documentos (CPF/RG), avatar e alerta de vínculos cruzados entre múltiplos RELINTs.
+  - [x] `🗺️ Municípios`: Mapeamento de mancha territorial por cidade, ranking de incidência criminal e relatórios associados.
+  - [x] `🚨 Crimes (Grupo BM)`: Painel estatístico com gráfico de barras por enquadramento criminal (Roubos, Furtos, Tráfico, Homicídios, etc.).
+- [x] **Sanitização de Avisos Legais e Preservação de Cabeçalhos:**
+  - [x] Remoção automatizada via Regex de avisos administrativos/disclaimers (`DOCUMENTO PREPARATÓRIO – ACESSO RESTRITO`, Lei 12.527/2011, Lei 9.883/1999, `Página X de Y`).
+  - [x] Preservação integral da tabela introdutória do RELINT (`RELATÓRIO DE INTELIGÊNCIA Nº...`, `ASSUNTO...`, `ORIGEM...`, `DIFUSÃO...`, `ANEXOS:...`).
+- [x] **Extração Espacial e Geolocalização de 3 Níveis:**
+  - [x] Extração de `time_of_fact`, `municipality`, `street`, `number`, `neighborhood`, `map_url` e `coordinates`.
+  - [x] Geração automática de links do Google Maps via busca de endereço estruturado em fallback.
+  - [x] Sistema de cores e alertas de precisão garantidos no Dashboard (Verde Esmeralda para Coordenadas Exatas, Azul Cyan para Link Citado e Laranja Âmbar para Endereço Gerado).
+  - [x] Resiliência de renderização HTML (`clean_html`) evitando blocos de código indesejados no Streamlit.
+- [x] Registro formal das decisões [ADR-011] a [ADR-014].
 
 ## O que está sendo feito agora:
 - [x] Atualização de todos os artefatos de documentação de contexto em `.ai_context`.
 
 ## Próximos Passos:
-- [ ] Atualizar os testes unitários em `tests/` para corresponder à nova taxonomia, aos *Enums* e aos novos repositórios.
-- [ ] Construir abas/telas exclusivas no Dashboard Streamlit para explorar o "Dossiê de Pessoas" e "Mapa de Municípios".
-- [ ] Implementar a extração automática de fotos dos quadros de participantes do PDF via PyMuPDF e vinculá-las ao Dossiê de Pessoas (`Person`).
+- [ ] Atualizar os testes unitários em `tests/` para corresponder à nova taxonomia, aos *Enums*, novos repositórios e funções de geolocalização.
+- [ ] Implementar a extração automática de fotos dos quadros de participantes dos PDFs via PyMuPDF e vinculá-las aos Dossiês de Pessoas (`Person`).
+- [ ] Criar relatórios de exportação em PDF/Docx dos Dossiês Consolidados de Pessoas e Municípios.
+
