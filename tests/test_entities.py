@@ -1,6 +1,14 @@
 import pytest
 from pydantic import ValidationError
-from src.domain.entities import IncidentReport
+from src.domain.entities import (
+    IncidentReport,
+    Person,
+    Municipality,
+    Participant,
+    RelintType,
+    BmGroup,
+    ParticipationType
+)
 
 def test_incident_report_validation():
     # Criando um report mínimo válido
@@ -11,6 +19,9 @@ def test_incident_report_validation():
     
     assert report.source_file == "test_report.pdf"
     assert report.content == "Resumo narrativo estruturado do fato."
+    assert report.relint_type == RelintType.OUTROS
+    assert report.bm_group == BmGroup.OUTROS
+    assert report.user_edited is False
 
     # Deve falhar sem os campos obrigatórios (source_file é obrigatório)
     with pytest.raises(ValidationError):
@@ -20,3 +31,58 @@ def test_incident_report_validation():
     report_no_content = IncidentReport(source_file="test.pdf")
     assert report_no_content.source_file == "test.pdf"
     assert report_no_content.content is None
+
+def test_incident_report_with_full_fields():
+    participant = Participant(
+        name="João da Silva",
+        nickname="Zé",
+        document="123.456.789-00",
+        background="Furto",
+        participation_type=ParticipationType.ACUSADO
+    )
+    report = IncidentReport(
+        source_file="relint_completo.pdf",
+        subject="ROUBO A RESIDÊNCIA",
+        main_fact="Roubo consumado",
+        relint_type=RelintType.OCORRENCIA,
+        bm_group=BmGroup.ROUBO_RESIDENCIA,
+        date_of_fact="10/08/2026",
+        time_of_fact="14h30min",
+        municipality="Panambi",
+        street="Rua Brasil",
+        number="100",
+        neighborhood="Centro",
+        map_url="https://maps.google.com/?q=-28.23,-53.60",
+        coordinates="-28.23, -53.60",
+        participants=[participant]
+    )
+    assert report.municipality == "Panambi"
+    assert report.time_of_fact == "14h30min"
+    assert report.relint_type == RelintType.OCORRENCIA
+    assert report.bm_group == BmGroup.ROUBO_RESIDENCIA
+    assert len(report.participants) == 1
+    assert report.participants[0].participation_type == ParticipationType.ACUSADO
+
+def test_person_entity():
+    person = Person(
+        person_id="123.456.789-00",
+        name="João da Silva",
+        aliases=["Zé"],
+        documents=["123.456.789-00"],
+        linked_relints=["relint_completo.pdf"]
+    )
+    assert person.person_id == "123.456.789-00"
+    assert person.name == "João da Silva"
+    assert "Zé" in person.aliases
+    assert "relint_completo.pdf" in person.linked_relints
+
+def test_municipality_entity():
+    municipality = Municipality(
+        name="Panambi",
+        state="RS",
+        linked_relints=["relint_completo.pdf"],
+        stats_by_group={"Roubo a Residência": 1}
+    )
+    assert municipality.name == "Panambi"
+    assert municipality.stats_by_group["Roubo a Residência"] == 1
+

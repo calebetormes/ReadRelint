@@ -1,4 +1,5 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
+
 from enum import Enum
 from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
@@ -34,6 +35,7 @@ class Participant(BaseModel):
     document: Optional[str] = Field(default=None, description="Documento de identificação (CPF ou RG)")
     background: Optional[str] = Field(default=None, description="Antecedentes mencionados (se houver)")
     participation_type: Optional[ParticipationType] = Field(default=None, description="Opções: Vítima, Testemunha, Acusado, Parte da Guarnição")
+    photo_path: Optional[str] = Field(default=None, description="Caminho do arquivo da foto do participante")
 
 
 class IncidentReport(BaseModel):
@@ -58,6 +60,8 @@ class IncidentReport(BaseModel):
     neighborhood: Optional[str] = Field(default=None, description="Nome do bairro da ocorrência (ex: Arco-Íris, Centro)")
     map_url: Optional[str] = Field(default=None, description="URL ou link do Google Maps presente no texto")
     coordinates: Optional[str] = Field(default=None, description="Coordenadas geográficas no formato Latitude, Longitude (ex: -28.2612, -53.4912)")
+    images: Optional[List[Union[str, Dict[str, Any]]]] = Field(default=[], description="Lista de caminhos ou objetos de imagens do fato/local com legenda")
+
     content: Optional[str] = Field(default=None, description="Histórico completo e literal do RELINT")
     summary: Optional[str] = Field(default=None, description="Escreva um resumo claro e explicativo dos fatos descritos no RELINT em 1 parágrafo")
     user_edited: bool = Field(default=False, description="Indica se o relatório foi editado manualmente pelo usuário")
@@ -72,8 +76,10 @@ class Person(BaseModel):
     name: str = Field(description="Nome principal consolidado")
     aliases: List[str] = Field(default=[], description="Lista de alcunhas e vulgos acumulados")
     documents: List[str] = Field(default=[], description="Lista de documentos acumulados (CPF, RG)")
+    photos: List[str] = Field(default=[], description="Lista de fotos acumuladas deste participante ao longo dos RELINTs")
     linked_relints: List[str] = Field(default=[], description="Lista de nomes de arquivos PDF (RELINTs) vinculados a esta pessoa")
     last_updated: str = Field(default_factory=lambda: datetime.now().isoformat())
+
 
 
 class Municipality(BaseModel):

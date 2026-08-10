@@ -224,8 +224,9 @@ else:
 
 
 
-                subtab_summary, subtab_content, subtab_edit = st.tabs([
+                subtab_summary, subtab_images, subtab_content, subtab_edit = st.tabs([
                     "📖 Resumo & Participantes", 
+                    "🖼️ Imagens do Fato",
                     "📄 Histórico Completo", 
                     "✏️ Editar Dados"
                 ])
@@ -244,6 +245,7 @@ else:
                             p_nick = get_participant_field(p, "nickname", "-")
                             p_doc = get_participant_field(p, "document", "-")
                             p_type = get_participant_field(p, "participation_type", "-")
+                            p_photo = get_participant_field(p, "photo_path", "")
                             
                             links = find_vinculos(r_filename, p_name, p_doc, reports)
                             links_str = f'<div class="vinculo-badge-alert">🔗 Vinculado a outros arquivos: {", ".join(links)}</div>' if links else ""
@@ -259,6 +261,28 @@ else:
                                     {links_str}
                                 </div>
                                 """), unsafe_allow_html=True)
+                                if p_photo and Path(p_photo).exists():
+                                    st.image(p_photo, caption=f"Foto: {p_name}", width=140)
+
+                with subtab_images:
+                    st.markdown('<div class="detail-section-title">🖼️ Galeria de Imagens do Fato / Cenas do Local</div>', unsafe_allow_html=True)
+                    r_images = getattr(selected_report, "images", []) or []
+                    if not r_images:
+                        st.info("Nenhuma imagem geral de cena ou evidência registrada para este RELINT.")
+                    else:
+                        cols_img = st.columns(3)
+                        for i_idx, img_item in enumerate(r_images):
+                            if isinstance(img_item, dict):
+                                img_path = img_item.get("path") or img_item.get("file_path") or ""
+                                img_caption = img_item.get("caption") or f"Imagem #{i_idx+1}"
+                            else:
+                                img_path = str(img_item)
+                                img_caption = f"Imagem #{i_idx+1}"
+
+                            if img_path and Path(img_path).exists():
+                                with cols_img[i_idx % 3]:
+                                    st.image(img_path, caption=img_caption, use_container_width=True)
+
 
                 with subtab_content:
                     st.markdown('<div class="detail-section-title">Histórico Literal do RELINT</div>', unsafe_allow_html=True)
@@ -283,6 +307,7 @@ else:
                             p_name = get_participant_field(p, "name")
                             p_nick = get_participant_field(p, "nickname")
                             p_doc = get_participant_field(p, "document")
+                            p_photo = get_participant_field(p, "photo_path")
                             
                             st.markdown(f"*Participante #{p_idx+1}:*")
                             col_pt1, col_pt2, col_pt3 = st.columns(3)
@@ -291,7 +316,7 @@ else:
                             e_doc = col_pt3.text_input("Doc (CPF/RG)", value=p_doc, key=f"form_pdoc_{p_idx}")
                             
                             if e_name.strip() or e_nick.strip() or e_doc.strip():
-                                updated_participants.append(Participant(name=e_name.strip(), nickname=e_nick.strip(), document=e_doc.strip()))
+                                updated_participants.append(Participant(name=e_name.strip(), nickname=e_nick.strip(), document=e_doc.strip(), photo_path=p_photo))
                         
                         st.markdown("*Adicionar Novo Participante:*")
                         col_new_p1, col_new_p2, col_new_p3 = st.columns(3)
@@ -309,6 +334,7 @@ else:
                                 subject=edit_subject.strip(),
                                 modification_date_history=edit_date.strip(),
                                 participants=updated_participants,
+                                images=getattr(selected_report, "images", []),
                                 content=edit_content,
                                 summary=edit_summary.strip(),
                                 bm_group=edit_bm_group,
@@ -395,9 +421,20 @@ else:
                     </div>
                     """), unsafe_allow_html=True)
                     
+                    # Exibe galeria de fotos do indivíduo no dossiê
+                    p_photos = p.get("photos", [])
+                    valid_photos = [ph for ph in p_photos if Path(ph).exists()]
+                    if valid_photos:
+                        with st.expander(f"🖼️ Ver Fotos do Indivíduo ({len(valid_photos)})"):
+                            photo_cols = st.columns(min(3, len(valid_photos)))
+                            for ph_idx, ph_path in enumerate(valid_photos):
+                                with photo_cols[ph_idx % 3]:
+                                    st.image(ph_path, caption=f"Foto #{ph_idx+1}", use_container_width=True)
+
                     with st.expander(f"📁 Ver RELINTs vinculados ({len(p['linked_relints'])})"):
                         for relint_file in p["linked_relints"]:
                             st.write(f"- 📄 `{relint_file}`")
+
 
     # =========================================================================
     # ABA 3: MUNICÍPIOS (MANCHA TERRITORIAL)

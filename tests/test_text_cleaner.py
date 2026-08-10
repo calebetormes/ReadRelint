@@ -91,3 +91,30 @@ def test_clean_relint_text_pagination():
     assert "Ocorrência de teste." in cleaned
     assert "Conteúdo da segunda página." in cleaned
     assert "Fim do documento." in cleaned
+
+
+def test_extract_date_and_time_of_fact():
+    from src.application.text_cleaner import extract_date_of_fact, extract_time_of_fact
+
+    text = "Fato ocorrido no dia 15 de julho de 2026, por volta das 14h30min, no centro da cidade."
+    assert extract_date_of_fact(text) == "15 de julho de 2026"
+    assert extract_time_of_fact(text) == "14h30min"
+
+    text2 = "Ocorrência registrada em 10/08/2026 às 08:15h."
+    assert extract_date_of_fact(text2) == "10/08/2026"
+    assert extract_time_of_fact(text2) == "08:15h"
+
+
+def test_extract_map_url_and_coordinates():
+    from src.application.text_cleaner import extract_map_url, resolve_coordinates_and_map_info
+
+    text = "Localização disponível em https://google.com/maps/place/-28.2612,-53.4912 no município."
+    url = extract_map_url(text)
+    assert "google.com/maps" in url
+
+    text_coords = "Ocorrência no ponto -28.26123, -53.49123 na zona rural."
+    found_url, coords = resolve_coordinates_and_map_info(text_coords)
+    assert coords == "-28.26123, -53.49123"
+
+
+

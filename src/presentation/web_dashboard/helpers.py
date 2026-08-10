@@ -143,14 +143,17 @@ def get_report_structured_address(r: Any) -> Dict[str, str]:
 
 
 def load_data() -> Tuple[List[Any], Path]:
-    """Carrega dados do relatório de inteligência usando TinyDbRepo."""
-    db_path = Path("data/relints.json")
-    if not db_path.exists():
-        db_path = Path("data/homicides.json")
-        if not db_path.exists():
-            return [], Path("data/relints.json")
-    repo = TinyDbRepo(db_path)
-    return repo.get_all(), db_path
+    """Carrega dados dos relatórios de inteligência a partir do SQLite."""
+    db_path = Path("data/relints.db")
+    if db_path.exists():
+        try:
+            from src.adapters.sqlite_repo import SqliteRepo
+            repo = SqliteRepo(db_path)
+            return repo.get_all(), db_path
+        except Exception:
+            pass
+    return [], db_path
+
 
 def find_vinculos(current_file: str, name: str, doc: str, all_reports: List[Any]) -> List[str]:
     """Procura por outros relatórios que citem o mesmo participante (por nome ou documento)."""
@@ -219,17 +222,16 @@ def filter_reports(reports: List[Any], search_query: str, selected_groups: List[
 
 def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
     """
-    Carrega ou agrega pessoas consolidadas (dossiê) a partir dos relatórios ou do repo de pessoas.
-    Garante resiliência mesmo se o banco participants.json ainda não tiver sido populado pelo ETL.
+    Carrega ou agrega pessoas consolidadas (dossiê) a partir dos relatórios ou do repo de pessoas (SQLite).
     """
     persons_map: Dict[str, Dict[str, Any]] = {}
     
-    # 1. Tentar ler do banco dedicado se existir
-    part_db_path = Path("data/participants.json")
+    # 1. Tentar ler do banco dedicado se existir (SQLite)
+    part_db_path = Path("data/relints.db")
     if part_db_path.exists():
         try:
-            from src.adapters.tinydb_person_repo import TinyDbPersonRepo
-            repo = TinyDbPersonRepo(part_db_path)
+            from src.adapters.sqlite_person_repo import SqlitePersonRepo
+            repo = SqlitePersonRepo(part_db_path)
             for p in repo.get_all():
                 key = p.person_id
                 persons_map[key] = {
@@ -245,6 +247,7 @@ def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
             pass
 
     # 2. Se a leitura do banco não trouxe registros ou se queremos enriquecer com os relatórios atuais:
+
     for r in reports:
         source_file = r.source_file
         for p in (r.participants or []):
@@ -274,6 +277,7 @@ def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
                 }
             else:
                 entry = persons_map[key]
+
                 if name and entry["name"] in ["Desconhecido", ""] and name != entry["name"]:
                     entry["name"] = name
                 if nick and nick not in entry["aliases"]:
@@ -289,18 +293,19 @@ def get_persons_data(reports: List[Any]) -> List[Dict[str, Any]]:
 
     return list(persons_map.values())
 
+
 def get_municipalities_data(reports: List[Any]) -> List[Dict[str, Any]]:
     """
     Carrega ou agrega dados de municípios (Mancha Criminal Territorial).
     """
     muni_map: Dict[str, Dict[str, Any]] = {}
 
-    # 1. Tentar ler do banco dedicado se existir
-    muni_db_path = Path("data/municipalities.json")
-    if muni_db_path.exists():
+    # 1. Tentar ler do banco dedicado se existir (SQLite)
+    db_path = Path("data/relints.db")
+    if db_path.exists():
         try:
-            from src.adapters.tinydb_municipality_repo import TinyDbMunicipalityRepo
-            repo = TinyDbMunicipalityRepo(muni_db_path)
+            from src.adapters.sqlite_municipality_repo import SqliteMunicipalityRepo
+            repo = SqliteMunicipalityRepo(db_path)
             for m in repo.get_all():
                 muni_map[m.name.upper()] = {
                     "name": m.name,

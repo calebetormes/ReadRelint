@@ -56,19 +56,16 @@ class EtlService:
         start_time = time.time()
         
         try:
-            if rule and self.processed_registry.is_processed(filename, rule.name):
-                records = self.processed_registry.get_all_records()
-                status = records.get(filename, {}).get(rule.name)
-                if status == "confirmed" and not self.database_repo.exists_by_source_file(filename):
-                    self.processed_registry.remove_record(filename, rule.name)
-                else:
-                    if on_progress: on_progress(f"[{filename}] Já processado. Pulando.")
-                    return None
-
-            if self.database_repo.exists_by_source_file(filename):
+            if self.database_repo.exists_by_source_file(filename) is True:
                 if on_progress: on_progress(f"[{filename}] Já cadastrado no banco. Pulando.")
                 if rule: self.processed_registry.register_processed(filename, rule.name, "confirmed")
                 return None
+
+            if rule and self.processed_registry.is_processed(filename, rule.name) is True:
+                if on_progress: on_progress(f"[{filename}] Já processado. Pulando.")
+                return None
+
+
 
             if on_progress: on_progress(f"[{filename}] -> Extraindo texto do PDF...")
             raw_text = self.file_parser.extract_text(file_path)
@@ -143,7 +140,35 @@ class EtlService:
                 if not is_pm and p_name.strip():
                     filtered_participants.append(p)
 
-            response_dict["participants"] = filtered_participants
+            # 6. Extração e Classificação de Imagens do PDF (Fotos de Participantes vs Cenas do Fato)
+            media_dir = Path("data/media") / file_path.stem
+            extracted_images = []
+            try:
+                if hasattr(self.file_parser, "extract_images"):
+                    res = self.file_parser.extract_images(file_path, media_dir)
+                    if isinstance(res, list):
+                        extracted_images = res
+            except Exception:
+                extracted_images = []
+
+
+            general_scene_images = []
+            for img_info in extracted_images:
+                path_str = img_info.get("file_path", "")
+                caption_str = img_info.get("caption", "")
+                if path_str:
+                    general_scene_images.append({"path": path_str, "caption": caption_str})
+
+            # Atribuição de participantes (sem foto individual nesta etapa)
+            parsed_participants = []
+            for p in filtered_participants:
+                p_dict = p if isinstance(p, dict) else p.model_dump()
+                p_dict["photo_path"] = None
+                parsed_participants.append(p_dict)
+
+            response_dict["participants"] = parsed_participants
+            response_dict["images"] = general_scene_images
+
 
             # Instancia a entidade de domínio principal (RELINT)
             report_data = {
@@ -166,7 +191,8 @@ class EtlService:
                     address=response_dict.get("address", ""),
                     date_of_fact=date_val,
                     modification_date_history=date_val,
-                    participants=filtered_participants
+                    participants=parsed_participants,
+                    images=general_scene_images
                 )
 
 
@@ -187,6 +213,8 @@ class EtlService:
                         existing_person.linked_relints.append(filename)
                     if participant.nickname and participant.nickname not in existing_person.aliases:
                         existing_person.aliases.append(participant.nickname)
+                    if participant.photo_path and participant.photo_path not in existing_person.photos:
+                        existing_person.photos.append(participant.photo_path)
                     self.person_repo.update(existing_person)
                 else:
                     new_person = Person(
@@ -194,9 +222,11 @@ class EtlService:
                         name=participant.name,
                         aliases=[participant.nickname] if participant.nickname else [],
                         documents=[participant.document] if participant.document else [],
+                        photos=[participant.photo_path] if participant.photo_path else [],
                         linked_relints=[filename]
                     )
                     self.person_repo.save(new_person)
+
 
             # Upsert de Locais no banco de Municípios (baseado nos Tipos de Local ou extraindo cidade, 
             # Como a extração de cidade exata é complexa e não temos um campo 'city', usaremos 
@@ -214,13 +244,15 @@ class EtlService:
                 if filename not in mun.linked_relints:
                     mun.linked_relints.append(filename)
                 
-                group = str(report.bm_group.value)
+                bm_val = getattr(report.bm_group, "value", report.bm_group)
+                group = str(bm_val) if bm_val else "Outros"
                 mun.stats_by_group[group] = mun.stats_by_group.get(group, 0) + 1
                 
                 if self.municipality_repo.get_by_name(city_mock):
                     self.municipality_repo.update(mun)
                 else:
                     self.municipality_repo.save(mun)
+
 
             if rule:
                 self.processed_registry.register_processed(filename, rule.name, "confirmed")

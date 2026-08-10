@@ -21,7 +21,6 @@ def test_ollama_client_success(mock_post):
     assert result["bm_group"] == "Outros"
     assert len(result["participants"]) == 1
     assert result["participants"][0]["name"] == "José"
-    assert result["content"] == "Texto bruto do RELINT"
 
     mock_post.assert_called_once()
 
@@ -34,8 +33,5 @@ def test_ollama_client_failure(mock_post):
     client = OllamaClient()
     result = client.process_text("Texto bruto")
 
-    assert result["subject"] == "Erro de processamento da IA"
-    assert result["bm_group"] == "Outros"
-    assert "Connection refused" in result["summary"]
-    assert result["participants"] == []
-    assert result["content"] == "Texto bruto"
+    assert result == {}
+

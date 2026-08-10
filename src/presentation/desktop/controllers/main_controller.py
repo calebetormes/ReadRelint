@@ -5,9 +5,9 @@ from typing import Callable, Optional, Set
 
 from src.adapters.pdf_reader import PdfReader
 from src.adapters.ollama_client import OllamaClient
-from src.adapters.tinydb_repo import TinyDbRepo
-from src.adapters.tinydb_person_repo import TinyDbPersonRepo
-from src.adapters.tinydb_municipality_repo import TinyDbMunicipalityRepo
+from src.adapters.sqlite_repo import SqliteRepo
+from src.adapters.sqlite_person_repo import SqlitePersonRepo
+from src.adapters.sqlite_municipality_repo import SqliteMunicipalityRepo
 from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
 from src.domain.rules.relint_rule import RelintRule
@@ -46,14 +46,15 @@ class MainController:
         self.session_post_llm_filtered_count: int = 0
         self.session_skipped_files: Set[str] = set()
 
-        # Injeção de Dependências do Domínio e Aplicação
+        # Injeção de Dependências do Domínio e Aplicação (SQLite)
         self.pdf_reader = PdfReader()
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()
         
-        self.db_repo = TinyDbRepo(Path("data") / self.active_rule.db_name)
-        self.person_repo = TinyDbPersonRepo(Path("data/participants.json"))
-        self.municipality_repo = TinyDbMunicipalityRepo(Path("data/municipalities.json"))
+        db_path = Path("data/relints.db")
+        self.db_repo = SqliteRepo(db_path)
+        self.person_repo = SqlitePersonRepo(db_path)
+        self.municipality_repo = SqliteMunicipalityRepo(db_path)
         self.processed_registry = JsonProcessedRegistry(Path("data/processed_registry.json"))
         
         self.etl_service = EtlService(
@@ -64,6 +65,7 @@ class MainController:
             person_repo=self.person_repo,
             municipality_repo=self.municipality_repo
         )
+
 
         # Gerenciador do Dashboard
         self.dashboard_manager = DashboardManager(log_callback=self.log)
@@ -112,8 +114,9 @@ class MainController:
 
         try:
             folder = Path(self.monitoring_path)
-            existing_pdfs = list(folder.glob("*.pdf"))
+            existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
             self.total_files_in_folder = len(existing_pdfs)
+
             to_process_pdfs = []
             
             # Otimização O(1): Cache de histórico e banco de dados para evitar leitura O(N²) de JSON
@@ -122,18 +125,16 @@ class MainController:
             db_files_set = {report.source_file for report in db_reports}
             
             for pdf_file in existing_pdfs:
-                status = all_records.get(pdf_file.name, {}).get(self.active_rule.name)
-                in_db = pdf_file.name in db_files_set
+                in_db = self.db_repo.exists_by_source_file(pdf_file.name)
                 
-                # Sincronização: limpar histórico se banco foi limpo
-                if status == "confirmed" and not in_db:
+                # Sincronização: se o arquivo não está no banco relints.json, limpa histórico antigo para forçar leitura
+                if not in_db:
                     self.processed_registry.remove_record(pdf_file.name, self.active_rule.name)
-                    status = None
-
-                if (in_db or status is not None):
+                else:
                     self.skipped_count += 1
                     self.session_skipped_files.add(pdf_file.name)
                     continue
+
                     
                 to_process_pdfs.append(pdf_file)
                 try:
@@ -186,19 +187,17 @@ class MainController:
 
     def on_pdf_detected(self, file_path: Path):
         """Callback acionado pelo FolderWatcher ao identificar novo PDF."""
-        records = self.processed_registry.get_all_records()
-        status = records.get(file_path.name, {}).get(self.active_rule.name)
+        in_db = self.db_repo.exists_by_source_file(file_path.name)
         
-        if status == "confirmed" and not self.db_repo.exists_by_source_file(file_path.name):
+        if not in_db:
             self.processed_registry.remove_record(file_path.name, self.active_rule.name)
-            status = None
-
-        if (self.db_repo.exists_by_source_file(file_path.name) or status is not None):
+        else:
             self.skipped_count += 1
             self.session_skipped_files.add(file_path.name)
-            self.log(f"[{file_path.name}] Novo arquivo detectado, mas já analisado/descartado. Pulando.")
+            self.log(f"[{file_path.name}] Já cadastrado no banco relints.json. Pulando.")
             self.update_ui()
             return
+
 
         self.log(f"Novo arquivo detectado pelo monitor: {file_path.name}")
         self.total_discovered += 1
@@ -296,7 +295,13 @@ class MainController:
     def clear_all_history(self):
         """Remove todos os dados do banco e registros processados."""
         self.processed_registry.clear()
-        self.db_repo.db.truncate()
+        if hasattr(self.db_repo, "clear_all"):
+            self.db_repo.clear_all()
+        if hasattr(self.person_repo, "clear_all"):
+            self.person_repo.clear_all()
+        if hasattr(self.municipality_repo, "clear_all"):
+            self.municipality_repo.clear_all()
+
         self.confirmed_homicides_count = 0
         self.processed_count = 0
         self.skipped_count = 0

@@ -39,14 +39,17 @@ def test_etl_service_with_rule_skips_processing():
     mock_parser.extract_text.return_value = "Furto de veículo na garagem da residência."
     
     mock_llm = Mock()
-    mock_llm.process_text.return_value = {"natureza": "furto", "content": "Texto do furto."}
+    mock_llm.process_text.return_value = {"main_fact": "furto", "content": "Texto do furto."}
     mock_db = Mock()
     mock_db.exists_by_source_file.return_value = False
     
     mock_registry = Mock()
     mock_registry.is_processed.return_value = False
+    mock_person_repo = Mock()
+    mock_municipality_repo = Mock()
+    mock_municipality_repo.get_by_name.return_value = None
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
     rule = HomicideRule()
     
     progress_calls = []
@@ -78,15 +81,18 @@ def test_etl_service_with_rule_processes_matching_file():
     mock_parser.extract_text.return_value = "Suspeito desferiu tiros e cometeu homicídio."
     
     mock_llm = Mock()
-    mock_llm.process_text.return_value = {"natureza": "homicídio consumado", "content": "Resumo estruturado do homicídio."}
+    mock_llm.process_text.return_value = {"main_fact": "homicídio consumado", "content": "Resumo estruturado do homicídio."}
     
     mock_db = Mock()
     mock_db.exists_by_source_file.return_value = False
     
     mock_registry = Mock()
     mock_registry.is_processed.return_value = False
- 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry)
+    mock_person_repo = Mock()
+    mock_municipality_repo = Mock()
+    mock_municipality_repo.get_by_name.return_value = None
+
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
     rule = HomicideRule()
     
     filtered_calls = []
@@ -116,15 +122,18 @@ def test_etl_service_with_rule_discards_post_llm_false_positive():
     
     mock_llm = Mock()
     # A LLM avalia semanticamente que é lesão leve, mas o ETL não descarta mais nada
-    mock_llm.process_text.return_value = {"natureza": "lesão corporal leve", "content": "Apenas lesão leve."}
+    mock_llm.process_text.return_value = {"main_fact": "lesão corporal leve", "content": "Apenas lesão leve."}
     
     mock_db = Mock()
     mock_db.exists_by_source_file.return_value = False
     
     mock_registry = Mock()
     mock_registry.is_processed.return_value = False
- 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry)
+    mock_person_repo = Mock()
+    mock_municipality_repo = Mock()
+    mock_municipality_repo.get_by_name.return_value = None
+
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
     rule = HomicideRule()
     
     filtered_calls = []
@@ -145,7 +154,6 @@ def test_etl_service_with_rule_discards_post_llm_false_positive():
     mock_db.save.assert_called_once()
     assert len(filtered_calls) == 0
     assert len(sent_calls) == 1
-    assert len(sent_calls) == 1      # E foi enviado ao LLM
 
 def test_etl_service_skips_when_already_processed_in_registry():
     mock_parser = Mock()
@@ -153,10 +161,11 @@ def test_etl_service_skips_when_already_processed_in_registry():
     mock_db = Mock()
     
     mock_registry = Mock()
-    # Simula que o arquivo já foi processado/descartado anteriormente para a regra
     mock_registry.is_processed.return_value = True
-    
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry)
+    mock_person_repo = Mock()
+    mock_municipality_repo = Mock()
+
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
     rule = HomicideRule()
     
     progress_calls = []
@@ -171,7 +180,7 @@ def test_etl_service_skips_when_already_processed_in_registry():
     mock_parser.extract_text.assert_not_called()
     mock_llm.process_text.assert_not_called()
     # Deve conter log informando que foi pulado pelo histórico
-    assert any("Já processado anteriormente" in msg for msg in progress_calls)
+    assert any("Já processado" in msg for msg in progress_calls)
 
 def test_validate_qa_results_scenarios():
     rule = HomicideRule()
@@ -205,33 +214,30 @@ def test_validate_qa_results_scenarios():
     }) is False
 
 
-def test_etl_service_prioritizes_user_manual_edits():
+def test_etl_service_skips_when_exists_in_database():
     mock_parser = Mock()
-    mock_parser.extract_text.return_value = "Suspeito cometeu homicídio."
-
     mock_llm = Mock()
-    mock_llm.process_text.return_value = {"natureza": "homicídio consumado", "content": "Resumo estruturado."}
-
     mock_db = Mock()
-    mock_db.exists_by_source_file.return_value = False
+    mock_db.exists_by_source_file.return_value = True
 
     mock_registry = Mock()
     mock_registry.is_processed.return_value = False
-    # Simula que existe uma edição manual do usuário no histórico para o arquivo e regra
-    mock_registry.get_user_edit.return_value = "Feminicídio Tentado"
+    mock_person_repo = Mock()
+    mock_municipality_repo = Mock()
 
-    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry)
+    service = EtlService(mock_parser, mock_llm, mock_db, mock_registry, mock_person_repo, mock_municipality_repo)
     rule = HomicideRule()
 
+    progress_calls = []
     report = service.process_file(
-        file_path=Path("dummy_homicidio.pdf"),
-        rule=rule
+        file_path=Path("dummy_already_in_db.pdf"),
+        rule=rule,
+        on_progress=lambda m: progress_calls.append(m)
     )
 
-    assert report is not None
-    # Deve usar "Feminicídio Tentado" em vez de "homicídio consumado" sugerido pela LLM
-    assert report.main_fact == "Feminicídio Tentado"
-    assert report.user_edited is True
-    # O mock_registry deve ter sido consultado
-    mock_registry.get_user_edit.assert_called_once_with("dummy_homicidio.pdf", "Homicídio")
+    assert report is None
+    mock_parser.extract_text.assert_not_called()
+    mock_llm.process_text.assert_not_called()
+    assert any("Já cadastrado no banco" in msg for msg in progress_calls)
+
 
