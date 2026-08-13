@@ -138,7 +138,14 @@ class EtlService:
                     filtered_participants.append(p)
 
             # 6. Extração de Imagens do PDF (Galeria do RELINT)
-            media_dir = Path("data/media") / file_path.stem
+            import re
+            import hashlib
+            stem_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', file_path.stem)
+            stem_clean = re.sub(r'_+', '_', stem_clean).strip('_')
+            safe_hash = hashlib.md5(file_path.name.encode('utf-8', errors='replace')).hexdigest()[:8]
+            safe_folder_name = f"{stem_clean[:35]}_{safe_hash}"
+
+            media_dir = Path("data/media") / safe_folder_name
             extracted_images = []
             try:
                 if hasattr(self.file_parser, "extract_images"):

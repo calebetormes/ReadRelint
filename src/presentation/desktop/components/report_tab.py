@@ -78,7 +78,21 @@ class ReportTab(ctk.CTkFrame):
             fg_color="#b91c1c", hover_color="#991b1b",
             command=self.controller.clear_all_history
         )
-        self.btn_clear_history.pack(side="right", padx=10)
+        self.btn_clear_history.pack(side="right", padx=5)
+
+        self.btn_open_streamlit = ctk.CTkButton(
+            self.report_toolbar, text="📊 Streamlit", width=100,
+            fg_color="#475569", hover_color="#334155",
+            command=self.controller.open_streamlit_dashboard
+        )
+        self.btn_open_streamlit.pack(side="right", padx=5)
+
+        self.btn_open_dashboard = ctk.CTkButton(
+            self.report_toolbar, text="🌐 Painel Web (v2.0)", width=150, 
+            fg_color="#3b82f6", hover_color="#2563eb",
+            command=self.controller.open_dashboard
+        )
+        self.btn_open_dashboard.pack(side="right", padx=5)
 
         # Lista de Arquivos
         self.report_scroll = ctk.CTkScrollableFrame(self.report_content_frame, fg_color="transparent")
@@ -179,13 +193,34 @@ class ReportTab(ctk.CTkFrame):
             pending = max(0, self.controller.total_discovered - self.controller.processed_count)
             is_reading = self.controller.is_monitoring and (pending > 0 or self.controller.current_filename != "")
             
+            import re
+            import hashlib
+            stem_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', Path(filename).stem)
+            stem_clean = re.sub(r'_+', '_', stem_clean).strip('_')
+            safe_hash = hashlib.md5(filename.encode('utf-8', errors='replace')).hexdigest()[:8]
+            safe_folder_name = f"{stem_clean[:35]}_{safe_hash}"
+
+            media_folder = Path("data/media") / safe_folder_name
+            if not media_folder.exists():
+                media_folder = Path("data/media") / Path(filename).stem
+
+            image_files = list(media_folder.glob("*.*")) if media_folder.exists() else []
+
             if not is_reading:
                 btn_reprocess = ctk.CTkButton(
                     row_frame, text="Reprocessar", width=85, height=24,
                     fg_color="#334155", hover_color="#475569", font=ctk.CTkFont(size=11),
                     command=lambda f=filename, r=self.controller.active_rule.name: self.controller.reprocess_file_history(f, r)
                 )
-                btn_reprocess.pack(side="right", padx=10, pady=10)
+                btn_reprocess.pack(side="right", padx=5, pady=10)
+
+            if image_files:
+                btn_photos = ctk.CTkButton(
+                    row_frame, text=f"📷 Fotos ({len(image_files)})", width=90, height=24,
+                    fg_color="#0284c7", hover_color="#0369a1", font=ctk.CTkFont(size=11),
+                    command=lambda f=filename, imgs=image_files: self.show_photo_gallery_modal(f, imgs)
+                )
+                btn_photos.pack(side="right", padx=5, pady=10)
 
         # Renderizar Sessão Atual
         if current_session_files:
@@ -206,3 +241,50 @@ class ReportTab(ctk.CTkFrame):
             lbl_prev.pack(anchor="w", pady=(20, 5), padx=5)
             for f in previous_session_files:
                 render_file_card(f, is_previous=True)
+
+    def show_photo_gallery_modal(self, filename: str, image_files: list):
+        """Abre uma janela modal CustomTkinter para visualizar as fotos do RELINT."""
+        window = ctk.CTkToplevel(self)
+        window.title(f"Fotos do RELINT - {filename}")
+        window.geometry("720x520")
+        window.grab_set()
+
+        lbl_title = ctk.CTkLabel(
+            window, 
+            text=f"📷 Fotos & Anexos do Fato ({len(image_files)}) — {filename}", 
+            font=ctk.CTkFont(size=15, weight="bold")
+        )
+        lbl_title.pack(pady=12)
+
+        scroll_frame = ctk.CTkScrollableFrame(window)
+        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+        from PIL import Image
+        for img_path in image_files:
+            try:
+                pil_img = Image.open(img_path)
+                w, h = pil_img.size
+                ratio = w / h if h > 0 else 1.0
+                thumb_w = 260
+                thumb_h = int(thumb_w / ratio) if ratio > 0 else 180
+                
+                pil_img = pil_img.resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
+                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(thumb_w, thumb_h))
+
+                card = ctk.CTkFrame(scroll_frame, fg_color="#1e293b", corner_radius=8)
+                card.pack(pady=8, padx=10, fill="x")
+
+                img_label = ctk.CTkLabel(card, image=ctk_img, text="")
+                img_label.image = ctk_img
+                img_label.pack(side="left", padx=12, pady=12)
+
+                info_frame = ctk.CTkFrame(card, fg_color="transparent")
+                info_frame.pack(side="left", padx=10, pady=12, fill="both", expand=True)
+
+                lbl_fname = ctk.CTkLabel(info_frame, text=f"Imagem: {img_path.name}", font=ctk.CTkFont(size=13, weight="bold"), anchor="w")
+                lbl_fname.pack(anchor="w", pady=(0, 4))
+
+                lbl_path = ctk.CTkLabel(info_frame, text=f"Caminho local: {img_path}", font=ctk.CTkFont(size=11), text_color="#94a3b8", anchor="w")
+                lbl_path.pack(anchor="w")
+            except Exception as e:
+                pass

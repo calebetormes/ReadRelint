@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadRelint - Administrador de RELINTs</title>
+  
+  <!-- Vendor CSS (Offline) -->
+  <link rel="stylesheet" href="/static/assets/vendor/leaflet.css">
+
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <i data-lucide="shield-alert"></i>
+          </div>
+          <div class="sidebar-title">ReadRelint</div>
+        </div>
+
+        <ul class="nav-list">
+          <li class="nav-item active" data-tab="relints">
+            <i data-lucide="file-text"></i>
+            <span>RELINTs</span>
+          </li>
+          <li class="nav-item" data-tab="participants">
+            <i data-lucide="users"></i>
+            <span>Participantes</span>
+          </li>
+          <li class="nav-item" data-tab="municipalities">
+            <i data-lucide="map-pin"></i>
+            <span>Municípios</span>
+          </li>
+          <li class="nav-item" data-tab="crimes">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Crimes & Estatísticas</span>
+          </li>
+          <li class="nav-item" data-tab="gallery">
+            <i data-lucide="image"></i>
+            <span>Anexos & Fotos</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="dot"></span>
+          <span>Motor Local Offline</span>
+        </div>
+        <div>v2.0.0 (FastAPI + Web)</div>
+      </div>
+    </aside>
+
+    <!-- Content Workspace -->
+    <main class="content-area">
+      <!-- Top Bar -->
+      <header class="top-header">
+        <h1 class="page-title" id="page-title">RELINTs</h1>
+
+        <div class="header-actions">
+          <a href="http://localhost:8501" target="_blank" class="btn-dashboard-link" style="background-color: var(--primary, #3b82f6); color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Abrir Dashboard</span>
+          </a>
+          <span class="badge badge-blue" id="api-status-badge">API: CONNECTING...</span>
+        </div>
+      </header>
+
+      <!-- Tab Content Area -->
+      <!-- Aba 1: RELINTs -->
+      <section class="tab-content active" id="tab-relints">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="file-check"></i>
+            Relatórios de Inteligência (RELINTs)
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Tabela Master-Detail com filtros interativos, busca por palavra-chave e visualizador de dossiês.
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 2: Participantes -->
+      <section class="tab-content" id="tab-participants">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="user-check"></i>
+            Cruzamento de Vínculos de Participantes
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Dossiê completo de envolvidos (RG/CPF, alcunha, fotos e histórico de ocorrências).
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 3: Municípios -->
+      <section class="tab-content" id="tab-municipalities">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="map"></i>
+            Mancha Criminal & Geolocalização
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Mapa interativo Leaflet.js com pontos de ocorrência e ranking por cidade.
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 5: Anexos & Fotos -->
+      <section class="tab-content" id="tab-gallery">
+        <div class="card">
+          <div class="gallery-header">
+            <div class="card-title" style="margin-bottom: 0;">
+              <i data-lucide="image"></i> Galeria Geral de Fotos & Anexos do Fato
+            </div>
+            <span class="badge badge-blue" id="gallery-count-badge">0 Imagens Extraídas</span>
+          </div>
+          <div id="gallery-container" class="gallery-grid-full">
+            <div class="loading-state">Carregando galeria de fotos...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+      <img id="lightbox-img" src="" alt="Imagem Ampliada" class="lightbox-img" />
+      <div id="lightbox-caption" class="lightbox-caption">Legenda da imagem</div>
+    </div>
+  </div>
+
+  <!-- Vendor JS Libraries (Offline) -->
+  <script src="/static/assets/vendor/lucide.min.js"></script>
+  <script src="/static/assets/vendor/leaflet.js"></script>
+  <script src="/static/assets/vendor/apexcharts.min.js"></script>
+
+  <!-- Application JS -->
+  <script src="/static/js/views/relints_view.js"></script>
+  <script src="/static/js/views/gallery_view.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

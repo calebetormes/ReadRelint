@@ -1,4 +1,4 @@
-# Decisões Técnicas e Fluxo da IA (ADR & Workflow)
+﻿# Decisões Técnicas e Fluxo da IA (ADR & Workflow)
 
 Este documento contém os registros de decisões arquiteturais importantes (ADRs) que ditam a lógica técnica do projeto, e os roteiros operativos de como o Agente de IA deve atuar.
 
@@ -21,15 +21,16 @@ Sempre que concluir grandes blocos de tarefas:
 ## 2. Registro de Decisões de Arquitetura (ADRs)
 
 - **[ADR-001] Clean Architecture e NLP Local:** Isolamento total via Ports e Adapters. Uso exclusivo do `Ollama` rodando localmente, evitando quebras de LGPD (nenhum PDF sai da máquina).
-- **[ADR-002] Interface Híbrida:** Streamlit para leitura e cruzamento (Dashboard) e CustomTkinter para monitoramento de pastas OS-level (Desktop).
+- **[ADR-002] Interface Híbrida:** FastAPI + SPA Web para leitura e cruzamento (Dashboard) e CustomTkinter para monitoramento de pastas OS-level (Desktop).
 - **[ADR-003] Migração de TinyDB para SQLite (Persistência Principal):** Uso de `SQLite` nativo em modo WAL (Write-Ahead Logging) em `data/relints.db`. Motivo: Resiliência contra concorrência e tabelas estruturadas que permitem queries velozes para dossiês, abandonando o gargalo de O(N) do TinyDB.
 - **[ADR-004] Separação de Dados de Pessoas:** Criação da tabela e domínio independente de `Person` no SQLite (`persons`). Garante dossiês hiper-velozes e cruzamento de vínculos de pessoas através dos RELINTs.
 - **[ADR-005] Exclusão de Guarnições PM e Transcrição Segura:** Policiais não são adicionados aos dossiês de pessoas investigadas (apenas vítimas/testemunhas/acusados/civis). O histórico literal (`content`) do boletim é extraído via código determinístico (Python/Regex) e ocultado da IA (LLM), evitando que ela trunque ou resuma erroneamente a transcrição exata dos fatos.
 - **[ADR-006] Prioridade da Curadoria Humana:** Uso do `processed_registry.json` para gravar edições efetuadas pelo usuário humano e forçar que a IA nunca sobrescreva alterações humanas caso o PDF seja reprocessado.
 - **[ADR-007] Geolocalização Visual por 3 Níveis:** Cores indicando precisão da localização no Dashboard: Verde (GPS exato capturado do PDF), Azul (Link explícito capturado), Laranja (Endereço estruturado via fallback).
-- **[ADR-008] Repositório Universal (Sem Descartes):** Nenhum boletim válido lido do diretório deve ser silenciado. Todos devem ir para o banco. A filtragem de "ocorrências indesejadas" ocorre apenas na UI do Streamlit.
+- **[ADR-008] Repositório Universal (Sem Descartes):** Nenhum boletim válido lido do diretório deve ser silenciado. Todos devem ir para o banco. A filtragem de "ocorrências indesejadas" ocorre apenas na UI.
 - **[ADR-009] Suíte de Testes 100% Mockada:** O `pytest` usa fixtures de memória (`tmp_path`) e mocks simulando Ollama e PyMuPDF para executar CI instantâneo sem necessitar ambiente pesado pré-configurado.
 - **[ADR-017] Remoção da Tabela de Municípios (Cálculo On-The-Fly):** Eliminação da tabela `municipalities` e da entidade/porta correspondente. Os índices de criminalidade por município e contagem de RELINTs são agrupados dinamicamente diretamente a partir da tabela principal `relints`, garantindo Single Source of Truth e eliminando qualquer risco de dessincronia no ETL.
 - **[ADR-018] Migração de Streamlit para FastAPI + Frontend Custom:** Decisão de substituir o Streamlit por uma arquitetura **FastAPI (backend API REST)** + **Frontend HTML/CSS/JS puro** para obter controle total de UX/UI, permitindo design premium, responsivo e com micro-animações — impossível de atingir com as limitações visuais do Streamlit.
 - **[ADR-019] Acesso Online com E2EE (Cloudflare Tunnel):** Dados de inteligência policial trafegam criptografados ponta-a-ponta (AES-256-GCM) na camada da aplicação. A Cloudflare atua apenas como túnel de transporte — vê somente blobs cifrados. A chave de criptografia é derivada da senha do usuário (PBKDF2/HKDF) e nunca trafega pela rede. Autenticação separada via hash bcrypt/argon2.
 - **[ADR-020] Descarte da Associação Automática de Fotos a Participantes:** A heurística espacial/legenda para vincular imagens extraídas a participantes individuais foi descartada por imprecisão. Todas as imagens vão para a galeria geral do RELINT.
+- **[ADR-021] Remoção Completa do Streamlit:** Após a consolidação bem-sucedida do SPA HTML/JS e FastAPI, removeu-se completamente toda a pasta `src/presentation/web_dashboard`, dependências associadas do `requirements.txt` (como `streamlit` e `plotly`) e botões da GUI CustomTkinter, simplificando a base de código e eliminando redundâncias.

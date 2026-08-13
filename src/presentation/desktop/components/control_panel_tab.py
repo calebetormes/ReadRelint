@@ -106,22 +106,21 @@ class ControlPanelTab(ctk.CTkFrame):
         )
         self.btn_update.pack(side="left", padx=10)
 
-        # Direita (Dashboards)
         self.btn_dashboard_close = ctk.CTkButton(
-            self.action_frame, 
-            text="Encerrar Dashboards", 
-            command=self.kill_all_dashboards,
+            self.action_frame,
+            text="Parar Servidor Web",
+            command=self.stop_web_server,
             fg_color="#ef4444", hover_color="#b91c1c"
         )
-        self.btn_dashboard_close.pack(side="right", padx=(10, 0))
+        self.btn_dashboard_close.pack(side="right", padx=(5, 0))
 
         self.btn_dashboard = ctk.CTkButton(
-            self.action_frame, 
-            text="Abrir Dashboard (Web)", 
-            command=self.open_dashboard,
+            self.action_frame,
+            text="🌐 Painel Web",
+            command=self.open_web_dashboard,
             fg_color="#3b82f6", hover_color="#2563eb"
         )
-        self.btn_dashboard.pack(side="right", padx=10)
+        self.btn_dashboard.pack(side="right", padx=5)
 
         # Console de Logs
         self.log_textbox = ctk.CTkTextbox(self, height=120, state="disabled", font=ctk.CTkFont(family="Consolas", size=12))
@@ -154,19 +153,30 @@ class ControlPanelTab(ctk.CTkFrame):
             self.btn_update.configure(state="normal")
             self.controller.stop_monitoring()
 
-    def kill_all_dashboards(self):
+    def stop_web_server(self) -> None:
+        """Encerra o processo do servidor Uvicorn via PowerShell e pelo controlador."""
         import subprocess
-        self.log_message("Executando varredura para eliminar todos os processos fantasmas do Streamlit...")
+        self.log_message("Encerrando processos Uvicorn em execucao...")
         try:
-            cmd = 'Get-CimInstance Win32_Process -Filter "CommandLine LIKE \'%streamlit%\'" | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }'
-            subprocess.run(["powershell", "-Command", cmd], capture_output=True, text=True, creationflags=0x08000000)
-            self.log_message("Varredura concluída. Todos os Dashboards foram encerrados.")
-        except Exception as e:
-            self.log_message(f"Erro ao matar processos: {e}")
-        self.controller.close_dashboard()
+            cmd = (
+                'Get-CimInstance Win32_Process '
+                '-Filter "CommandLine LIKE \'%uvicorn%\'" '
+                '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }'
+            )
+            subprocess.run(
+                ["powershell", "-Command", cmd],
+                capture_output=True,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            self.log_message("Servidor Uvicorn encerrado.")
+        except Exception as exc:
+            self.log_message(f"Erro ao encerrar processos: {exc}")
+        self.controller.close_web_dashboard()
 
-    def open_dashboard(self):
-        self.controller.open_dashboard()
+    def open_web_dashboard(self) -> None:
+        """Abre o Painel Web no navegador padrao."""
+        self.controller.open_web_dashboard()
 
     def update_stats(self):
         pending = max(0, self.controller.total_discovered - self.controller.processed_count)

@@ -11,7 +11,7 @@ from src.infrastructure.folder_watcher import FolderWatcher
 from src.application.etl_service import EtlService
 from src.domain.rules.relint_rule import RelintRule
 from src.adapters.json_processed_registry import JsonProcessedRegistry
-from src.presentation.desktop.controllers.dashboard_manager import DashboardManager
+from src.presentation.desktop.controllers.web_app_manager import WebAppManager
 
 class MainController:
     """
@@ -64,8 +64,8 @@ class MainController:
         )
 
 
-        # Gerenciador do Dashboard
-        self.dashboard_manager = DashboardManager(log_callback=self.log)
+        # Gerenciador do servidor web
+        self.web_app_manager = WebAppManager(log_callback=self.log)
 
         # Callbacks para atualizar a UI (devem ser configurados pela view)
         self.on_log_message: Optional[Callable[[str], None]] = None
@@ -356,16 +356,16 @@ class MainController:
         self.log("=" * 60)
         self.update_ui()
 
-    def open_dashboard(self):
-        """Inicia o dashboard web Streamlit via gerenciador."""
-        self.dashboard_manager.open_dashboard()
+    def open_web_dashboard(self) -> None:
+        """Abre o Painel Web (FastAPI + SPA) no navegador padrão."""
+        self.web_app_manager.open()
 
-    def close_dashboard(self):
-        """Encerra o dashboard web via gerenciador."""
-        self.dashboard_manager.close_dashboard()
+    def close_web_dashboard(self) -> None:
+        """Encerra o servidor web."""
+        self.web_app_manager.close()
 
-    def destroy(self):
-        """Cleanup."""
+    def destroy(self) -> None:
+        """Libera recursos ao fechar a aplicação."""
         if self.is_monitoring and self.watcher:
             self.watcher.stop()
-        self.dashboard_manager.destroy()
+        self.web_app_manager.destroy()

@@ -28,11 +28,25 @@ class MainWindow(ctk.CTk):
         self.controller = MainControllerCls()
 
         # 3. Construindo a UI
+        self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.header_frame.pack(fill="x", padx=25, pady=(15, 5))
+
         self.title_label = ctk.CTkLabel(
-            self, text="Painel de Controle - ETL de BOs", 
+            self.header_frame, text="Painel de Controle - ETL de BOs", 
             font=ctk.CTkFont(family="Inter", size=22, weight="bold")
         )
-        self.title_label.pack(pady=10)
+        self.title_label.pack(side="left")
+
+        self.btn_open_dashboard = ctk.CTkButton(
+            self.header_frame,
+            text="🌐 Painel Web",
+            command=self.controller.open_web_dashboard,
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            font=ctk.CTkFont(weight="bold"),
+            height=36
+        )
+        self.btn_open_dashboard.pack(side="right", padx=5)
 
         self.tabview = ctk.CTkTabview(self, width=720, height=480)
         self.tabview.pack(pady=5, padx=25, fill="both", expand=True)
