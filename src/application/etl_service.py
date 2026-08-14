@@ -16,6 +16,7 @@ from src.application.text_cleaner import (
 )
 from src.domain.rules.base_rule import IncidentRule
 from src.ports.processed_registry import IProcessedRegistry
+from src.application.bm_classifier import classify_bm_group
 
 class EtlService:
     """
@@ -78,12 +79,49 @@ class EtlService:
             if on_sent_to_llm: on_sent_to_llm(filename)
             
             questions = rule.questions if rule else None
-            response_dict = self.llm_processor.process_text(cleaned_text, questions=questions)
+            
+            schema_model = None
+            if rule and hasattr(rule, 'get_schema_model'):
+                schema_model = rule.get_schema_model()
+            else:
+                schema_model = IncidentReport
+                
+            response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model)
 
             # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT (RELATÓRIO DE INTELIGÊNCIA Nº, ASSUNTO, ORIGEM, DIFUSÃO, ANEXOS)
             final_content = clean_relint_text(cleaned_text)
             if "content" in response_dict:
                 del response_dict["content"]
+
+            # 1.1 Classificação determinística por Regra específica (prioridade máxima)
+            # A regra da especialidade (ex: HomicideRule) força o bm_group.
+            rule_forced_bm = None
+            if rule and hasattr(rule, 'get_bm_group'):
+                rule_forced_bm = rule.get_bm_group(
+                    filename=filename,
+                    subject=response_dict.get("subject", "") or ""
+                )
+                if rule_forced_bm:
+                    llm_bm = response_dict.get("bm_group", "Outros")
+                    if llm_bm != rule_forced_bm:
+                        if on_progress:
+                            on_progress(f"[{filename}] ⚡ BM Group corrigido: '{llm_bm}' → '{rule_forced_bm}' (regra determinística)")
+                    response_dict["bm_group"] = rule_forced_bm
+
+            # 1.2 Classificação determinística por padrões regex (fallback para relints sem regra específica)
+            # Roda apenas se a Regra específica não já definiu o bm_group OU se a LLM retornou 'Outros'.
+            current_bm = response_dict.get("bm_group", "Outros")
+            if not rule_forced_bm and current_bm in ("Outros", "outros", None, ""):
+                classified_bm = classify_bm_group(
+                    filename=filename,
+                    subject=response_dict.get("subject", "") or "",
+                    content=final_content,
+                    llm_bm_group=current_bm,
+                )
+                if classified_bm != current_bm:
+                    if on_progress:
+                        on_progress(f"[{filename}] 🎯 BM Group classificado: '{current_bm}' → '{classified_bm}' (classificador regex)")
+                    response_dict["bm_group"] = classified_bm
 
             # 2. Extração / Sanitização da data e hora do fato (date_of_fact, time_of_fact)
             extracted_date = extract_date_of_fact(final_content)
@@ -180,11 +218,11 @@ class EtlService:
             }
             
             try:
-                report = IncidentReport(**report_data)
+                report = schema_model(**report_data)
             except Exception as model_err:
                 # Se falhar o parse direto do Pydantic (IA fugiu muito do schema), injeta de forma relaxada
                 if on_progress: on_progress(f"[{filename}] Aviso: IA não seguiu estritamente o Schema. Salvando relaxado.")
-                report = IncidentReport(
+                report = schema_model(
                     source_file=filename,
                     content=final_content,
                     subject=response_dict.get("subject", ""),

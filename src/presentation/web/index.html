@@ -29,6 +29,10 @@
             <i data-lucide="file-text"></i>
             <span>RELINTs</span>
           </li>
+          <li class="nav-item" data-tab="homicides">
+            <i data-lucide="crosshair"></i>
+            <span>Homicídios</span>
+          </li>
           <li class="nav-item" data-tab="participants">
             <i data-lucide="users"></i>
             <span>Participantes</span>
@@ -64,11 +68,11 @@
         <h1 class="page-title" id="page-title">RELINTs</h1>
 
         <div class="header-actions">
-          <a href="http://localhost:8501" target="_blank" class="btn-dashboard-link" style="background-color: var(--primary, #3b82f6); color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+          <a href="http://localhost:8501" target="_blank" class="btn-dashboard-link">
             <i data-lucide="layout-dashboard"></i>
             <span>Abrir Dashboard</span>
           </a>
-          <span class="badge badge-blue" id="api-status-badge">API: CONNECTING...</span>
+          <span class="badge badge-muted" id="api-status-badge">API: CONNECTING...</span>
         </div>
       </header>
 
@@ -82,6 +86,19 @@
           </div>
           <p style="color: var(--text-secondary);">
             Em breve: Tabela Master-Detail com filtros interativos, busca por palavra-chave e visualizador de dossiês.
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba Especialidade: Homicídios -->
+      <section class="tab-content" id="tab-homicides">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="crosshair"></i>
+            Especialidade: Casos de Homicídios
+          </div>
+          <p style="color: var(--text-secondary);">
+            Carregando interface exclusiva de homicídios...
           </p>
         </div>
       </section>
@@ -110,6 +127,11 @@
             Em breve: Mapa interativo Leaflet.js com pontos de ocorrência e ranking por cidade.
           </p>
         </div>
+      </section>
+
+      <!-- Aba 4: Crimes & Estatísticas (Dashboard Analytics) -->
+      <section class="tab-content" id="tab-crimes">
+        <div class="loading-state">Carregando painel estatístico...</div>
       </section>
 
       <!-- Aba 5: Anexos & Fotos -->
@@ -145,6 +167,8 @@
 
   <!-- Application JS -->
   <script src="/static/js/views/relints_view.js"></script>
+  <script src="/static/js/views/homicides_view.js"></script>
+  <script src="/static/js/views/crimes_view.js"></script>
   <script src="/static/js/views/gallery_view.js"></script>
   <script src="/static/js/app.js"></script>
 </body>

@@ -30,6 +30,8 @@ class ParticipantDTO(BaseModel):
 
 class RelintDetailResponse(BaseModel):
     """Complete detail representation of an IncidentReport."""
+    model_config = {"extra": "allow"}
+    
     id: str
     source_file: str
     subject: Optional[str] = ""

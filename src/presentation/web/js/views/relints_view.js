@@ -239,7 +239,7 @@ function renderRelintDetail(relint) {
             <div class="participant-card">
               <div class="participant-header">
                 <div class="participant-name">${escapeHtml(p.name)}</div>
-                <span class="badge ${p.participation_type === 'Vítima' ? 'badge-blue' : 'badge-rose'}">${escapeHtml(p.participation_type || 'Acusado')}</span>
+                <span class="badge ${p.participation_type === 'Vítima' ? 'badge-emerald' : 'badge-rose'}">${escapeHtml(p.participation_type || 'Acusado')}</span>
               </div>
               ${p.nickname ? `<div class="participant-sub">Alcunha: <strong>${escapeHtml(p.nickname)}</strong></div>` : ''}
               ${p.document ? `<div class="participant-sub">Documento: ${escapeHtml(p.document)}</div>` : ''}

@@ -18,6 +18,7 @@ class BmGroup(str, Enum):
     FURTO_QUALIFICADO = "Furto Qualificado"
     FURTO_VEICULO = "Furto de Veículo"
     PRISAO_TRAFICO = "Prisão por Tráfico"
+    HOMICIDIO = "Homicídio"
     OUTROS = "Outros"
 
 class RelintType(str, Enum):
@@ -25,6 +26,14 @@ class RelintType(str, Enum):
     DISK_DENUNCIA = "Disk Denúncia"
     RESPOSTA_PB = "Resposta a PB"
     OUTROS = "Outros"
+
+class HomicideMotivation(str, Enum):
+    FEMINICIDIO = "Feminicídio"
+    TRAFICO = "Envolvimento com o Tráfico"
+    OPOSICAO_PM = "Oposição a Ação PM"
+    DESAVENCA = "Desavença"
+    LATROCINIO = "Latrocídio"
+    DESCONHECIDO = "Desconhecido"
 
 class Participant(BaseModel):
     """
@@ -66,6 +75,17 @@ class IncidentReport(BaseModel):
     summary: Optional[str] = Field(default=None, description="Escreva um resumo claro e explicativo dos fatos descritos no RELINT em 1 parágrafo")
     user_edited: bool = Field(default=False, description="Indica se o relatório foi editado manualmente pelo usuário")
 
+
+class HomicideReport(IncidentReport):
+    """
+    Entidade especializada para relatórios de homicídio.
+    """
+    registry_number: Optional[str] = Field(default=None, description="Número do registro Policial ou DP (ex: 516/151641/2026)")
+    registry_agency: Optional[str] = Field(default=None, description="Órgão de Registro Policial (ex: DP)")
+    registry_year: Optional[str] = Field(default=None, description="Ano de registro Policial (ex: 2026)")
+    fact_type: Optional[str] = Field(default=None, description="Determine o Tipo de Fato (Tentado ou Consumado)")
+    police_unit: Optional[str] = Field(default=None, description="Identifique a Unidade Policial Militar (ex: 16BPM, 37BPM, 39BPM)")
+    motivation: Optional[HomicideMotivation] = Field(default=None, description="Determine a Motivação baseada nas opções fornecidas")
 
 
 class Person(BaseModel):

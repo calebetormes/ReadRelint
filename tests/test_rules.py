@@ -108,8 +108,13 @@ def test_etl_service_with_rule_processes_matching_file():
     assert report is not None
     assert report.content == "Suspeito desferiu tiros e cometeu homicídio."
     assert report.main_fact == "homicídio consumado"
-    # A LLM deve ter sido chamada com as perguntas específicas da regra
-    mock_llm.process_text.assert_called_once_with("Suspeito desferiu tiros e cometeu homicídio.", questions=rule.questions)
+    # A LLM deve ter sido chamada com as perguntas específicas da regra e o schema model
+    from src.domain.entities import HomicideReport
+    mock_llm.process_text.assert_called_once_with(
+        "Suspeito desferiu tiros e cometeu homicídio.", 
+        questions=rule.questions,
+        schema_model=HomicideReport
+    )
     # O banco de dados deve ter sido salvo
     mock_db.save.assert_called_once()
     assert len(filtered_calls) == 0

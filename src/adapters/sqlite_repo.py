@@ -120,6 +120,12 @@ class SqliteRepo(IDatabaseRepo):
             if not row:
                 return None
             data_dict = json.loads(row["data"])
+            
+            # Polimorfismo de Especialidades
+            from src.domain.entities import BmGroup, HomicideReport
+            if data_dict.get("bm_group") == BmGroup.HOMICIDIO.value or data_dict.get("bm_group") == "Homicídio":
+                return HomicideReport(**data_dict)
+            
             return IncidentReport(**data_dict)
 
     def get_all(self) -> List[IncidentReport]:
@@ -134,7 +140,12 @@ class SqliteRepo(IDatabaseRepo):
             for row in rows:
                 try:
                     data_dict = json.loads(row["data"])
-                    reports.append(IncidentReport(**data_dict))
+                    
+                    from src.domain.entities import BmGroup, HomicideReport
+                    if data_dict.get("bm_group") == BmGroup.HOMICIDIO.value or data_dict.get("bm_group") == "Homicídio":
+                        reports.append(HomicideReport(**data_dict))
+                    else:
+                        reports.append(IncidentReport(**data_dict))
                 except Exception:
                     pass
             return reports

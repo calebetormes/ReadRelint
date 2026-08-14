@@ -1,17 +1,23 @@
-﻿# Estado do Projeto e Backlog
+# Estado do Projeto e Backlog
 
 Este arquivo documenta o que já foi construído, o que está sendo finalizado no momento e o backlog de tarefas futuras do **ReadRelint**.
 
 ## 1. O que já foi implementado (Checklist Final)
 - [x] Configuração da Clean Architecture (Portas, Adaptadores, Domínio, Aplicação e Apresentação).
 - [x] Leitura de PDF (`PyMuPDF`) e monitoramento em tempo real (CustomTkinter + FolderWatcher).
-- [x] Migração de Banco de Dados de JSON (TinyDB) para **SQLite nativo (WAL)**, com tabelas dedicadas (`relints` e `persons`). Refatoração final (Clean Code) para remoção da tabela redundante de municípios, calculando manchas criminais dinamicamente on-the-fly.
+- [x] Migração de Banco de Dados de JSON (TinyDB) para **SQLite nativo (WAL)**, com tabelas dedicadas (`relints` e `persons`).
 - [x] Pipeline ETL com NLP Local (Ollama) para estruturação semântica, mantendo a extração literal (`content`) 100% via código Python.
-- [x] Tratamento de histórico (Self-Healing de modelos IA, fallback de JSON Pydantic e tolerância a erros).
-- [x] Remoção definitiva do dashboard Streamlit legado de todas as partes do software.
-- [x] Substituição completa pelo novo painel web construído sobre **FastAPI** + **SPA HTML/CSS/JS** offline (Leaflet, ApexCharts, Lucide).
-- [x] Implementação de visualizador de imagens (Lightbox) e galeria global integrada que serve de forma nativa e segura os anexos normalizados.
-- [x] Suíte de Testes Automatizados 100% funcional (Pytest).
+- [x] **Arquitetura de Especialidades Polimórficas:** Modelo `HomicideReport` estendendo `IncidentReport` com extração de 6 campos extras (motivação, registro, ano, unidade BPM, tipo de fato) persistidos no JSON flexível do SQLite.
+- [x] **Extração LLM com Schema Pydantic Dinâmico:** Atualização do `OllamaClient` e `ILlmProcessor` para receber o modelo Pydantic da regra via `get_schema_model()`.
+- [x] **Classificador Determinístico (`bm_classifier.py`):** Sistema de classificação regex por hierarquia de especificidade que corrige o `bm_group` pós-LLM, eliminando o problema de ocorrências caírem indevidamente em "Outros".
+- [x] **Redesign completo do Dashboard Web (Resend Design System):**
+  - Implementação fiel ao `Design.md`: Canvas preto puro (`#000000`), hairlines translúcidas (`rgba(255,255,255,0.14)`), sem sombras pesadas.
+  - Eliminação de todos os estilos de cores claras hardcoded.
+  - Variáveis modulares em `variables.css` sem referências circulares.
+- [x] **Aba e Controlador de Homicídios (`homicides_view.js`):** Visualizador de dossiês focado na especialidade policial com separação de vítimas, acusados e motivação.
+- [x] **Dashboard de Crimes & Estatísticas (`crimes_view.js`):** Painel de Analytics com KPI Cards (Total, Homicídios, Tráfico, Top Município), Gráficos interativos Donut/Area via **ApexCharts** (100% offline) e feed de ocorrências recentes.
+- [x] Implementação de visualizador de imagens (Lightbox) e galeria global integrada.
+- [x] Suíte de Testes Automatizados (60 testes unitários passando em 100% com `pytest`).
 
 ## 2. Próximas Etapas (Prioridade)
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 FastAPI Router for RELINT reports management.
 
 Exposes endpoints for:
@@ -175,30 +175,24 @@ def get_relint_by_id(
     addr_info = extract_structured_address(report)
     map_url, coords, precision_level, precision_label = resolve_report_map_info(report)
 
-    return RelintDetailResponse(
-        id=report_id,
-        source_file=report.source_file or "",
-        subject=report.subject or "",
-        main_fact=report.main_fact or "",
-        date_of_fact=report.date_of_fact or "",
-        time_of_fact=report.time_of_fact or "",
-        bm_group=_enum_to_str(report.bm_group),
-        relint_type=_enum_to_str(report.relint_type),
-        municipality=report.municipality or addr_info["municipality"],
-        neighborhood=report.neighborhood or addr_info["neighborhood"],
-        street=report.street or addr_info["street"],
-        number=report.number or addr_info["number"],
-        address=addr_info["formatted_address"],
-        coordinates=coords,
-        map_url=map_url,
-        precision_level=precision_level,
-        precision_label=precision_label,
-        summary=report.summary or "",
-        content=report.content or "",
-        user_edited=getattr(report, "user_edited", False) or False,
-        images=_build_image_list(report.images or []),
-        participants=_build_participants_dto(report.participants or []),
-    )
+    report_dict = report.model_dump(exclude={"participants", "images", "bm_group", "relint_type"})
+    report_dict.update({
+        "bm_group": _enum_to_str(report.bm_group),
+        "relint_type": _enum_to_str(report.relint_type),
+        "municipality": report.municipality or addr_info["municipality"],
+        "neighborhood": report.neighborhood or addr_info["neighborhood"],
+        "street": report.street or addr_info["street"],
+        "number": report.number or addr_info["number"],
+        "address": addr_info["formatted_address"],
+        "coordinates": coords,
+        "map_url": map_url,
+        "precision_level": precision_level,
+        "precision_label": precision_label,
+        "images": _build_image_list(report.images or []),
+        "participants": _build_participants_dto(report.participants or []),
+    })
+
+    return RelintDetailResponse(id=report_id, **report_dict)
 
 
 @router.put("/{report_id}", response_model=RelintDetailResponse)

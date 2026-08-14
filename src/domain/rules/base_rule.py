@@ -45,7 +45,21 @@ class IncidentRule(ABC):
         """
         return True
 
+    def get_schema_model(self) -> type:
+        """
+        Retorna a classe Pydantic que deve ser utilizada para extrair os dados.
+        Por padrão, retorna a classe genérica IncidentReport.
+        """
+        from src.domain.entities import IncidentReport
+        return IncidentReport
 
+    def get_bm_group(self, filename: str = "", subject: str = "") -> str | None:
+        """
+        Retorna o BM Group que a regra classifica obrigatoriamente, de forma determinística.
+        Por padrão retorna None, o que significa 'manter o que a LLM sugeriu'.
+        Sobrescrever nas subclasses para aplicar classificação garantida baseada na regra.
+        """
+        return None
 
     def matches_filter(self, text: str) -> bool:
         """

@@ -80,17 +80,10 @@ class ReportTab(ctk.CTkFrame):
         )
         self.btn_clear_history.pack(side="right", padx=5)
 
-        self.btn_open_streamlit = ctk.CTkButton(
-            self.report_toolbar, text="📊 Streamlit", width=100,
-            fg_color="#475569", hover_color="#334155",
-            command=self.controller.open_streamlit_dashboard
-        )
-        self.btn_open_streamlit.pack(side="right", padx=5)
-
         self.btn_open_dashboard = ctk.CTkButton(
-            self.report_toolbar, text="🌐 Painel Web (v2.0)", width=150, 
+            self.report_toolbar, text="🌐 Painel Web", width=150, 
             fg_color="#3b82f6", hover_color="#2563eb",
-            command=self.controller.open_dashboard
+            command=self.controller.open_web_dashboard
         )
         self.btn_open_dashboard.pack(side="right", padx=5)
 
@@ -275,7 +268,6 @@ class ReportTab(ctk.CTkFrame):
                 card.pack(pady=8, padx=10, fill="x")
 
                 img_label = ctk.CTkLabel(card, image=ctk_img, text="")
-                img_label.image = ctk_img
                 img_label.pack(side="left", padx=12, pady=12)
 
                 info_frame = ctk.CTkFrame(card, fg_color="transparent")

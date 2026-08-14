@@ -35,6 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pageTitleElement) {
         pageTitleElement.textContent = tabTitle;
       }
+
+      // Trigger view re-fetches if needed
+      if (targetTab === 'crimes' && typeof fetchCrimesData === 'function') {
+        fetchCrimesData();
+      }
     });
   });
 

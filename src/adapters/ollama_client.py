@@ -23,17 +23,18 @@ class OllamaClient(ILlmProcessor):
         self.model_name = model_name
         self.base_url = base_url
 
-    def process_text(self, text: str, questions: Optional[Dict[str, str]] = None) -> dict:
+    def process_text(self, text: str, questions: Optional[Dict[str, str]] = None, schema_model: type = None) -> dict:
         """
         Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON
-        baseado no JSON Schema do modelo IncidentReport.
+        baseado no JSON Schema do modelo IncidentReport (ou do schema_model se fornecido).
         """
         system_prompt = ""
         if questions and "system_prompt" in questions:
             system_prompt = questions["system_prompt"]
         
         # Gera o JSON Schema do modelo Pydantic para orientar a extração
-        schema = IncidentReport.model_json_schema()
+        model_to_use = schema_model if schema_model else IncidentReport
+        schema = model_to_use.model_json_schema()
         # Remove campos mantidos pelo sistema Python para não poluir nem confundir o Ollama
         if "properties" in schema:
             schema["properties"].pop("source_file", None)

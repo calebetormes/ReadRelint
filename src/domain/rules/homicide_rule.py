@@ -14,6 +14,20 @@ class HomicideRule(IncidentRule):
     @property
     def db_name(self) -> str:
         return "homicides.json"
+        
+    def get_schema_model(self) -> type:
+        from src.domain.entities import HomicideReport
+        return HomicideReport
+
+    def get_bm_group(self, filename: str = "", subject: str = "") -> str:
+        """
+        Classifica deterministicamente como 'Homicídio'.
+        Qualquer ocorrência que tenha passado pelos filtros desta regra É um homicídio.
+        O nome do arquivo e o assunto são usados como reforço secundário para diagnóstico,
+        mas o retorno é sempre garantido.
+        """
+        from src.domain.entities import BmGroup
+        return BmGroup.HOMICIDIO.value
 
     @property
     def keywords(self) -> List[str]:
