@@ -43,6 +43,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Handle Collapsible Sidebar Toggle
+  const sidebar = document.getElementById('sidebar');
+  
+  // Check saved state (default to collapsed)
+  const savedState = localStorage.getItem('sidebar_collapsed');
+  if (savedState === 'false') {
+    sidebar?.classList.remove('collapsed');
+  } else {
+    sidebar?.classList.add('collapsed');
+  }
+
+  window.toggleSidebar = function() {
+    const sb = document.getElementById('sidebar');
+    if (!sb) return;
+    sb.classList.toggle('collapsed');
+    const isCollapsed = sb.classList.contains('collapsed');
+    localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+
+    // Re-trigger layout/icons update
+    if (window.lucide) window.lucide.createIcons();
+  };
+
+  document.getElementById('sidebar-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.toggleSidebar();
+  });
+
+  document.getElementById('top-sidebar-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.toggleSidebar();
+  });
+
   // Check API Connection Status
   fetchApiStatus();
 });

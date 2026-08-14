@@ -83,20 +83,10 @@ def _build_participants_dto(participants: list) -> List[ParticipantDTO]:
 
 def _find_report_by_id(report_id: str, repo: SqliteRepo):
     """
-    Looks up a report by UUID first, then falls back to positional integer index.
+    Looks up a report by doc_id directly.
     Returns None if not found.
     """
-    report = repo.get_by_id(report_id)
-    if report:
-        return report
-    try:
-        idx = int(report_id) - 1
-        all_reports = repo.get_all()
-        if 0 <= idx < len(all_reports):
-            return all_reports[idx]
-    except ValueError:
-        pass
-    return None
+    return repo.get_by_id(report_id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,7 +104,7 @@ def list_relints(
     """Returns all RELINT reports, with optional text search and category filters."""
     results = []
 
-    for idx, report in enumerate(repo.get_all(), start=1):
+    for report in repo.get_all():
         b_group = _enum_to_str(report.bm_group)
         r_type = _enum_to_str(report.relint_type)
         muni = report.municipality or ""
@@ -143,7 +133,7 @@ def list_relints(
                 continue
 
         results.append(RelintSummaryResponse(
-            id=str(idx),
+            id=str(report.id or ""),
             source_file=report.source_file or "",
             subject=report.subject or "",
             date_of_fact=report.date_of_fact or "",
@@ -192,7 +182,8 @@ def get_relint_by_id(
         "participants": _build_participants_dto(report.participants or []),
     })
 
-    return RelintDetailResponse(id=report_id, **report_dict)
+    report_dict["id"] = report_id
+    return RelintDetailResponse(**report_dict)
 
 
 @router.put("/{report_id}", response_model=RelintDetailResponse)
@@ -206,7 +197,16 @@ def update_relint(
     if not report:
         raise HTTPException(status_code=404, detail=f"RELINT '{report_id}' not found.")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    if "participants" in update_data and update_data["participants"] is not None:
+        from src.domain.entities import Participant
+        new_participants = []
+        for p_data in update_data.pop("participants"):
+            if isinstance(p_data, dict):
+                new_participants.append(Participant(**p_data))
+        report.participants = new_participants
+
+    for field, value in update_data.items():
         if value is not None:
             setattr(report, field, value)
 

@@ -115,11 +115,12 @@ class SqliteRepo(IDatabaseRepo):
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT data FROM relints WHERE doc_id = ?;", (doc_id_int,))
+            cursor.execute("SELECT doc_id, data FROM relints WHERE doc_id = ?;", (doc_id_int,))
             row = cursor.fetchone()
             if not row:
                 return None
             data_dict = json.loads(row["data"])
+            data_dict["id"] = str(row["doc_id"])
             
             # Polimorfismo de Especialidades
             from src.domain.entities import BmGroup, HomicideReport
@@ -130,16 +131,17 @@ class SqliteRepo(IDatabaseRepo):
 
     def get_all(self) -> List[IncidentReport]:
         """
-        Retorna todos os relatórios cadastrados no SQLite.
+        Retorna todos os relatórios cadastrados no SQLite ordenados do mais recente para o mais antigo.
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT data FROM relints ORDER BY doc_id ASC;")
+            cursor.execute("SELECT doc_id, data FROM relints ORDER BY doc_id DESC;")
             rows = cursor.fetchall()
             reports = []
             for row in rows:
                 try:
                     data_dict = json.loads(row["data"])
+                    data_dict["id"] = str(row["doc_id"])
                     
                     from src.domain.entities import BmGroup, HomicideReport
                     if data_dict.get("bm_group") == BmGroup.HOMICIDIO.value or data_dict.get("bm_group") == "Homicídio":

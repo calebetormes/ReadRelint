@@ -325,8 +325,9 @@ function renderRecentIncidentsFeed(relints) {
     return;
   }
 
-  // Show top 6 most recent
-  const recent = relints.slice(0, 6);
+  // Sort descending by ID to ensure latest read are at top
+  const sorted = [...relints].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+  const recent = sorted.slice(0, 6);
 
   container.innerHTML = recent.map(r => {
     const isHomicide = (r.bm_group || '').toLowerCase().includes('homicíd') || (r.bm_group || '').toLowerCase().includes('homicid');
