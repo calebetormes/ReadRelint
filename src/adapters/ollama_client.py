@@ -23,6 +23,24 @@ class OllamaClient(ILlmProcessor):
         self.model_name = model_name
         self.base_url = base_url
 
+    def check_connection(self) -> tuple[bool, str]:
+        """
+        Testa se o serviço Ollama está rodando localmente na URL base.
+        Retorna uma tupla (sucesso: bool, mensagem: str).
+        """
+        try:
+            url = f"{self.base_url}/api/tags"
+            res = requests.get(url, timeout=3)
+            if res.status_code == 200:
+                models = res.json().get("models", [])
+                if models:
+                    model_names = ", ".join(m.get("name", "") for m in models[:3])
+                    return True, f"Ollama online! Modelo(s) encontrado(s): {model_names}"
+                return True, "Ollama online! Nenhum modelo instalado no momento."
+            return False, f"Ollama respondeu com código de erro {res.status_code}."
+        except Exception:
+            return False, f"Serviço Ollama indisponível ou desativado em {self.base_url}"
+
     def process_text(self, text: str, questions: Optional[Dict[str, str]] = None, schema_model: type = None) -> dict:
         """
         Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON
@@ -102,5 +120,5 @@ TEXTO DO RELINT:
             
         except Exception as e:
             logger.error(f"Erro ao processar texto com Ollama: {e}")
-            return {}
+            raise e
 

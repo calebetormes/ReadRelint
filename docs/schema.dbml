@@ -1,0 +1,95 @@
+// Database Markup Language (DBML) Specification
+// Project: ReadRelint - Processador Inteligente de Relatórios de Inteligência (RELINT)
+// Database Engine: SQLite 3 (WAL Mode) - 100% Relacional Normalizado
+
+Project ReadRelint {
+  database_type: 'SQLite'
+  Note: '''
+    Banco de dados relacional normalizado do sistema ReadRelint.
+    Zero redundância e sem uso de JSON Blobs.
+  '''
+}
+
+// 1. Tabela Principal de Ocorrências / RELINTs
+Table relints {
+  id int [pk, increment, note: 'Identificador único sequencial da ocorrência']
+  source_file varchar [not null, unique, note: 'Nome do arquivo PDF de origem']
+  subject varchar [note: 'Assunto oficial extraído do cabeçalho do RELINT']
+  main_fact varchar [note: 'Fato principal resumido']
+  date_of_fact varchar [note: 'Data de ocorrência do fato (DD/MM/AAAA)']
+  time_of_fact varchar [note: 'Horário de ocorrência (ex: 14h30min)']
+  bm_group varchar [note: 'Grupo BM (Homicídio, Roubo a Estabelecimento, etc.)']
+  relint_type varchar [note: 'Tipo de documento (Ocorrência, Disk Denúncia, Resposta a PB, Outros)']
+  municipality varchar [note: 'Município/Cidade da ocorrência']
+  neighborhood varchar [note: 'Bairro da ocorrência']
+  address varchar [note: 'Endereço completo extraído do fato']
+  police_unit varchar [note: 'Unidade Policial Militar responsável/mencionada (ex: 39º BPM, 16º BPM)']
+  coordinates varchar [note: 'Coordenadas GPS exatas ou estimadas (ex: -28.2612, -53.4912)']
+  map_url varchar [note: 'URL do Google Maps para o local']
+  summary text [note: 'Resumo sintético narrativo do fato (Gerado por IA ou Fallback Regex)']
+  content text [note: 'Conteúdo/Histórico integral e literal do RELINT']
+  user_edited int [default: 0, note: 'Indica se a ocorrência foi editada manualmente (0 = Não, 1 = Sim)']
+
+  indexes {
+    source_file [unique]
+    bm_group
+    municipality
+    police_unit
+  }
+
+  Note: 'Tabela principal com todas as ocorrências cadastradas no sistema.'
+}
+
+// 2. Especialização de Homicídios (Relacionamento 1 para 1 com relints)
+Table homicide_details {
+  relint_id int [pk, ref: > relints.id, note: 'Chave estrangeira para a ocorrência principal']
+  registry_number varchar [note: 'Número do registro policial/DP (ex: 516/151641/2026)']
+  registry_agency varchar [note: 'Órgão de registro policial (ex: DP)']
+  registry_year varchar [note: 'Ano do registro policial (ex: 2026)']
+  fact_type varchar [note: 'Tipo de fato (Consumado ou Tentado)']
+  motivation varchar [note: 'Motivação do crime (ex: Tráfico de Drogas, Passional, etc.)']
+
+  Note: 'Campos especializados para ocorrências do grupo Homicídio.'
+}
+
+// 3. Cadastro Central de Pessoas (Vítimas, Suspeitos, Acusados, Testemunhas)
+Table persons {
+  id int [pk, increment, note: 'Identificador único sequencial da pessoa']
+  person_key varchar [not null, unique, note: 'Chave única de busca (Documento limpo ou Nome normalizado)']
+  name varchar [not null, note: 'Nome completo do indivíduo']
+  nickname varchar [note: 'Alcunha / Apelido']
+  document varchar [note: 'Documento oficial (RG / CPF)']
+  background text [note: 'Antecedentes criminais ou histórico policial']
+
+  indexes {
+    person_key [unique]
+    name
+  }
+
+  Note: 'Cadastro central de pessoas físicas citadas nos RELINTs.'
+}
+
+// 4. Tabela de Junção de Participantes (Relacionamento N para N entre relints e persons)
+Table relint_participants {
+  id int [pk, increment, note: 'Identificador único da participação']
+  relint_id int [not null, ref: > relints.id, note: 'ID da ocorrência']
+  person_id int [not null, ref: > persons.id, note: 'ID da pessoa cadastrada']
+  participation_type varchar [note: 'Tipo de participação (Vítima, Acusado, Suspeito, Testemunha)']
+  photo_path varchar [note: 'Caminho para imagem de foto de perfil da pessoa, se houver']
+
+  indexes {
+    (relint_id, person_id)
+  }
+
+  Note: 'Associação entre uma pessoa e um RELINT específico.'
+}
+
+// 5. Imagens e Anexos de Ocorrências (Relacionamento 1 para N com relints)
+Table relint_images {
+  id int [pk, increment, note: 'Identificador único da imagem']
+  relint_id int [not null, ref: > relints.id, note: 'ID da ocorrência proprietária']
+  file_path varchar [not null, note: 'Caminho do arquivo de imagem salvo em disco']
+  caption text [note: 'Legenda / Descrição da imagem extraída do relatório']
+
+  Note: 'Imagens e mídias visuais anexadas a cada RELINT.'
+}

@@ -91,15 +91,15 @@ class IncidentReport(BaseModel):
     participants: Optional[List[Participant]] = Field(default=[], description="Lista de pessoas de interesse citadas (vítimas, suspeitos, acusados, testemunhas). NUNCA inclua Policiais Militares da guarnição que atenderam o fato.")
     address: Optional[str] = Field(default=None, description="Endereço completo mencionado no fato")
     municipality: Optional[str] = Field(default=None, description="Nome da cidade/município da ocorrência (ex: Panambi, Palmeira das Missões, Ibirubá)")
-    street: Optional[str] = Field(default=None, description="Nome do logradouro/rua/avenida da ocorrência (ex: Rua Oscar Waeschter, Av. Brasil)")
-    number: Optional[str] = Field(default=None, description="Número do imóvel ou S/N")
     neighborhood: Optional[str] = Field(default=None, description="Nome do bairro da ocorrência (ex: Arco-Íris, Centro)")
+    police_unit: Optional[str] = Field(default=None, description="Identifique a Unidade Policial Militar responsável ou mencionada (ex: 39º BPM, 16º BPM, 37º BPM)")
     map_url: Optional[str] = Field(default=None, description="URL ou link do Google Maps presente no texto")
     coordinates: Optional[str] = Field(default=None, description="Coordenadas geográficas no formato Latitude, Longitude (ex: -28.2612, -53.4912)")
     images: Optional[List[Union[str, Dict[str, Any]]]] = Field(default=[], description="Lista de caminhos ou objetos de imagens do fato/local com legenda")
 
     content: Optional[str] = Field(default=None, description="Histórico completo e literal do RELINT")
     summary: Optional[str] = Field(default=None, description="Escreva um resumo claro e explicativo dos fatos descritos no RELINT em 1 parágrafo")
+    extraction_method: Optional[str] = Field(default="Regex (Sem IA)", description="Método de extração utilizado: 'Ollama (IA)' ou 'Regex (Sem IA)'")
     user_edited: bool = Field(default=False, description="Indica se o relatório foi editado manualmente pelo usuário")
 
     @field_validator("relint_type", mode="before")
@@ -155,7 +155,6 @@ class HomicideReport(IncidentReport):
     registry_agency: Optional[str] = Field(default=None, description="Órgão de Registro Policial (ex: DP)")
     registry_year: Optional[str] = Field(default=None, description="Ano de registro Policial (ex: 2026)")
     fact_type: Optional[str] = Field(default=None, description="Determine o Tipo de Fato (Tentado ou Consumado)")
-    police_unit: Optional[str] = Field(default=None, description="Identifique a Unidade Policial Militar (ex: 16BPM, 37BPM, 39BPM)")
     motivation: Optional[Union[HomicideMotivation, str]] = Field(default="Desconhecido", description="Determine a Motivação baseada nas opções fornecidas")
 
     @field_validator("motivation", mode="before")

@@ -336,7 +336,7 @@ function renderHomicideDetail(report) {
           </div>
           ${report.municipality ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Município:</strong> ${report.municipality}</div>` : ''}
           ${report.neighborhood ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Bairro:</strong> ${report.neighborhood}</div>` : ''}
-          ${report.street ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Rua:</strong> ${report.street} ${report.number ? 'nº ' + report.number : ''}</div>` : ''}
+          ${report.police_unit ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Unidade PM:</strong> ${report.police_unit}</div>` : ''}
           ${report.coordinates ? `<div class="geo-coords" style="margin-top:12px;"><strong>Coordenadas GPS:</strong> <code class="geo-code" style="font-size:13px;padding:4px 8px;">${report.coordinates}</code></div>` : ''}
 
           ${report.map_url ? `
@@ -367,7 +367,7 @@ function renderHomicideDetail(report) {
         </button>
       </div>
 
-      <div class="transcript-free-content" id="transcript-raw-text">${escapeHtml(report.content || 'Texto não disponível.')}</div>
+      <div class="transcript-free-content" id="transcript-raw-text">${escapeHtml(formatTranscriptText(report.content))}</div>
     </div>
   `;
 

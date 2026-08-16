@@ -120,3 +120,52 @@ function closeLightbox(event) {
     modal.classList.remove('active');
   }
 }
+
+/**
+ * Formatação e Limpeza da Transcrição Integral do PDF.
+ * Remove quebras de linha secas no meio de parágrafos mantendo parágrafos duplos (\n\n)
+ * e linhas de cabeçalho (ex: DATA:, ASSUNTO:, RG:, NOME:).
+ */
+function formatTranscriptText(text) {
+  if (!text) return 'Texto não disponível.';
+  
+  // 1. Uniformiza quebras de linha e remove espaços nas pontas de cada linha
+  let clean = text.replace(/[ \t]*\r?\n[ \t]*/g, '\n');
+  
+  // 2. Preserva parágrafos duplos com um marcador temporário
+  const MARKER = "___PARAGRAPH_BREAK___";
+  clean = clean.replace(/\n{2,}/g, MARKER);
+  
+  // 3. Junta linhas de um mesmo parágrafo (desfazendo quebras secas do layout do PDF)
+  const blocks = clean.split(MARKER);
+  const cleanedBlocks = blocks.map(block => {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    
+    const merged = [];
+    lines.forEach(line => {
+      if (!merged.length) {
+        merged.push(line);
+      } else {
+        const last = merged[merged.length - 1];
+        const isHeader = /^(?:[A-Z0-9_\-\.\s]{2,30}:|SUSPEITO|ANTECEDENTES|FOTO|REGISTRO|IMAGEM|ANEXOS|\-|\*|\d+[\.\)])/i.test(line);
+        const lastColon = last.endsWith(':');
+        
+        if (isHeader || lastColon) {
+          merged.push(line);
+        } else {
+          merged[merged.length - 1] = last + ' ' + line;
+        }
+      }
+    });
+    return merged.join('\n');
+  });
+  
+  clean = cleanedBlocks.filter(Boolean).join('\n\n');
+  
+  // 4. Normaliza múltiplos espaços consecutivos e ajusta pontuações grudadas
+  clean = clean.replace(/[ \t]{2,}/g, ' ');
+  clean = clean.replace(/\s+([,\.\;:\?\!])/g, '$1');
+  
+  return clean;
+}

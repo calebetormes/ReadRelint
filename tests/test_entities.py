@@ -48,14 +48,15 @@ def test_incident_report_with_full_fields():
         date_of_fact="10/08/2026",
         time_of_fact="14h30min",
         municipality="Panambi",
-        street="Rua Brasil",
-        number="100",
+        address="Rua Brasil, 100, Centro",
         neighborhood="Centro",
+        police_unit="39º BPM",
         map_url="https://maps.google.com/?q=-28.23,-53.60",
         coordinates="-28.23, -53.60",
         participants=[participant]
     )
     assert report.municipality == "Panambi"
+    assert report.police_unit == "39º BPM"
     assert report.time_of_fact == "14h30min"
     assert report.relint_type == RelintType.OCORRENCIA
     assert report.bm_group == BmGroup.ROUBO_RESIDENCIA

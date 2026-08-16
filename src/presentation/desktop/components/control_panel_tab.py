@@ -1,130 +1,258 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from datetime import datetime
 import customtkinter as ctk
 
+
 class ControlPanelTab(ctk.CTkFrame):
     """
-    Componente visual que representa a aba 'Painel de Controle'.
-    Exibe os status de monitoramento, barra de progresso, logs e contadores.
+    Componente visual moderno que representa a aba 'Painel de Controle'.
+    Exibe seleção de pasta, destaque de IA Ollama, métricas com 2 barras de progresso,
+    ações de controle (monitoramento, reset completo e servidor web) e logs.
     """
     def __init__(self, master, controller, **kwargs):
+        kwargs["fg_color"] = "#18181b"
         super().__init__(master, **kwargs)
         self.controller = controller
 
-        # Container para a Seleção de Diretório
-        self.dir_frame = ctk.CTkFrame(self)
-        self.dir_frame.pack(pady=10, padx=20, fill="x")
+        # ---------------------------------------------------------------------
+        # 1. Card: Seleção de Pasta & Status do Monitoramento
+        # ---------------------------------------------------------------------
+        self.dir_frame = ctk.CTkFrame(self, fg_color="#27272a", corner_radius=10)
+        self.dir_frame.pack(pady=(10, 5), padx=15, fill="x")
+
+        self.dir_label_title = ctk.CTkLabel(
+            self.dir_frame, 
+            text="📁 Diretório de Monitoramento dos RELINTs", 
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#a1a1aa"
+        )
+        self.dir_label_title.pack(anchor="w", padx=15, pady=(8, 2))
+
+        self.dir_inner_frame = ctk.CTkFrame(self.dir_frame, fg_color="transparent")
+        self.dir_inner_frame.pack(fill="x", padx=10, pady=(0, 8))
 
         self.dir_entry = ctk.CTkEntry(
-            self.dir_frame, 
-            placeholder_text="Selecione a pasta para monitorar...", 
-            width=350
+            self.dir_inner_frame, 
+            placeholder_text="Selecione a pasta para monitorar os arquivos PDF...", 
+            height=36,
+            font=ctk.CTkFont(size=12)
         )
-        self.dir_entry.pack(side="left", padx=10, pady=10, expand=True, fill="x")
+        self.dir_entry.pack(side="left", padx=(5, 10), expand=True, fill="x")
 
         self.browse_button = ctk.CTkButton(
-            self.dir_frame, 
+            self.dir_inner_frame, 
             text="Buscar Pasta", 
-            command=self.browse_directory
+            command=self.browse_directory,
+            height=36,
+            fg_color="#3f3f46",
+            hover_color="#52525b",
+            text_color="#ffffff",
+            text_color_disabled="#71717a",
+            font=ctk.CTkFont(weight="bold")
         )
-        self.browse_button.pack(side="right", padx=10, pady=10)
+        self.browse_button.pack(side="right", padx=5)
 
-        # Painel de Status
-        self.status_frame = ctk.CTkFrame(self)
-        self.status_frame.pack(pady=10, padx=20, fill="both", expand=True)
+        # ---------------------------------------------------------------------
+        # 2. Card: Status, Métricas & Duas Barras de Progresso
+        # ---------------------------------------------------------------------
+        self.stats_card = ctk.CTkFrame(self, fg_color="#27272a", corner_radius=10)
+        self.stats_card.pack(pady=5, padx=15, fill="x")
 
-        self.status_title = ctk.CTkLabel(
-            self.status_frame, 
-            text="Status do Monitoramento:", 
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        self.status_title.pack(anchor="w", padx=15, pady=5)
+        # Cabeçalho do Card de Status
+        self.status_header = ctk.CTkFrame(self.stats_card, fg_color="transparent")
+        self.status_header.pack(fill="x", padx=15, pady=(8, 2))
 
         self.status_label = ctk.CTkLabel(
-            self.status_frame, 
-            text="Parado - Aguardando seleção de diretório", 
-            text_color="orange",
-            font=ctk.CTkFont(size=13)
+            self.status_header, 
+            text="Status: Parado - Aguardando seleção de diretório", 
+            text_color="#f59e0b",
+            font=ctk.CTkFont(size=13, weight="bold")
         )
-        self.status_label.pack(anchor="w", padx=15, pady=5)
+        self.status_label.pack(side="left")
 
-        # Arquivo atual
-        self.curr_file_frame = ctk.CTkFrame(self.status_frame, fg_color="transparent")
-        self.curr_file_frame.pack(pady=(5, 2), padx=15, fill="x")
         self.label_curr_file = ctk.CTkLabel(
-            self.curr_file_frame, 
+            self.status_header, 
             text="Lendo: -", 
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color="grey"
+            font=ctk.CTkFont(size=12),
+            text_color="#d4d4d8"
         )
-        self.label_curr_file.pack(anchor="w", padx=10)
+        self.label_curr_file.pack(side="right")
 
-        # Contadores
-        self.stats_frame = ctk.CTkFrame(self.status_frame, fg_color="transparent")
-        self.stats_frame.pack(pady=2, padx=15, fill="x")
+        # BARRA DE PROGRESSO 1: Arquivos Lidos Anteriormente (Banco / Histórico)
+        self.prog1_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
+        self.prog1_frame.pack(fill="x", padx=15, pady=(6, 2))
 
-        self.label_processed = ctk.CTkLabel(self.stats_frame, text="Lidos: 0", font=ctk.CTkFont(size=12, weight="bold"), text_color="lightgreen")
-        self.label_processed.pack(side="left", padx=10)
+        self.label_prog1 = ctk.CTkLabel(
+            self.prog1_frame, 
+            text="📄 Arquivos Já Lidos (Banco): 0 / 0 (0.0%)", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="#10b981"
+        )
+        self.label_prog1.pack(anchor="w")
 
-        self.label_pending = ctk.CTkLabel(self.stats_frame, text="Fila: 0", font=ctk.CTkFont(size=12, weight="bold"), text_color="yellow")
-        self.label_pending.pack(side="left", padx=25)
+        self.progress_bar1 = ctk.CTkProgressBar(self.prog1_frame, height=10, progress_color="#10b981")
+        self.progress_bar1.pack(pady=(2, 6), fill="x")
+        self.progress_bar1.set(0)
 
-        current_date = datetime.now().strftime("%d/%m/%Y")
-        self.label_skipped = ctk.CTkLabel(self.stats_frame, text=f"Lidos em {current_date}: 0", font=ctk.CTkFont(size=12, weight="bold"), text_color="cyan")
-        self.label_skipped.pack(side="left", padx=10)
+        # BARRA DE PROGRESSO 2: Leitura Atual da Sessão de Monitoramento
+        self.prog2_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
+        self.prog2_frame.pack(fill="x", padx=15, pady=(0, 8))
 
-        self.label_total_files = ctk.CTkLabel(self.stats_frame, text="Total Pasta: 0", font=ctk.CTkFont(size=12, weight="bold"), text_color="#c084fc")
-        self.label_total_files.pack(side="left", padx=25)
+        self.label_prog2 = ctk.CTkLabel(
+            self.prog2_frame, 
+            text="⚡ Progresso da Leitura Atual: 0 / 0 novos arquivos lidos (0.0%)", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="#c084fc"
+        )
+        self.label_prog2.pack(anchor="w")
 
-        self.label_bytes = ctk.CTkLabel(self.stats_frame, text="Progresso: 0 B / 0 B (0%)", font=ctk.CTkFont(size=12, weight="bold"), text_color="orange")
-        self.label_bytes.pack(side="right", padx=10)
+        self.progress_bar2 = ctk.CTkProgressBar(self.prog2_frame, height=10, progress_color="#a855f7")
+        self.progress_bar2.pack(pady=(2, 4), fill="x")
+        self.progress_bar2.set(0)
 
-        # Barra de Progresso
-        self.progress_bar = ctk.CTkProgressBar(self.status_frame, height=10)
-        self.progress_bar.pack(pady=5, padx=15, fill="x")
-        self.progress_bar.set(0)
+        # ---------------------------------------------------------------------
+        # 3. Card: Painel de Ações (Botões Principais)
+        # ---------------------------------------------------------------------
+        self.action_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.action_frame.pack(pady=5, padx=15, fill="x")
 
-        # Botões de Ação
-        self.action_frame = ctk.CTkFrame(self.status_frame, fg_color="transparent")
-        self.action_frame.pack(pady=10, padx=15, fill="x")
-
-        # Esquerda (Monitoramento e Atualização)
+        # Botão Principal: Monitorar
         self.action_button = ctk.CTkButton(
             self.action_frame, 
-            text="Monitorar RELINTs", 
+            text="▶️ Iniciar Monitoramento", 
             command=self.toggle_monitoring,
-            fg_color="green", hover_color="#006400", state="disabled"
+            fg_color="#059669", hover_color="#047857", 
+            text_color="#ffffff",
+            text_color_disabled="#71717a",
+            font=ctk.CTkFont(weight="bold"),
+            height=38,
+            state="disabled"
         )
         self.action_button.pack(side="left", padx=(0, 10))
 
-        self.btn_update = ctk.CTkButton(
+        # Novo Botão: Resetar e Re-ler Todos os RELINTs
+        self.btn_reset_all = ctk.CTkButton(
             self.action_frame, 
-            text="Atualizar RELINTs (Forçar Processamento)", 
-            command=self.controller.update_homicides_only,
-            fg_color="#8b5cf6", hover_color="#7c3aed", state="disabled"
+            text="🔄 Resetar & Re-ler Todos os RELINTs", 
+            command=self.confirm_and_reset_all,
+            fg_color="#d97706", hover_color="#b45309",
+            text_color="#ffffff",
+            text_color_disabled="#71717a",
+            font=ctk.CTkFont(weight="bold"),
+            height=38,
+            state="disabled"
         )
-        self.btn_update.pack(side="left", padx=10)
+        self.btn_reset_all.pack(side="left", padx=10)
 
+        # Servidor e Painel Web (Direita)
         self.btn_dashboard_close = ctk.CTkButton(
             self.action_frame,
-            text="Parar Servidor Web",
+            text="⛔ Parar Servidor Web",
             command=self.stop_web_server,
-            fg_color="#ef4444", hover_color="#b91c1c"
+            fg_color="#dc2626", hover_color="#b91c1c",
+            text_color="#ffffff",
+            font=ctk.CTkFont(weight="bold"),
+            height=38
         )
         self.btn_dashboard_close.pack(side="right", padx=(5, 0))
 
         self.btn_dashboard = ctk.CTkButton(
             self.action_frame,
-            text="🌐 Painel Web",
+            text="🌐 Abrir Painel Web",
             command=self.open_web_dashboard,
-            fg_color="#3b82f6", hover_color="#2563eb"
+            fg_color="#0d9488", hover_color="#0f766e",
+            text_color="#ffffff",
+            font=ctk.CTkFont(weight="bold"),
+            height=38
         )
         self.btn_dashboard.pack(side="right", padx=5)
 
-        # Console de Logs
-        self.log_textbox = ctk.CTkTextbox(self, height=120, state="disabled", font=ctk.CTkFont(family="Consolas", size=12))
-        self.log_textbox.pack(pady=10, padx=15, fill="both", expand=True)
+        # ---------------------------------------------------------------------
+        # 4. Console de Logs / Caixa de Mensagens
+        # ---------------------------------------------------------------------
+        self.log_textbox = ctk.CTkTextbox(
+            self, 
+            height=140, 
+            state="disabled", 
+            font=ctk.CTkFont(family="Consolas", size=12),
+            fg_color="#121212",
+            text_color="#f1f5f9"
+        )
+        self.log_textbox.pack(pady=5, padx=15, fill="both", expand=True)
+
+        # ---------------------------------------------------------------------
+        # 5. Card em Destaque: Inteligência Artificial (Ollama)
+        # (Posicionado ABAIXO da caixa de mensagens/logs do sistema)
+        # ---------------------------------------------------------------------
+        self.ai_card = ctk.CTkFrame(self, fg_color="#202023", border_color="#10b981", border_width=1.5, corner_radius=10)
+        self.ai_card.pack(pady=(5, 10), padx=15, fill="x")
+
+        self.ai_card_left = ctk.CTkFrame(self.ai_card, fg_color="transparent")
+        self.ai_card_left.pack(side="left", padx=15, pady=10)
+
+        self.ai_title = ctk.CTkLabel(
+            self.ai_card_left, 
+            text="⚡ INTELIGÊNCIA ARTIFICIAL (Ollama Local)", 
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#34d399"
+        )
+        self.ai_title.pack(anchor="w")
+
+        self.ai_status_lbl = ctk.CTkLabel(
+            self.ai_card_left, 
+            text="Modo Ativo: 🟢 IA Local (Ollama) Habilitado", 
+            font=ctk.CTkFont(size=12),
+            text_color="#10b981"
+        )
+        self.ai_status_lbl.pack(anchor="w", pady=(2, 0))
+
+        self.switch_llm = ctk.CTkSwitch(
+            self.ai_card,
+            text="Usar Processamento por IA",
+            command=self.toggle_llm_switch,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            progress_color="#10b981",
+            switch_height=22,
+            switch_width=44
+        )
+        self.switch_llm.select()  # Ativado por padrão
+        self.switch_llm.pack(side="right", padx=20, pady=10)
+
+        # Checagem automática na inicialização da aplicação
+        self.after(300, self.initial_llm_check)
+
+    def initial_llm_check(self):
+        """Verifica a conexão com o Ollama na inicialização e ajusta o switch conforme o estado real."""
+        success = self.controller.set_use_llm(True)
+        if success:
+            self.switch_llm.select()
+            self.ai_status_lbl.configure(text="Modo Ativo: 🟢 IA Local (Ollama) Habilitado", text_color="#10b981")
+        else:
+            self.switch_llm.deselect()
+            self.ai_status_lbl.configure(text="Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)", text_color="#f59e0b")
+        
+        # Inicia o monitor de saúde em tempo real (heartbeat a cada 4 segundos)
+        self.after(4000, self.check_llm_heartbeat)
+
+    def check_llm_heartbeat(self):
+        """Monitor de saúde em tempo real do Ollama (executado periodicamente a cada 4s)."""
+        try:
+            if bool(self.switch_llm.get()) and getattr(self.controller, "use_llm", False):
+                if hasattr(self.controller, "llm_processor") and hasattr(self.controller.llm_processor, "check_connection"):
+                    is_ok, msg = self.controller.llm_processor.check_connection()
+                    if not is_ok:
+                        self.log_message("⚠️ [ALERTA DE DESCONEXÃO EM TEMPO REAL] O serviço Ollama foi desligado ou encerrado. O botão de IA foi DESLIGADO automaticamente.")
+                        self.controller.set_use_llm(False)
+                        self.switch_llm.deselect()
+                        self.ai_status_lbl.configure(
+                            text="Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA) — [IA Desconectada]", 
+                            text_color="#f59e0b"
+                        )
+        except Exception:
+            pass
+        finally:
+            self.after(4000, self.check_llm_heartbeat)
 
     def browse_directory(self):
         selected_dir = filedialog.askdirectory()
@@ -132,31 +260,72 @@ class ControlPanelTab(ctk.CTkFrame):
             self.controller.set_monitoring_path(selected_dir)
             self.dir_entry.delete(0, tk.END)
             self.dir_entry.insert(0, selected_dir)
-            self.status_label.configure(text=f"Pronto para iniciar monitoramento em: {selected_dir}", text_color="lightblue")
-            self.action_button.configure(state="normal")
-            self.btn_update.configure(state="normal")
+            self.status_label.configure(text="Status: ⏸️ Monitoramento Pausado", text_color="#f59e0b")
+            self.action_button.configure(
+                text="▶️ Iniciar Monitoramento", 
+                fg_color="#059669", hover_color="#047857", 
+                text_color="#ffffff", state="normal"
+            )
+            self.btn_reset_all.configure(state="normal")
             self.log_message(f"Pasta selecionada: {selected_dir}")
 
     def toggle_monitoring(self):
         if not self.controller.is_monitoring:
-            self.status_label.configure(text=f"Monitorando ativamente: {self.controller.monitoring_path}", text_color="green")
-            self.action_button.configure(text="Parar Monitoramento", fg_color="red", hover_color="#8B0000")
+            self.status_label.configure(text="Status: 🟢 Monitoramento Ativo", text_color="#4ade80")
+            self.action_button.configure(
+                text="⏸️ Pausar Monitoramento", 
+                fg_color="#dc2626", hover_color="#b91c1c", 
+                text_color="#ffffff", state="normal"
+            )
             self.dir_entry.configure(state="disabled")
             self.browse_button.configure(state="disabled")
-            self.btn_update.configure(state="disabled")
             self.controller.start_monitoring()
         else:
-            self.status_label.configure(text=f"Monitoramento parado em: {self.controller.monitoring_path}", text_color="orange")
-            self.action_button.configure(text="Monitorar RELINTs", fg_color="green", hover_color="#006400")
+            self.status_label.configure(text="Status: ⏸️ Monitoramento Pausado", text_color="#f59e0b")
+            self.action_button.configure(
+                text="▶️ Iniciar Monitoramento", 
+                fg_color="#059669", hover_color="#047857", 
+                text_color="#ffffff", state="normal"
+            )
             self.dir_entry.configure(state="normal")
             self.browse_button.configure(state="normal")
-            self.btn_update.configure(state="normal")
             self.controller.stop_monitoring()
+
+    def toggle_llm_switch(self):
+        """Dispara a alternância de uso do Ollama no controlador com teste de saúde."""
+        use_llm = bool(self.switch_llm.get())
+        success = self.controller.set_use_llm(use_llm)
+        if use_llm:
+            if success:
+                self.ai_status_lbl.configure(text="Modo Ativo: 🟢 IA Local (Ollama) Habilitado", text_color="#10b981")
+            else:
+                self.switch_llm.deselect()
+                self.ai_status_lbl.configure(text="Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)", text_color="#f59e0b")
+        else:
+            self.ai_status_lbl.configure(text="Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)", text_color="#f59e0b")
+
+    def on_llm_disconnected_ui(self):
+        """Desativa o switch da IA e atualiza o rótulo quando o Ollama é fechado/desconectado durante a leitura."""
+        self.switch_llm.deselect()
+        self.ai_status_lbl.configure(
+            text="Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA) — [IA Desconectada]", 
+            text_color="#f59e0b"
+        )
+
+    def confirm_and_reset_all(self):
+        """Solicita confirmação e executa o reset completo do banco, mídias e re-leitura."""
+        answer = messagebox.askyesno(
+            "Confirmar Reset Completo",
+            "Atenção!\nEsta ação irá zerar todas as ocorrências salvas no banco de dados, limpar o cadastro de pessoas e apagar as mídias salvas.\n\nDeseja continuar e re-ler todos os RELINTs da pasta do zero?",
+            icon="warning"
+        )
+        if answer:
+            self.controller.reset_and_reprocess_all()
 
     def stop_web_server(self) -> None:
         """Encerra o processo do servidor Uvicorn via PowerShell e pelo controlador."""
         import subprocess
-        self.log_message("Encerrando processos Uvicorn em execucao...")
+        self.log_message("Encerrando processos Uvicorn do Servidor Web...")
         try:
             cmd = (
                 'Get-CimInstance Win32_Process '
@@ -169,46 +338,93 @@ class ControlPanelTab(ctk.CTkFrame):
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
-            self.log_message("Servidor Uvicorn encerrado.")
+            self.log_message("Servidor Web encerrado.")
         except Exception as exc:
             self.log_message(f"Erro ao encerrar processos: {exc}")
         self.controller.close_web_dashboard()
 
     def open_web_dashboard(self) -> None:
-        """Abre o Painel Web no navegador padrao."""
+        """Abre o Painel Web no navegador padrão."""
         self.controller.open_web_dashboard()
 
     def update_stats(self):
-        pending = max(0, self.controller.total_discovered - self.controller.processed_count)
-        
-        fname = self.controller.current_filename
+        """Atualiza os rótulos de status, estado dos botões e as 2 Barras de Progresso."""
+        total_folder = getattr(self.controller, "total_files_in_folder", 0)
+        skipped_cnt = getattr(self.controller, "skipped_count", 0)
+        processed_cnt = getattr(self.controller, "processed_count", 0)
+        discovered_cnt = getattr(self.controller, "total_discovered", 0)
+        current_fn = getattr(self.controller, "current_filename", "")
+
+        # Estado do monitoramento e status
+        if self.controller.is_monitoring:
+            self.status_label.configure(text="Status: 🟢 Monitoramento Ativo", text_color="#4ade80")
+            self.action_button.configure(
+                text="⏸️ Pausar Monitoramento", 
+                fg_color="#dc2626", hover_color="#b91c1c", 
+                text_color="#ffffff", state="normal"
+            )
+        else:
+            if self.controller.monitoring_path:
+                self.status_label.configure(text="Status: ⏸️ Monitoramento Pausado", text_color="#f59e0b")
+                self.action_button.configure(
+                    text="▶️ Iniciar Monitoramento", 
+                    fg_color="#059669", hover_color="#047857", 
+                    text_color="#ffffff", state="normal"
+                )
+            else:
+                self.status_label.configure(text="Status: Parado - Aguardando seleção de diretório", text_color="#f59e0b")
+                self.action_button.configure(
+                    text="▶️ Iniciar Monitoramento", 
+                    fg_color="#059669", hover_color="#047857", 
+                    text_color="#ffffff", state="disabled"
+                )
+
+        fname = current_fn
         if fname:
-            fname = fname[:62] + "..." if len(fname) > 65 else fname
-            self.label_curr_file.configure(text=f"Lendo: {fname}", text_color="lightblue")
+            fname_short = fname[:60] + "..." if len(fname) > 65 else fname
+            self.label_curr_file.configure(text=f"Lendo: {fname_short}", text_color="#34d399")
         else:
-            self.label_curr_file.configure(text="Lendo: -", text_color="grey")
+            self.label_curr_file.configure(text="Lendo: -", text_color="#d4d4d8")
 
-        self.label_processed.configure(text=f"Lidos: {self.controller.processed_count}")
-        self.label_pending.configure(text=f"Fila: {pending}")
-        current_date = datetime.now().strftime("%d/%m/%Y")
-        self.label_skipped.configure(text=f"Lidos em {current_date}: {self.controller.skipped_count}")
-        self.label_total_files.configure(text=f"Total Pasta: {self.controller.total_files_in_folder}")
+        # 1. BARRA 1 (Barra de Cima: Arquivos Lidos na Pasta):
+        # Atualizada em tempo real sempre que uma leitura for concluída!
+        total_read_cnt = skipped_cnt + processed_cnt
+        if total_folder > 0:
+            total_read_cnt = min(total_read_cnt, total_folder)
 
-        def format_size(bytes_val: int) -> str:
-            if bytes_val < 1024: return f"{bytes_val} B"
-            elif bytes_val < 1024 * 1024: return f"{bytes_val / 1024:.1f} KB"
-            else: return f"{bytes_val / (1024 * 1024):.1f} MB"
-
-        if self.controller.total_bytes > 0:
-            progress = self.controller.processed_bytes / self.controller.total_bytes
+        if total_folder > 0:
+            prog1 = min(max(total_read_cnt / total_folder, 0.0), 1.0)
         else:
-            progress = 0.0
-
-        progress = min(max(progress, 0.0), 1.0)
-        self.progress_bar.set(progress)
-        self.label_bytes.configure(
-            text=f"Progresso: {format_size(self.controller.processed_bytes)} / {format_size(self.controller.total_bytes)} ({progress * 100:.1f}%)"
+            prog1 = 0.0
+            
+        self.progress_bar1.set(prog1)
+        self.label_prog1.configure(
+            text=f"📄 Arquivos Lidos na Pasta: {total_read_cnt} / {total_folder} arquivos ({prog1 * 100:.1f}%)"
         )
+
+        # 2. BARRA 2 (Barra de Baixo: Leitura Atual da Sessão)
+        if discovered_cnt > 0:
+            prog2 = min(max(processed_cnt / discovered_cnt, 0.0), 1.0)
+        else:
+            prog2 = 1.0 if (total_folder > 0 and total_read_cnt == total_folder) else 0.0
+        
+        self.progress_bar2.set(prog2)
+        if discovered_cnt > 0:
+            self.label_prog2.configure(
+                text=f"⚡ Progresso da Leitura Atual: {processed_cnt} / {discovered_cnt} novos arquivos lidos ({prog2 * 100:.1f}%)",
+                text_color="#c084fc"
+            )
+        else:
+            if total_folder > 0 and total_read_cnt == total_folder:
+                self.label_prog2.configure(
+                    text="⚡ Progresso da Leitura Atual: Todos os arquivos da pasta já estão cadastrados",
+                    text_color="#34d399"
+                )
+            else:
+                self.label_prog2.configure(
+                    text="⚡ Progresso da Leitura Atual: Aguardando início do monitoramento",
+                    text_color="#d4d4d8"
+                )
 
     def log_message(self, message: str):
         timestamp = datetime.now().strftime("%H:%M:%S")

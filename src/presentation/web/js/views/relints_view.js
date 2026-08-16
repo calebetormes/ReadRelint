@@ -226,8 +226,8 @@ function renderRelintDetail(relint) {
             <span class="fact-value">${escapeHtml(relint.date_of_fact || 'N/I')} ${relint.time_of_fact ? 'às ' + escapeHtml(relint.time_of_fact) : ''}</span>
           </div>
           <div class="fact-card">
-            <span class="fact-label"><i data-lucide="shield" style="width:12px;height:12px;display:inline;"></i> Grupo BM / Tipo de Documento</span>
-            <span class="fact-value">${escapeHtml(relint.bm_group || 'Outros')} (${escapeHtml(relint.relint_type || 'Outros')})</span>
+            <span class="fact-label"><i data-lucide="shield" style="width:12px;height:12px;display:inline;"></i> Grupo BM / Unidade PM</span>
+            <span class="fact-value">${escapeHtml(relint.bm_group || 'Outros')} ${relint.police_unit ? '• ' + escapeHtml(relint.police_unit) : ''}</span>
           </div>
         </div>
 
@@ -324,7 +324,7 @@ function renderRelintDetail(relint) {
           </div>
           ${relint.municipality ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Município:</strong> ${escapeHtml(relint.municipality)}</div>` : ''}
           ${relint.neighborhood ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Bairro:</strong> ${escapeHtml(relint.neighborhood)}</div>` : ''}
-          ${relint.street ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Rua:</strong> ${escapeHtml(relint.street)} ${relint.number ? 'nº ' + escapeHtml(relint.number) : ''}</div>` : ''}
+          ${relint.police_unit ? `<div style="font-size:13px;color:var(--ash);margin-bottom:6px;"><strong>Unidade PM:</strong> ${escapeHtml(relint.police_unit)}</div>` : ''}
           ${relint.coordinates ? `<div class="geo-coords" style="margin-top:12px;"><strong>Coordenadas GPS:</strong> <code class="geo-code" style="font-size:13px;padding:4px 8px;">${escapeHtml(relint.coordinates)}</code></div>` : ''}
 
           ${relint.map_url ? `
@@ -355,7 +355,7 @@ function renderRelintDetail(relint) {
         </button>
       </div>
 
-      <div class="transcript-free-content" id="transcript-raw-text">${escapeHtml(relint.content || 'Texto não disponível.')}</div>
+      <div class="transcript-free-content" id="transcript-raw-text">${escapeHtml(formatTranscriptText(relint.content))}</div>
     </div>
   `;
 

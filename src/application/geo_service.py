@@ -19,12 +19,10 @@ KNOWN_MUNICIPALITIES = [
 
 def extract_structured_address(report: Any) -> Dict[str, str]:
     """
-    Extracts structured address fields (municipality, street, number, neighborhood)
+    Extracts structured address fields (municipality, neighborhood, address)
     from report attributes with deterministic regex fallback on the report text.
     """
     muni = getattr(report, "municipality", None) or ""
-    street = getattr(report, "street", None) or ""
-    num = getattr(report, "number", None) or ""
     neigh = getattr(report, "neighborhood", None) or ""
     addr_raw = getattr(report, "address", None) or ""
     content = getattr(report, "content", None) or ""
@@ -48,44 +46,18 @@ def extract_structured_address(report: Any) -> Dict[str, str]:
         else:
             neigh = "Não Informado"
 
-    # 3. Street Fallback
-    if not street or street in ["Não Informado", "None", ""]:
-        m_rua = re.search(
-            r'(?i)\b(rua|av\.|avenida|travessa|rodovia|alameda)\s+([a-zA-Z\u00C0-\u00FF\s0-9\-]+?)(?:,|\snº|\sn°|\sno\b|\sn\b|\.|$)',
-            text_source
-        )
-        if m_rua:
-            street = f"{m_rua.group(1).capitalize()} {m_rua.group(2).strip()}"
-        else:
-            street = "Não Informado"
-
-    # 4. Number Fallback
-    if not num or num in ["Não Informado", "None", ""]:
-        m_num = re.search(r'(?i)\b(?:nº|n°|nº\.|n°\.|nº\s*|n°\s*|número\s*)\s*(\d+|s/n)\b', text_source)
-        if m_num:
-            num = m_num.group(1).strip()
-        else:
-            num = "S/N"
-
     # Assemble formatted address string
-    components = []
-    if street != "Não Informado":
-        components.append(street)
-    if num not in ["S/N", "Não Informado", "None"]:
-        components.append(f"nº {num}")
-    elif street != "Não Informado":
-        components.append("S/N")
-    if neigh != "Não Informado":
-        components.append(f"Bairro {neigh}")
-    if muni != "Não Informado":
-        components.append(f"{muni} - RS")
-
-    formatted_address = ", ".join(components) if components else (addr_raw if addr_raw not in ["Não Informado", "None"] else "Endereço não informado")
+    formatted_address = addr_raw if addr_raw not in ["Não Informado", "None", ""] else ""
+    if not formatted_address:
+        components = []
+        if neigh != "Não Informado":
+            components.append(f"Bairro {neigh}")
+        if muni != "Não Informado":
+            components.append(f"{muni} - RS")
+        formatted_address = ", ".join(components) if components else "Endereço não informado"
 
     return {
         "municipality": muni,
-        "street": street,
-        "number": num,
         "neighborhood": neigh,
         "formatted_address": formatted_address
     }
@@ -156,13 +128,9 @@ def resolve_report_map_info(report: Any) -> Tuple[str, str, str, str]:
 
     # 3. Inferred Address Search (Precisão Estimada)
     query_parts = []
-    if addr_info["street"] != "Não Informado":
-        query_parts.append(addr_info["street"])
-    if addr_info["number"] not in ["S/N", "Não Informado", "None"]:
-        query_parts.append(addr_info["number"])
-    if addr_info["neighborhood"] != "Não Informado":
-        query_parts.append(f"Bairro {addr_info['neighborhood']}")
-    if addr_info["municipality"] != "Não Informado":
+    if addr_info["formatted_address"] and addr_info["formatted_address"] != "Endereço não informado":
+        query_parts.append(addr_info["formatted_address"])
+    elif addr_info["municipality"] != "Não Informado":
         query_parts.append(f"{addr_info['municipality']} - RS")
 
     if query_parts:

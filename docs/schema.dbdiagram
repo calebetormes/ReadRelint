@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "currentViewName": null,
+  "defaultView": {
+    "detailLevel": "All",
+    "tablePositions": [
+      {
+        "name": "relints",
+        "schemaName": "public",
+        "x": 12,
+        "y": 12
+      },
+      {
+        "name": "homicide_details",
+        "schemaName": "public",
+        "x": 509.06750785574263,
+        "y": -55.118081180811814
+      },
+      {
+        "name": "persons",
+        "schemaName": "public",
+        "x": 118.140221402214,
+        "y": 707.3616236162362
+      },
+      {
+        "name": "relint_participants",
+        "schemaName": "public",
+        "x": 498.14130859375,
+        "y": 488
+      },
+      {
+        "name": "relint_images",
+        "schemaName": "public",
+        "x": 569.9420466011301,
+        "y": 289.8044280442804
+      }
+    ],
+    "tableGroupCollapseStates": [],
+    "stickyNoteLayouts": [],
+    "referencePaths": []
+  },
+  "views": {}
+}

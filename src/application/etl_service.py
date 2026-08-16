@@ -12,7 +12,9 @@ from src.application.text_cleaner import (
     extract_date_of_fact,
     extract_time_of_fact,
     extract_map_url,
-    resolve_coordinates_and_map_info
+    resolve_coordinates_and_map_info,
+    extract_subject_fallback,
+    extract_fallback_summary
 )
 from src.domain.rules.base_rule import IncidentRule
 from src.ports.processed_registry import IProcessedRegistry
@@ -29,13 +31,15 @@ class EtlService:
         llm_processor: ILlmProcessor,
         database_repo: IDatabaseRepo,
         processed_registry: IProcessedRegistry,
-        person_repo: IPersonRepo
+        person_repo: IPersonRepo,
+        use_llm: bool = True
     ):
         self.file_parser = file_parser
         self.llm_processor = llm_processor
         self.database_repo = database_repo
         self.processed_registry = processed_registry
         self.person_repo = person_repo
+        self.use_llm = use_llm
 
     def process_file(
         self,
@@ -45,7 +49,8 @@ class EtlService:
         on_success: Optional[Callable[[IncidentReport], None]] = None,
         on_error: Optional[Callable[[str], None]] = None,
         on_filtered: Optional[Callable[[str], None]] = None,
-        on_sent_to_llm: Optional[Callable[[str], None]] = None
+        on_sent_to_llm: Optional[Callable[[str], None]] = None,
+        on_llm_disconnected: Optional[Callable[[str], None]] = None
     ) -> Optional[IncidentReport]:
         """
         Executa o pipeline de processamento de um único arquivo PDF.
@@ -63,8 +68,6 @@ class EtlService:
                 if on_progress: on_progress(f"[{filename}] Já processado. Pulando.")
                 return None
 
-
-
             if on_progress: on_progress(f"[{filename}] -> Extraindo texto do PDF...")
             raw_text = self.file_parser.extract_text(file_path)
             
@@ -75,18 +78,34 @@ class EtlService:
             # Extração segura do histórico usando regra 11 (pós ANEXOS)
             history_from_annex = extract_history_from_annex(raw_text)
             
-            if on_progress: on_progress(f"[{filename}] -> Processando com IA local...")
-            if on_sent_to_llm: on_sent_to_llm(filename)
-            
             questions = rule.questions if rule else None
-            
             schema_model = None
             if rule and hasattr(rule, 'get_schema_model'):
                 schema_model = rule.get_schema_model()
             else:
                 schema_model = IncidentReport
-                
-            response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model)
+
+            if self.use_llm and self.llm_processor:
+                if on_progress: on_progress(f"[{filename}] -> Processando com IA local (Ollama)...")
+                if on_sent_to_llm: on_sent_to_llm(filename)
+                try:
+                    response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model)
+                    if not isinstance(response_dict, dict):
+                        response_dict = {}
+                    extraction_method = "Ollama (IA)"
+                except Exception as llm_err:
+                    self.use_llm = False
+                    msg_disconnect = f"⚠️ Conexão com o Ollama perdida ({llm_err}). Alternando automaticamente para Regex (Sem IA)..."
+                    if on_progress: on_progress(f"[{filename}] {msg_disconnect}")
+                    if on_llm_disconnected: on_llm_disconnected(str(llm_err))
+                    response_dict = {}
+                    extraction_method = "Regex (Sem IA)"
+            else:
+                if on_progress: on_progress(f"[{filename}] ⚡ Processamento Ultra-Rápido (Regex / Sem IA)...")
+                response_dict = {}
+                extraction_method = "Regex (Sem IA)"
+
+            response_dict["extraction_method"] = extraction_method
 
             # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT (RELATÓRIO DE INTELIGÊNCIA Nº, ASSUNTO, ORIGEM, DIFUSÃO, ANEXOS)
             final_content = clean_relint_text(cleaned_text)
@@ -148,15 +167,24 @@ class EtlService:
             if not coords or coords == "None":
                 response_dict["coordinates"] = resolved_coords
 
-            # 4. Sanitiza o resumo caso venha nulo ou com texto de placeholder
+            # 1.0 Fallback do Assunto caso venha nulo ou vazio
+            subject_val = response_dict.get("subject")
+            if not subject_val or str(subject_val).strip() in ["None", "null", ""]:
+                subject_val = extract_subject_fallback(final_content, filename)
+                response_dict["subject"] = subject_val
+
+            # 4. Sanitiza o resumo caso venha nulo ou com texto de placeholder/cabeçalho
             summary_val = response_dict.get("summary")
-            if not summary_val or "Resumo do Histórico" in str(summary_val) or len(str(summary_val).strip()) < 5:
-                summary_val = response_dict.get("main_fact") or response_dict.get("subject") or (final_content[:300] + "...")
+            if not summary_val or "Resumo do Histórico" in str(summary_val) or len(str(summary_val).strip()) < 5 or "RELATÓRIO DE INTELIGÊNCIA" in str(summary_val):
+                summary_val = response_dict.get("main_fact") or extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
             response_dict["summary"] = summary_val
 
             # 5. Filtragem de participantes: EXCLUIR Policiais Militares (PM / Guarnição)
-
             raw_participants = response_dict.get("participants", [])
+            if not raw_participants:
+                from src.application.text_cleaner import extract_fallback_participants
+                raw_participants = extract_fallback_participants(final_content)
+
             filtered_participants = []
             pm_keywords = ["SD PM", "SGT PM", "CB PM", "CAP PM", "MAJ PM", "TEN PM", "POLICIAL MILITAR", "GUARNICAO", "GUARNICÃO", "2° SGT", "1° SGT", "3° SGT", " VTR "]
             
@@ -231,6 +259,7 @@ class EtlService:
                     address=response_dict.get("address", ""),
                     date_of_fact=date_val,
                     modification_date_history=date_val,
+                    extraction_method=extraction_method,
                     participants=parsed_participants,
                     images=general_scene_images
                 )

@@ -31,7 +31,6 @@ def test_ollama_client_failure(mock_post):
     mock_post.side_effect = Exception("Connection refused")
 
     client = OllamaClient()
-    result = client.process_text("Texto bruto")
-
-    assert result == {}
+    with pytest.raises(Exception):
+        client.process_text("Texto bruto")
 

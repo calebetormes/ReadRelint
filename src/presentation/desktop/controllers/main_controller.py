@@ -47,6 +47,7 @@ class MainController:
 
         # Injeção de Dependências do Domínio e Aplicação (SQLite)
         self.pdf_reader = PdfReader()
+        self.use_llm: bool = True
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()
         
@@ -60,7 +61,8 @@ class MainController:
             llm_processor=self.llm_processor, 
             database_repo=self.db_repo, 
             processed_registry=self.processed_registry,
-            person_repo=self.person_repo
+            person_repo=self.person_repo,
+            use_llm=self.use_llm
         )
 
 
@@ -70,6 +72,38 @@ class MainController:
         # Callbacks para atualizar a UI (devem ser configurados pela view)
         self.on_log_message: Optional[Callable[[str], None]] = None
         self.on_stats_updated: Optional[Callable[[], None]] = None
+
+    def set_use_llm(self, use_llm: bool) -> bool:
+        """
+        Alterna a utilização da LLM (IA local) no serviço de ETL.
+        Quando ativado (True), executa um teste de conexão em tempo real com o Ollama.
+        Retorna True se ativado com sucesso ou False se falhar.
+        """
+        if use_llm:
+            if hasattr(self.llm_processor, "check_connection"):
+                self.log("🔍 Testando conexão com o Ollama local...")
+                is_ok, msg = self.llm_processor.check_connection()
+                if not is_ok:
+                    self.log(f"⚠️ {msg}")
+                    self.log("💡 Mantendo modo de extração rápida sem IA (Regex). Inicie o Ollama e tente ligar novamente.")
+                    self.use_llm = False
+                    if hasattr(self, "etl_service"):
+                        self.etl_service.use_llm = False
+                    return False
+                else:
+                    self.log(f"✅ {msg}")
+            
+            self.use_llm = True
+            if hasattr(self, "etl_service"):
+                self.etl_service.use_llm = True
+            self.log("🟢 Modo de extração via IA Local (Ollama) ATIVADO.")
+            return True
+        else:
+            self.use_llm = False
+            if hasattr(self, "etl_service"):
+                self.etl_service.use_llm = False
+            self.log("⚡ Modo de extração rápida (Regex / Sem IA) ATIVADO.")
+            return True
 
     def log(self, message: str):
         """Dispara o callback de log se estiver configurado."""
@@ -81,8 +115,85 @@ class MainController:
         if self.on_stats_updated:
             self.on_stats_updated()
 
+    def reset_and_reprocess_all(self):
+        """
+        Interrompe o monitoramento, limpa o banco de dados SQLite, a tabela de pessoas,
+        o registro de histórico e a pasta de mídias extraídas, e reinicia a leitura
+        completa de todos os arquivos da pasta selecionada.
+        """
+        self.log("🔄 Iniciando Reset Completo da Base de Dados e Re-leitura de RELINTs...")
+        if self.is_monitoring:
+            self.stop_monitoring()
+
+        # 1. Limpa o banco de dados relacional
+        try:
+            self.db_repo.clear_all()
+            self.person_repo.clear_all()
+            self.log("🧹 Banco de dados relacional (relints.db) zerado.")
+        except Exception as exc:
+            self.log(f"⚠️ Aviso ao limpar banco: {exc}")
+
+        # 2. Limpa o registro de histórico
+        try:
+            self.processed_registry.clear()
+            self.log("🧹 Histórico de controle de arquivos zerado.")
+        except Exception as exc:
+            self.log(f"⚠️ Aviso ao limpar registro de histórico: {exc}")
+
+        # 3. Limpa arquivos de mídia salvos
+        try:
+            import shutil
+            media_dir = Path("data/media")
+            if media_dir.exists():
+                shutil.rmtree(media_dir)
+                media_dir.mkdir(parents=True, exist_ok=True)
+                self.log("🧹 Galeria de mídias/fotos em data/media/ limpada.")
+        except Exception as exc:
+            self.log(f"⚠️ Aviso ao limpar pasta de mídias: {exc}")
+
+        # 4. Reseta contadores e reinicia o monitoramento se houver pasta selecionada
+        self.processed_count = 0
+        self.total_discovered = 0
+        self.total_bytes = 0
+        self.processed_bytes = 0
+        self.skipped_count = 0
+        self.total_files_in_folder = 0
+        self.current_filename = ""
+        self.update_ui()
+
+        if self.monitoring_path and Path(self.monitoring_path).exists():
+            self.log(f"🚀 Reiniciando varredura e leitura do zero em: {self.monitoring_path}")
+            self.start_monitoring()
+        else:
+            self.log("⚠️ Selecione uma pasta para iniciar a re-leitura.")
+
     def set_monitoring_path(self, path: str):
         self.monitoring_path = path
+        self.inspect_folder(path)
+
+    def inspect_folder(self, path: str):
+        """
+        Inspeciona a pasta selecionada imediatamente ao escolher o diretório,
+        calculando o total de PDFs e quantos já constam no banco de dados.
+        """
+        self.monitoring_path = path
+        self.skipped_count = 0
+        self.total_files_in_folder = 0
+        self.processed_count = 0
+        self.total_discovered = 0
+        
+        try:
+            folder = Path(path)
+            if folder.exists() and folder.is_dir():
+                existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
+                self.total_files_in_folder = len(existing_pdfs)
+                already_in_db = [f for f in existing_pdfs if self.db_repo.exists_by_source_file(f.name)]
+                self.skipped_count = len(already_in_db)
+                self.total_discovered = max(0, self.total_files_in_folder - self.skipped_count)
+        except Exception as exc:
+            self.log(f"Aviso ao inspecionar pasta: {exc}")
+        
+        self.update_ui()
 
     def toggle_monitoring(self):
         """Inicia ou para o monitoramento de diretório."""
@@ -229,7 +340,8 @@ class MainController:
                 on_error=self.log,
                 on_success=self.increment_confirmed,
                 on_filtered=self.increment_filtered,
-                on_sent_to_llm=self.increment_llm_sent
+                on_sent_to_llm=self.increment_llm_sent,
+                on_llm_disconnected=self.handle_llm_disconnection
             )
             
             self.processed_count += 1
@@ -237,6 +349,23 @@ class MainController:
             self.current_filename = ""
             self.update_ui()
             self.processing_queue.task_done()
+
+    def handle_llm_disconnection(self, reason: str = ""):
+        """
+        Trata a desconexão ou fechamento do Ollama durante o processamento de um RELINT.
+        Desliga a chave da LLM no controlador e notifica a interface desktop.
+        """
+        self.use_llm = False
+        if hasattr(self, 'etl_service'):
+            self.etl_service.use_llm = False
+            
+        self.log(f"⚠️ [CONEXÃO IA PERDIDA] O serviço Ollama está inacessível. O botão da LLM foi DESLIGADO automaticamente e o sistema alternou para o modo Regex (Sem IA).")
+        
+        if hasattr(self, 'view') and hasattr(self.view, 'control_panel_tab'):
+            try:
+                self.view.control_panel_tab.after(0, self.view.control_panel_tab.on_llm_disconnected_ui)
+            except Exception:
+                pass
 
     def increment_confirmed(self, report):
         self.confirmed_homicides_count += 1
@@ -257,11 +386,11 @@ class MainController:
         self.update_ui()
 
     def reprocess_file_history(self, filename: str, rule_name: str):
-        """Limpa arquivo do banco e histórico, enfileirando novamente se possível."""
+        """Limpa arquivo do banco e histórico e reprocessa imediatamente o PDF especificado."""
         self.processed_registry.remove_record(filename, rule_name)
         deleted = self.db_repo.delete_by_source_file(filename)
         if deleted:
-            self.log(f"[{filename}] Removido do banco de dados local para reprocessamento.")
+            self.log(f"[{filename}] Removido do banco de dados para reprocessamento.")
             if self.confirmed_homicides_count > 0:
                 self.confirmed_homicides_count -= 1
             if self.session_confirmed_count > 0:
@@ -272,20 +401,43 @@ class MainController:
             if self.skipped_count > 0:
                 self.skipped_count -= 1
 
-        if self.is_monitoring and self.monitoring_path:
+        if self.monitoring_path:
             file_path = Path(self.monitoring_path) / filename
             if file_path.exists():
-                self.log(f"[{filename}] Adicionado novamente à fila de processamento.")
-                self.total_discovered += 1
-                try:
-                    self.total_bytes += file_path.stat().st_size
-                except Exception:
-                    pass
-                self.processing_queue.put(file_path)
+                if self.is_monitoring:
+                    self.log(f"[{filename}] Adicionado novamente à fila de monitoramento.")
+                    self.total_discovered += 1
+                    try:
+                        self.total_bytes += file_path.stat().st_size
+                    except Exception:
+                        pass
+                    self.processing_queue.put(file_path)
+                    self.update_ui()
+                else:
+                    self.log(f"🚀 Reprocessando imediatamente o arquivo: {filename}...")
+                    def _reprocess_job():
+                        self.current_filename = filename
+                        self.update_ui()
+                        self.etl_service.process_file(
+                            file_path=file_path,
+                            rule=self.active_rule,
+                            on_progress=self.log,
+                            on_error=self.log,
+                            on_success=self.increment_confirmed,
+                            on_filtered=self.increment_filtered,
+                            on_sent_to_llm=self.increment_llm_sent,
+                            on_llm_disconnected=self.handle_llm_disconnection
+                        )
+                        self.current_filename = ""
+                        self.processed_count += 1
+                        self.update_ui()
+                        self.log(f"✅ Reprocessamento de {filename} concluído com sucesso!")
+
+                    threading.Thread(target=_reprocess_job, daemon=True).start()
             else:
-                self.log(f"[{filename}] Arquivo físico não encontrado na pasta monitorada.")
+                self.log(f"⚠️ Arquivo {filename} não encontrado no diretório: {self.monitoring_path}")
         else:
-            self.log(f"[{filename}] Removido do histórico. Inicie o monitoramento para reprocessá-lo.")
+            self.log(f"⚠️ Selecione um diretório para reprocessar {filename}.")
             
         self.update_ui()
 

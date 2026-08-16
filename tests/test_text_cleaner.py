@@ -117,4 +117,62 @@ def test_extract_map_url_and_coordinates():
     assert coords == "-28.26123, -53.49123"
 
 
+def test_extract_subject_fallback():
+    from src.application.text_cleaner import extract_subject_fallback
+
+    text = (
+        "RELATÓRIO DE INTELIGÊNCIA Nº 100\n"
+        "ASSUNTO: HOMICÍDIO DOLOSO EM PANAMBI - RS\n"
+        "ORIGEM: ARI"
+    )
+    filename = "RELINT 100 - ADJ-INT-CRIM - Homicídio Doloso em Panambi - RS.pdf"
+
+    assert extract_subject_fallback(text, filename) == "HOMICÍDIO DOLOSO EM PANAMBI - RS"
+    assert extract_subject_fallback("", filename) == "Homicídio Doloso em Panambi - RS"
+
+
+def test_extract_fallback_summary():
+    from src.application.text_cleaner import extract_fallback_summary
+
+    text = (
+        "RELATÓRIO DE INTELIGÊNCIA Nº 459/2026\n"
+        "DATA: 30/07/2026\n"
+        "ASSUNTO: ROUBO A ESTABELECIMENTO COMERCIAL EM PANAMBI -RS\n"
+        "ORIGEM: ARI/AJ\n"
+        "DIFUSÃO: ACI\n"
+        "REFERÊNCIA: XXX\n"
+        "ANEXOS: XXX\n"
+        "Em 30 de julho de 2026, por volta das 01h30min, quatro indivíduos armados efetuaram um roubo.\n"
+        "FOTO DO ISOLAMENTO DO LOCAL\n"
+        "Segundo relatos, os indivíduos invadiram a residência..."
+    )
+
+    summary = extract_fallback_summary(text, subject="ROUBO A ESTABELECIMENTO COMERCIAL")
+    assert "RELATÓRIO DE INTELIGÊNCIA" not in summary
+    assert "DIFUSÃO:" not in summary
+    assert summary.startswith("ROUBO A ESTABELECIMENTO COMERCIAL")
+
+
+def test_normalize_whitespace_and_paragraphs():
+    from src.application.text_cleaner import normalize_whitespace_and_paragraphs
+
+    raw_text = (
+        "como\n"
+        "GILMAR\n"
+        "LAURINDO\n"
+        "BELLINI\n"
+        "RG7036249394 - 60 anos , ATUAL PREFEITO DO MUNICÍPIO DE BOA VISTA DO\n"
+        "INCRA/RS pelo Partido Democrático Brasileiro (MDB).\n\n"
+        "Conforme relato da vítima LUANA, o indivíduo compareceu ao estabelecimento e,\n"
+        "durante o atendimento, solicitou seu número de telefone.\n"
+    )
+
+    cleaned = normalize_whitespace_and_paragraphs(raw_text)
+    assert "como GILMAR LAURINDO BELLINI RG7036249394 - 60 anos, ATUAL PREFEITO" in cleaned
+    assert "estabelecimento e, durante o atendimento, solicitou" in cleaned
+    assert "anos , ATUAL" not in cleaned
+
+
+
+
 

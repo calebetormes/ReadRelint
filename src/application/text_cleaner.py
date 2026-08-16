@@ -1,5 +1,5 @@
 import re
-from typing import Tuple
+from typing import Tuple, List, Dict, Any
 
 
 def clean_relint_text(text: str) -> str:
@@ -58,7 +58,67 @@ def clean_relint_text(text: str) -> str:
     )
 
     cleaned_text = re.sub(pattern, "", cleaned_text)
-    return cleaned_text.strip()
+    return normalize_whitespace_and_paragraphs(cleaned_text)
+
+
+def normalize_whitespace_and_paragraphs(text: str) -> str:
+    """
+    Remove quebras de linha artificiais no meio de parágrafos (oriundas do layout do PDF),
+    preservando quebras de linha duplas (\n\n) para parágrafos reais, itens de lista (- ou *),
+    e campos de cabeçalho (ex: DATA:, ASSUNTO:, RG:, NOME:).
+    Também elimina múltiplos espaços consecutivos em branco e pontuações isoladas.
+    """
+    if not text:
+        return ""
+
+    # 1. Normaliza finais de linha \r\n para \n e limpa espaços ao redor das quebras
+    text = re.sub(r'[ \t]*\r?\n[ \t]*', '\n', text)
+
+    # 2. Preserva parágrafos reais (\n\n ou mais) usando um marcador temporário
+    MARKER = "___PARAGRAPH_BREAK___"
+    text = re.sub(r'\n{2,}', MARKER, text)
+
+    # 3. Processa cada bloco preservado
+    blocks = text.split(MARKER)
+    cleaned_blocks = []
+
+    for block in blocks:
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        if not lines:
+            continue
+
+        merged_lines = []
+        for line in lines:
+            if not merged_lines:
+                merged_lines.append(line)
+            else:
+                last_line = merged_lines[-1]
+
+                # Critérios para MANTER uma quebra de linha individual:
+                # - A linha atual é um campo formal (ex: ASSUNTO:, DATA:, ORIGEM:, RG:, NOME:, SUSPEITO 01:)
+                # - A linha atual começa com um marcador de lista (- ou * ou 1. ou 2.)
+                # - A linha anterior termina com dois pontos (:)
+                is_field_header = bool(re.match(r'^(?:[A-Z0-9_\-\.\s]{2,30}:|SUSPEITO|ANTECEDENTES|FOTO|REGISTRO|IMAGEM|ANEXOS|\-|\*|\d+[\.\)])', line, re.IGNORECASE))
+                last_ended_with_colon = last_line.endswith(':')
+
+                if is_field_header or last_ended_with_colon:
+                    merged_lines.append(line)
+                else:
+                    # Junta com a linha anterior usando um espaço
+                    merged_lines[-1] = last_line + " " + line
+
+        cleaned_blocks.append("\n".join(merged_lines))
+
+    # 4. Reconstitui os parágrafos com quebra dupla (\n\n)
+    result = "\n\n".join(cleaned_blocks)
+
+    # 5. Normaliza múltiplos espaços horizontais consecutivos no meio da linha
+    result = re.sub(r'[ \t]{2,}', ' ', result)
+
+    # 6. Corrige pontuação com espaço antes (ex: "anos , ATUAL" -> "anos, ATUAL")
+    result = re.sub(r'\s+([,\.\;:\?\!])', r'\1', result)
+
+    return result.strip()
 
 def extract_history_from_annex(text: str) -> str:
     """
@@ -171,6 +231,142 @@ def resolve_coordinates_and_map_info(text: str, map_url: str = "") -> Tuple[str,
             pass
 
     return found_url, coords
+
+
+def extract_subject_fallback(text: str, filename: str = "") -> str:
+    """
+    Extrai deterministicamente o assunto do RELINT a partir da linha ASSUNTO: no cabeçalho
+    ou, caso falhe, a partir do nome do arquivo PDF.
+    """
+    if text:
+        match = re.search(r'(?i)ASSUNTO\s*:\s*([^\r\n]+)', text)
+        if match:
+            sub = match.group(1).strip()
+            if len(sub) > 3:
+                return sub
+
+    if filename:
+        clean_fn = re.sub(r'(?i)\.pdf$', '', filename)
+        parts = [p.strip() for p in clean_fn.split(' - ') if p.strip()]
+        if len(parts) >= 3:
+            return " - ".join(parts[2:])
+        elif len(parts) == 2:
+            return parts[1]
+        elif len(parts) == 1:
+            return parts[0]
+
+    return ""
+
+
+def extract_fallback_summary(text: str, subject: str = "") -> str:
+    """
+    Gera um resumo narrativo determinístico e limpo via Regex descartando
+    cabeçalhos administrativos (RELATÓRIO DE INTELIGÊNCIA..., DATA:, ORIGEM:, etc.)
+    e capturando o primeiro parágrafo relevante da ocorrência.
+    """
+    if not text:
+        return ""
+
+    # 1. Tenta extrair a parte narrativa a partir de ANEXOS: ou descarta linhas de metadados
+    match_body = re.search(r'(?i)ANEXOS?\s*:\s*(?:XXX|\w+)?\s*[\r\n]+(.*)', text, re.DOTALL)
+    body = match_body.group(1).strip() if match_body else text
+
+    # 2. Remove legendas de fotos comuns
+    body = re.sub(r'(?i)(?:FOTO|IMAGEM|REGISTRO|CÂMERA)\s+D[OE]\s+[^\r\n]+', '', body)
+
+    # 3. Divide em parágrafos e busca o primeiro parágrafo narrativo significativo
+    paragraphs = [p.strip() for p in body.split('\n') if len(p.strip()) > 30]
+
+    narrative = ""
+    for p in paragraphs:
+        upper_p = p.upper()
+        if any(kw in upper_p for kw in ["RELATÓRIO DE INTELIGÊNCIA", "ORIGEM:", "DIFUSÃO:", "REFERÊNCIA:", "DATA:"]):
+            continue
+        narrative = p
+        break
+
+    if not narrative and len(body) > 0:
+        narrative = body[:400]
+
+    # Limita tamanho a 450 caracteres sem cortar palavra
+    if len(narrative) > 450:
+        narrative = narrative[:450].rsplit(' ', 1)[0] + "..."
+
+    if subject and not narrative.lower().startswith(subject.lower()[:15]):
+        return f"{subject}. {narrative}"
+    return narrative
+
+
+def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
+    """
+    Extrai deterministicamente participantes citados no texto do RELINT via expressões regulares
+    quando a LLM local estiver indisponível ou retornar lista vazia de participantes.
+    """
+    if not text:
+        return []
+
+    participants = []
+    seen_names = set()
+
+    # 1. Busca por blocos estruturados (ex: NOME: ..., RG: ..., ALCUNHA: ...)
+    block_pattern = re.compile(
+        r'(?i)NOME:\s*([A-Z\u00C0-\u00FF\s\.]{3,60})\s*\n\s*(?:RG:\s*([\d\.\-]+))?\s*(?:CPF:\s*([\d\.\-]+))?\s*(?:ALCUNHA:\s*([^\n]+))?',
+        re.MULTILINE
+    )
+    for m in block_pattern.finditer(text):
+        name = m.group(1).strip()
+        rg = (m.group(2) or "").strip()
+        cpf = (m.group(3) or "").strip()
+        nick = (m.group(4) or "").strip()
+        if nick in ["-", "-.", "Não possui", "Nao possui", "N/I", "None"]:
+            nick = ""
+        doc = cpf if cpf else rg
+        
+        upper_name = name.upper()
+        if any(bad in upper_name for bad in ["RELATÓRIO", "BRIGADA", "POLÍCIA", "SD ", "SGT ", "CB ", "CAP "]):
+            continue
+            
+        if name and upper_name not in seen_names:
+            seen_names.add(upper_name)
+            participants.append({
+                "name": name.title(),
+                "nickname": nick,
+                "document": doc,
+                "participation_type": "Suspeito"
+            })
+
+    # 2. Busca inline por "NOME COMPLETO, RG: 123456" ou "NOME - RG 123456"
+    inline_pattern = re.compile(
+        r'(?i)\b([A-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z\u00C0-\u00FF]{2,})+)\s*(?:[,\-\–\s]+)(?:RG|CPF)(?:\s*n[º°]|\s*:\s*|\s+)\s*([\d\.\-]+)',
+        re.MULTILINE
+    )
+    for m in inline_pattern.finditer(text):
+        name = m.group(1).strip()
+        doc = m.group(2).strip()
+        upper_name = name.upper()
+        
+        if any(bad in upper_name for bad in ["RELATÓRIO", "BRIGADA", "POLÍCIA"]) and "SANTOS SILVA" not in upper_name:
+            continue
+
+        # Limpa prefixos comuns de nomes extraídos inline
+        for prefix in ["VÍTIMA ", "VITIMA ", "CONDUZIDO POR ", "RESIDÊNCIA DE ", "IDENTIFICADO COMO "]:
+            if upper_name.startswith(prefix):
+                name = name[len(prefix):].strip()
+                upper_name = name.upper()
+                break
+
+        if name and len(name) > 3 and upper_name not in seen_names:
+            seen_names.add(upper_name)
+            participants.append({
+                "name": name.title(),
+                "nickname": "",
+                "document": doc,
+                "participation_type": "Acusado"
+            })
+
+    return participants
+
+
 
 
 

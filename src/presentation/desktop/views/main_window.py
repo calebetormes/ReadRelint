@@ -12,12 +12,13 @@ class MainWindow(ctk.CTk):
 
         # Configurações globais do tema
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        ctk.set_default_color_theme("green")
 
         self.title("ETL de Boletins de Ocorrência - Painel de Controle")
         self.geometry("1024x720")
         self.resizable(True, True)
         self.minsize(850, 640)
+        self.configure(fg_color="#121212")
 
         # 1. Recuperando as classes injetadas dinamicamente via Registry
         MainControllerCls = ModuleLoader.get_class("MainController")
@@ -32,23 +33,20 @@ class MainWindow(ctk.CTk):
         self.header_frame.pack(fill="x", padx=25, pady=(15, 5))
 
         self.title_label = ctk.CTkLabel(
-            self.header_frame, text="Painel de Controle - ETL de BOs", 
-            font=ctk.CTkFont(family="Inter", size=22, weight="bold")
+            self.header_frame, text="ReadRelint • Sistema de Leitura & Inteligência", 
+            font=ctk.CTkFont(family="Inter", size=22, weight="bold"),
+            text_color="#f8fafc"
         )
         self.title_label.pack(side="left")
 
-        self.btn_open_dashboard = ctk.CTkButton(
-            self.header_frame,
-            text="🌐 Painel Web",
-            command=self.controller.open_web_dashboard,
-            fg_color="#3b82f6",
-            hover_color="#2563eb",
-            font=ctk.CTkFont(weight="bold"),
-            height=36
+        self.tabview = ctk.CTkTabview(
+            self, 
+            width=720, 
+            height=480, 
+            fg_color="#18181b", 
+            segmented_button_selected_color="#10b981",
+            segmented_button_selected_hover_color="#059669"
         )
-        self.btn_open_dashboard.pack(side="right", padx=5)
-
-        self.tabview = ctk.CTkTabview(self, width=720, height=480)
         self.tabview.pack(pady=5, padx=25, fill="both", expand=True)
 
         self.tabview.add("Painel de Controle")

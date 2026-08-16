@@ -155,12 +155,16 @@ def classify_bm_group(
         content: Texto do histórico/conteúdo.
         llm_bm_group: Classificação sugerida pelo LLM (pode ser None ou "Outros").
     """
-    # Corpus de busca: filename + subject têm maior peso; content completa.
-    # Concatenamos em ordem de confiança.
+    # Passada 1: Busca estrita no título e assunto (alta prioridade)
     primary = f"{filename} {subject}".lower()
+    for bm_value, patterns in _CLASSIFICATION_RULES:
+        for pattern in patterns:
+            if re.search(pattern, primary, re.IGNORECASE):
+                return bm_value
+
+    # Passada 2: Busca no texto completo do conteúdo como fallback
     secondary = (content or "").lower()
     full_corpus = f"{primary} {secondary}"
-
     for bm_value, patterns in _CLASSIFICATION_RULES:
         for pattern in patterns:
             if re.search(pattern, full_corpus, re.IGNORECASE):
