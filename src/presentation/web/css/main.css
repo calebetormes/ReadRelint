@@ -1018,6 +1018,103 @@ body {
 .btn:hover,
 .btn-secondary:hover { border-color: var(--ink); }
 
+/* ── Monitoring Action Buttons (Matching Sidebar .nav-item.active Design) ── */
+.btn-resend {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 9px 16px !important;
+  border-radius: var(--r-md) !important;
+  font-family: var(--font-ui) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  background-color: var(--surface-elevated) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--hairline-strong) !important;
+  transition: background-color var(--ease-fast), border-color var(--ease-fast), transform 150ms ease !important;
+  user-select: none !important;
+  height: 38px !important;
+  white-space: nowrap !important;
+}
+
+.btn-resend:hover {
+  background-color: #27272a !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-resend:active {
+  transform: scale(0.98) !important;
+}
+
+.btn-resend svg,
+.btn-resend i {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+  color: var(--ink) !important;
+}
+
+.btn-resend-emerald {
+  background-color: var(--surface-elevated) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+}
+
+.btn-resend-emerald svg,
+.btn-resend-emerald i {
+  color: #34d399 !important;
+}
+
+.btn-resend-emerald:hover {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.btn-resend-amber {
+  background-color: var(--surface-elevated) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.btn-resend-amber svg,
+.btn-resend-amber i {
+  color: #fbbf24 !important;
+}
+
+.btn-resend-amber:hover {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+.btn-resend-danger {
+  background-color: var(--surface-elevated) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+.btn-resend-danger svg,
+.btn-resend-danger i {
+  color: #f87171 !important;
+}
+
+.btn-resend-danger:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+.btn-resend-sm {
+  height: 32px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+}
+
 /* ── Image Gallery ────────────────────────────────────────── */
 .images-gallery-grid,
 .gallery-grid-full {

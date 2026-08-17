@@ -4,6 +4,15 @@ Pydantic schemas for RELINTs REST API endpoints.
 from typing import List, Optional, Any, Dict
 from pydantic import BaseModel, Field
 
+class ParticipantDTO(BaseModel):
+    """Participant information inside a RELINT."""
+    name: str
+    nickname: Optional[str] = ""
+    document: Optional[str] = ""
+    background: Optional[str] = ""
+    participation_type: Optional[str] = "Acusado"
+    photo_path: Optional[str] = ""
+
 class RelintSummaryResponse(BaseModel):
     """Summary representation of a RELINT report for list/table view."""
     id: str
@@ -14,21 +23,14 @@ class RelintSummaryResponse(BaseModel):
     bm_group: Optional[str] = "Outros"
     relint_type: Optional[str] = "Outros"
     municipality: Optional[str] = ""
+    neighborhood: Optional[str] = ""
     police_unit: Optional[str] = ""
     summary: Optional[str] = ""
-    extraction_method: Optional[str] = "Ollama (IA)"
+    extraction_method: Optional[str] = "Regex (Sem IA)"
+    participants: Optional[List[ParticipantDTO]] = []
     participants_count: int = 0
     images_count: int = 0
     user_edited: bool = False
-
-class ParticipantDTO(BaseModel):
-    """Participant information inside a RELINT."""
-    name: str
-    nickname: Optional[str] = ""
-    document: Optional[str] = ""
-    background: Optional[str] = ""
-    participation_type: Optional[str] = "Acusado"
-    photo_path: Optional[str] = ""
 
 class RelintDetailResponse(BaseModel):
     """Complete detail representation of an IncidentReport."""
@@ -52,7 +54,7 @@ class RelintDetailResponse(BaseModel):
     precision_label: Optional[str] = "Sem Dados de Localização"
     summary: Optional[str] = ""
     content: Optional[str] = ""
-    extraction_method: Optional[str] = "Ollama (IA)"
+    extraction_method: Optional[str] = "Regex (Sem IA)"
     user_edited: bool = False
     images: List[Dict[str, Any]] = Field(default_factory=list)
     participants: List[ParticipantDTO] = Field(default_factory=list)

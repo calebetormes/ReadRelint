@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Trigger view re-fetches if needed
       if (targetTab === 'crimes' && typeof fetchCrimesData === 'function') {
         fetchCrimesData();
+      } else if (targetTab === 'monitoring' && typeof renderMonitoringView === 'function') {
+        const container = document.getElementById('tab-monitoring');
+        if (container) renderMonitoringView(container);
       }
     });
   });

@@ -93,12 +93,12 @@ TEXTO DO RELINT:
 
         try:
             logger.info(f"Enviando texto do RELINT para processamento local via Ollama ({self.model_name})...")
-            response = requests.post(url, json=payload, timeout=90)
+            response = requests.post(url, json=payload, timeout=25)
             
             # Recuperação Automática: Se der 404 (model not found), tenta buscar modelos ativos no Ollama
             if response.status_code == 404:
                 logger.warning(f"Modelo '{self.model_name}' não encontrado no Ollama. Buscando modelos alternativos...")
-                tags_response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+                tags_response = requests.get(f"{self.base_url}/api/tags", timeout=5)
                 if tags_response.status_code == 200:
                     models = tags_response.json().get("models", [])
                     if models:
@@ -108,7 +108,7 @@ TEXTO DO RELINT:
                         payload["model"] = alternative_model
                         
                         # Segunda tentativa
-                        response = requests.post(url, json=payload, timeout=90)
+                        response = requests.post(url, json=payload, timeout=25)
             
             response.raise_for_status()
             

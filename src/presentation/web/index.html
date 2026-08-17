@@ -53,6 +53,10 @@
             <i data-lucide="image"></i>
             <span>Anexos & Fotos</span>
           </li>
+          <li class="nav-item" data-tab="monitoring" title="Monitoramento & IA">
+            <i data-lucide="cpu"></i>
+            <span>Monitoramento & IA</span>
+          </li>
           <li class="nav-item" data-tab="about" title="Sobre">
             <i data-lucide="info"></i>
             <span>Sobre</span>
@@ -163,10 +167,14 @@
           <div id="gallery-container" class="gallery-grid-full">
             <div class="loading-state">Carregando galeria de fotos...</div>
           </div>
-        </div>
       </section>
 
-      <!-- Aba 6: Sobre -->
+      <!-- Aba 6: Monitoramento & IA -->
+      <section class="tab-content" id="tab-monitoring">
+        <div class="loading-state">Carregando painel de monitoramento e IA...</div>
+      </section>
+
+      <!-- Aba 7: Sobre -->
       <section class="tab-content" id="tab-about">
         <div class="card" style="max-width: 720px; margin: 0 auto;">
           <div class="card-title" style="font-size: 20px; margin-bottom: 16px;">
@@ -404,10 +412,11 @@
   <script src="/static/assets/vendor/apexcharts.min.js"></script>
 
   <!-- Application JS -->
-  <script src="/static/js/views/relints_view.js"></script>
-  <script src="/static/js/views/homicides_view.js"></script>
-  <script src="/static/js/views/crimes_view.js"></script>
-  <script src="/static/js/views/gallery_view.js"></script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/views/relints_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/homicides_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/crimes_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/gallery_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/monitoring_view.js?v=2.0.1"></script>
+  <script src="/static/js/app.js?v=2.0.1"></script>
 </body>
 </html>

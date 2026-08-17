@@ -1,116 +1,115 @@
-﻿"""
+"""
 Gerenciador do servidor web da aplicação (FastAPI + SPA).
 
-Responsabilidade única: iniciar, monitorar e encerrar o processo Uvicorn
-que serve a API REST e o frontend SPA em http://localhost:8000.
+Responsabilidade única: iniciar, monitorar e encerrar o servidor Uvicorn
+em-processo (na mesma memória e thread pool que a UI Desktop),
+garantindo sincronização 100% bidirecional em tempo real entre Tkinter e Web.
 """
+import os
 import sys
-import subprocess
 import time
+import threading
+import subprocess
 import webbrowser
 from typing import Callable, Optional
+import uvicorn
+
+from src.presentation.api.app import app
 
 
 class WebAppManager:
     """
-    Gerencia o ciclo de vida do servidor web (FastAPI / Uvicorn).
-
-    Recebe um callback de log para desacoplar completamente da camada de UI.
+    Gerencia o ciclo de vida do servidor web (FastAPI / Uvicorn em-processo).
+    Roda como thread daemon compartilhando a mesma instância de MainController.
     """
 
-    _SERVER_MODULE = "src.presentation.api.app:app"
     _DEFAULT_HOST = "127.0.0.1"
     _DEFAULT_PORT = 8000
 
     def __init__(self, log_callback: Callable[[str], None]) -> None:
         self._log = log_callback
-        self._process: Optional[subprocess.Popen] = None
-
-    # ─────────────────────────────────────────────
-    # Propriedades de estado
-    # ─────────────────────────────────────────────
+        self._server: Optional[uvicorn.Server] = None
+        self._thread: Optional[threading.Thread] = None
 
     @property
     def is_running(self) -> bool:
-        """Retorna True se o processo do servidor ainda esta em execucao."""
-        return self._process is not None and self._process.poll() is None
+        """Retorna True se o servidor Uvicorn estiver rodando."""
+        return self._thread is not None and self._thread.is_alive()
 
     @property
     def url(self) -> str:
         return f"http://{self._DEFAULT_HOST}:{self._DEFAULT_PORT}"
 
-    # ─────────────────────────────────────────────
-    # Operacoes publicas
-    # ─────────────────────────────────────────────
-
     def open(self) -> bool:
         """
-        Inicia o servidor Uvicorn (caso nao esteja rodando) e abre no navegador.
-
-        Retorna True em caso de sucesso, False em caso de falha.
+        Inicia o servidor Uvicorn em-processo (caso não esteja rodando) e abre no navegador.
         """
         if self.is_running:
-            self._log("Painel Web ja esta em execucao. Reabrindo no navegador...")
+            self._log("Painel Web já está em execução. Reabrindo no navegador...")
             self._open_browser()
             return True
 
-        self._log("Iniciando o servidor Painel Web (FastAPI / Uvicorn)...")
-        return self._start_server()
+        self._log("Iniciando o servidor Painel Web (FastAPI em-processo)...")
+        return self._start_server(open_browser=True)
+
+    def start_background_silent(self) -> bool:
+        """Inicia o servidor web em segundo plano sem abrir o navegador automaticamente."""
+        if self.is_running:
+            return True
+        return self._start_server(open_browser=False)
 
     def close(self) -> None:
-        """Encerra o processo do servidor de forma segura."""
-        if not self.is_running:
+        """Encerra o servidor de forma segura."""
+        if not self.is_running or not self._server:
             return
 
         self._log("Encerrando o servidor Painel Web...")
         try:
-            self._process.terminate()
-            self._process.wait(timeout=3)
-            self._log("Servidor encerrado com sucesso.")
-        except subprocess.TimeoutExpired:
-            self._process.kill()
-            self._log("Servidor forcado a encerrar (timeout).")
+            self._server.should_exit = True
+            self._log("Servidor Web encerrado com sucesso.")
         except Exception as exc:
-            self._log(f"Erro ao encerrar o servidor: {exc}")
+            self._log(f"Erro ao encerrar o servidor Web: {exc}")
         finally:
-            self._process = None
+            self._server = None
+            self._thread = None
 
     def destroy(self) -> None:
-        """Libera todos os recursos — deve ser chamado ao fechar a aplicacao."""
+        """Libera todos os recursos ao fechar a aplicação."""
         self.close()
 
-    # ─────────────────────────────────────────────
-    # Metodos privados
-    # ─────────────────────────────────────────────
-
-    def _start_server(self) -> bool:
+    def _start_server(self, open_browser: bool = True) -> bool:
         try:
-            cmd = [
-                self._resolve_python_exe(),
-                "-m", "uvicorn",
-                self._SERVER_MODULE,
-                "--host", self._DEFAULT_HOST,
-                "--port", str(self._DEFAULT_PORT),
-            ]
-            creation_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-            self._process = subprocess.Popen(cmd, creationflags=creation_flags)
+            config = uvicorn.Config(
+                app,
+                host=self._DEFAULT_HOST,
+                port=self._DEFAULT_PORT,
+                log_level="warning"
+            )
+            self._server = uvicorn.Server(config)
+            self._thread = threading.Thread(target=self._server.run, daemon=True)
+            self._thread.start()
 
-            time.sleep(1.0)
-            self._open_browser()
-            self._log(f"Painel Web iniciado em {self.url}")
+            if open_browser:
+                def _deferred_open():
+                    time.sleep(0.5)
+                    self._open_browser()
+                threading.Thread(target=_deferred_open, daemon=True).start()
+
+            self._log(f"Painel Web ativo em {self.url}")
             return True
         except Exception as exc:
             self._log(f"Erro ao iniciar o Painel Web: {exc}")
             return False
 
     def _open_browser(self) -> None:
+        """Abre o navegador padrão no Windows para a URL do Painel Web."""
         try:
-            webbrowser.open(self.url)
-        except Exception as exc:
-            self._log(f"Erro ao abrir navegador: {exc}")
-
-    @staticmethod
-    def _resolve_python_exe() -> str:
-        """Retorna o caminho do executavel Python (garante uso de python.exe, nao pythonw.exe)."""
-        exe = sys.executable
-        return exe.replace("pythonw.exe", "python.exe").replace("pythonw", "python")
+            opened = webbrowser.open(self.url)
+            if not opened and sys.platform == "win32":
+                subprocess.Popen(["cmd", "/c", "start", self.url], creationflags=subprocess.CREATE_NO_WINDOW)
+        except Exception:
+            if sys.platform == "win32":
+                try:
+                    subprocess.Popen(["cmd", "/c", "start", self.url], creationflags=subprocess.CREATE_NO_WINDOW)
+                except Exception as exc:
+                    self._log(f"Erro ao abrir navegador: {exc}")

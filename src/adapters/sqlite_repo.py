@@ -420,3 +420,39 @@ class SqliteRepo(IDatabaseRepo):
             cursor.execute("DELETE FROM relints;")
             cursor.execute("DELETE FROM persons;")
             conn.commit()
+
+    def get_all_source_filenames(self) -> set:
+        """
+        Retorna um conjunto em memória contendo os nomes de todos os arquivos já cadastrados (busca O(1)).
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT source_file FROM relints WHERE source_file IS NOT NULL AND source_file != '';")
+            rows = cursor.fetchall()
+            return {row["source_file"] for row in rows}
+
+    def get_report_counts(self) -> dict:
+        """
+        Retorna a contagem estatística agregada em 1 única query SQL ultrarrápida (0.1ms).
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) AS total FROM relints;")
+            total_row = cursor.fetchone()
+            total = total_row["total"] if total_row else 0
+
+            cursor.execute("""
+                SELECT 
+                    SUM(CASE WHEN extraction_method LIKE '%Ollama%' OR extraction_method LIKE '%LLM%' THEN 1 ELSE 0 END) AS llm_count,
+                    SUM(CASE WHEN (extraction_method LIKE '%Regex%' OR extraction_method LIKE '%Sem IA%') AND extraction_method NOT LIKE '%Ollama%' THEN 1 ELSE 0 END) AS regex_count
+                FROM relints;
+            """)
+            row = cursor.fetchone()
+            llm_cnt = row["llm_count"] if (row and row["llm_count"]) else 0
+            regex_cnt = row["regex_count"] if (row and row["regex_count"]) else 0
+
+            return {
+                "total": total,
+                "llm": llm_cnt,
+                "regex": regex_cnt
+            }

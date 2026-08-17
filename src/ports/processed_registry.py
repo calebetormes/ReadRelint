@@ -45,6 +45,12 @@ class IProcessedRegistry(ABC):
         """
         pass
 
+    def remove_records_bulk(self, filenames: list, rule_name: str) -> None:
+        """
+        Remove múltiplos registros em uma única operação de escrita.
+        """
+        pass
+
     @abstractmethod
     def get_all_records(self) -> dict:
         """

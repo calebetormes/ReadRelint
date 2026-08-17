@@ -1,4 +1,4 @@
-﻿"""
+"""
 FastAPI Application Entry Point — ReadRelint Web API.
 
 Responsabilidades:
@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.presentation.api.routers import relints
+from src.presentation.api.routers import relints, monitoring
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths resolvidos relativos a este arquivo para evitar dependência de CWD
@@ -36,6 +36,15 @@ app = FastAPI(
     version="2.0.0",
 )
 
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/") or request.url.path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # Arquivos estáticos do frontend (CSS, JS, assets)
 app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 
@@ -44,6 +53,7 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
 # Rotas da API REST
 app.include_router(relints.router, prefix="/api/v1")
+app.include_router(monitoring.router, prefix="/api/v1")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

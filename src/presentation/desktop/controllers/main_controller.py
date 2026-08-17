@@ -1,3 +1,5 @@
+import collections
+from datetime import datetime
 import threading
 from pathlib import Path
 from queue import Queue, Empty
@@ -65,6 +67,7 @@ class MainController:
             use_llm=self.use_llm
         )
 
+        self.recent_logs = collections.deque(maxlen=200)
 
         # Gerenciador do servidor web
         self.web_app_manager = WebAppManager(log_callback=self.log)
@@ -72,6 +75,10 @@ class MainController:
         # Callbacks para atualizar a UI (devem ser configurados pela view)
         self.on_log_message: Optional[Callable[[str], None]] = None
         self.on_stats_updated: Optional[Callable[[], None]] = None
+
+        # Registra a instância para acesso pelos endpoints da API REST
+        from src.presentation.api.dependencies import set_main_controller
+        set_main_controller(self)
 
     def set_use_llm(self, use_llm: bool) -> bool:
         """
@@ -106,7 +113,12 @@ class MainController:
             return True
 
     def log(self, message: str):
-        """Dispara o callback de log se estiver configurado."""
+        """Salva o log no buffer de histórico e dispara o callback de log se configurado."""
+        from datetime import datetime
+        now_str = datetime.now().strftime("%H:%M:%S")
+        entry = f"[{now_str}] {message}"
+        if hasattr(self, "recent_logs"):
+            self.recent_logs.append(entry)
         if self.on_log_message:
             self.on_log_message(message)
 
@@ -187,7 +199,8 @@ class MainController:
             if folder.exists() and folder.is_dir():
                 existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
                 self.total_files_in_folder = len(existing_pdfs)
-                already_in_db = [f for f in existing_pdfs if self.db_repo.exists_by_source_file(f.name)]
+                db_files_set = self.db_repo.get_all_source_filenames() if hasattr(self.db_repo, "get_all_source_filenames") else {r.source_file for r in self.db_repo.get_all()}
+                already_in_db = [f for f in existing_pdfs if f.name in db_files_set]
                 self.skipped_count = len(already_in_db)
                 self.total_discovered = max(0, self.total_files_in_folder - self.skipped_count)
         except Exception as exc:
@@ -203,17 +216,27 @@ class MainController:
             self.stop_monitoring()
 
     def start_monitoring(self):
-        """Inicializa o monitoramento, varredura de arquivos e thread do trabalhador."""
+        """Inicializa o monitoramento de forma não-bloqueante em segundo plano para resposta instantânea."""
+        self.is_monitoring = True
+        self.current_filename = ""
+        self.log("🚀 Comando de início recebido. Inicializando varredura de diretório em segundo plano...")
+        self.update_ui()
+
+        # Inicia a tarefa de varredura e consumo de fila em segundo plano (não-bloqueante)
+        init_thread = threading.Thread(target=self._async_start_monitoring_task, daemon=True)
+        init_thread.start()
+
+    def _async_start_monitoring_task(self):
+        """Tarefa executada em thread secundária para varredura e inicialização do monitor."""
         self.skipped_count = 0
         self.total_files_in_folder = 0
-        self.current_filename = ""
         
         self.session_confirmed_count = 0
         self.session_pre_filtered_count = 0
         self.session_post_llm_filtered_count = 0
         self.session_skipped_files = set()
         
-        # Esvazia a fila
+        # Esvazia a fila de trabalhos pendentes
         while not self.processing_queue.empty():
             try:
                 self.processing_queue.get_nowait()
@@ -222,34 +245,49 @@ class MainController:
 
         try:
             folder = Path(self.monitoring_path)
+            if not folder.exists() or not folder.is_dir():
+                self.is_monitoring = False
+                self.log(f"⚠️ Pasta de monitoramento inválida: {self.monitoring_path}")
+                self.update_ui()
+                return
+
             existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
             self.total_files_in_folder = len(existing_pdfs)
 
             to_process_pdfs = []
             
-            # Otimização O(1): Cache de histórico e banco de dados para evitar leitura O(N²) de JSON
-            all_records = self.processed_registry.get_all_records()
-            db_reports = self.db_repo.get_all()
-            db_files_set = {report.source_file for report in db_reports}
-            
+            # Otimização O(1): busca em memória dos arquivos já cadastrados
+            db_files_set = self.db_repo.get_all_source_filenames() if hasattr(self.db_repo, "get_all_source_filenames") else {r.source_file for r in self.db_repo.get_all()}
+            all_registry_records = self.processed_registry.get_all_records()
+            to_remove_from_registry = []
+
             for pdf_file in existing_pdfs:
-                in_db = self.db_repo.exists_by_source_file(pdf_file.name)
+                if not self.is_monitoring:
+                    return
+
+                in_db = pdf_file.name in db_files_set
                 
-                # Sincronização: se o arquivo não está no banco relints.json, limpa histórico antigo para forçar leitura
                 if not in_db:
-                    self.processed_registry.remove_record(pdf_file.name, self.active_rule.name)
+                    if pdf_file.name in all_registry_records:
+                        to_remove_from_registry.append(pdf_file.name)
                 else:
                     self.skipped_count += 1
                     self.session_skipped_files.add(pdf_file.name)
                     continue
 
-                    
                 to_process_pdfs.append(pdf_file)
                 try:
                     self.total_bytes += pdf_file.stat().st_size
                 except Exception:
                     pass
                 self.processing_queue.put(pdf_file)
+
+            if to_remove_from_registry:
+                if hasattr(self.processed_registry, "remove_records_bulk"):
+                    self.processed_registry.remove_records_bulk(to_remove_from_registry, self.active_rule.name)
+                else:
+                    for fn in to_remove_from_registry:
+                        self.processed_registry.remove_record(fn, self.active_rule.name)
             
             self.total_discovered = len(to_process_pdfs)
             self.update_ui()
@@ -264,7 +302,6 @@ class MainController:
 
             self.watcher = FolderWatcher(folder_path=folder, callback=self.on_pdf_detected)
             self.watcher.start()
-            self.is_monitoring = True
             
             self.worker_thread = threading.Thread(target=self.process_queue_worker, daemon=True)
             self.worker_thread.start()
@@ -273,25 +310,35 @@ class MainController:
             self.update_ui()
             
         except Exception as e:
+            self.is_monitoring = False
             self.log(f"Erro ao iniciar monitoramento: {e}")
+            self.update_ui()
 
     def stop_monitoring(self):
-        """Interrompe o monitoramento de diretório e esvazia o watcher."""
+        """Interrompe o monitoramento de diretório e esvazia a fila de leitura imediatamente."""
         self.is_monitoring = False
         if self.watcher:
             self.watcher.stop()
             self.watcher = None
         
+        # Esvazia a fila pendente para pausar a leitura de imediato
+        try:
+            with self.processing_queue.mutex:
+                self.processing_queue.queue.clear()
+        except Exception:
+            pass
+
+        # Aguarda a finalização limpa da thread trabalhadora se ainda estiver rodando
+        if hasattr(self, "worker_thread") and self.worker_thread and self.worker_thread.is_alive():
+            try:
+                self.worker_thread.join(timeout=0.3)
+            except Exception:
+                pass
+            self.worker_thread = None
+
         self.current_filename = ""
-        self.total_bytes = 0
-        self.processed_bytes = 0
-        self.skipped_count = 0
-        self.llm_sent_count = 0
-        self.rule_filtered_count = 0
-        self.confirmed_homicides_count = 0
-        
         self.update_ui()
-        self.log("Serviço de monitoramento de diretório PARADO.")
+        self.log("⏸️ Serviço de monitoramento e fila de leitura PARADOS imediatamente.")
 
     def on_pdf_detected(self, file_path: Path):
         """Callback acionado pelo FolderWatcher ao identificar novo PDF."""
@@ -352,20 +399,10 @@ class MainController:
 
     def handle_llm_disconnection(self, reason: str = ""):
         """
-        Trata a desconexão ou fechamento do Ollama durante o processamento de um RELINT.
-        Desliga a chave da LLM no controlador e notifica a interface desktop.
+        Trata a resposta demorada ou indisponibilidade pontual do Ollama no arquivo atual.
+        Realiza o fallback gracioso para Regex sem desligar a chave global de IA do monitoramento.
         """
-        self.use_llm = False
-        if hasattr(self, 'etl_service'):
-            self.etl_service.use_llm = False
-            
-        self.log(f"⚠️ [CONEXÃO IA PERDIDA] O serviço Ollama está inacessível. O botão da LLM foi DESLIGADO automaticamente e o sistema alternou para o modo Regex (Sem IA).")
-        
-        if hasattr(self, 'view') and hasattr(self.view, 'control_panel_tab'):
-            try:
-                self.view.control_panel_tab.after(0, self.view.control_panel_tab.on_llm_disconnected_ui)
-            except Exception:
-                pass
+        self.log(f"⚠️ [AVISO IA] Resposta demorada do Ollama no arquivo atual. Efetuando leitura via Regex (Sem IA) para continuar o fluxo.")
 
     def increment_confirmed(self, report):
         self.confirmed_homicides_count += 1

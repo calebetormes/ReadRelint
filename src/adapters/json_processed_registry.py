@@ -67,6 +67,20 @@ class JsonProcessedRegistry(IProcessedRegistry):
                         del data[filename]
                     self._write_data(data)
 
+    def remove_records_bulk(self, filenames: list, rule_name: str) -> None:
+        with self.lock:
+            data = self._read_data()
+            modified = False
+            for filename in filenames:
+                if filename in data and isinstance(data[filename], dict):
+                    if rule_name in data[filename]:
+                        del data[filename][rule_name]
+                        if not data[filename]:
+                            del data[filename]
+                        modified = True
+            if modified:
+                self._write_data(data)
+
     def get_all_records(self) -> dict:
         with self.lock:
             return self._read_data()
