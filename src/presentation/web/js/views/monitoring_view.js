@@ -8,6 +8,7 @@
 let monitoringEventSource = null;
 let _lastProcessedCount = -1;
 let _allWebReports = [];
+let _isTogglingLLM = false;
 
 function renderMonitoringView(container) {
   container.innerHTML = `
@@ -456,22 +457,27 @@ function updateMonitoringUIState(data) {
   }
 
   if (btnLLM && aiStatusLbl) {
-    if (data.use_llm && data.ollama_online) {
-      if (aiCard) aiCard.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-      aiStatusLbl.innerText = 'Modo Ativo: 🟢 IA Local (Ollama) Habilitado';
-      aiStatusLbl.style.color = '#10b981';
-      btnLLM.className = 'btn-resend btn-resend-emerald';
-      btnLLM.innerHTML = '<i data-lucide="check-circle-2"></i> Processamento c/ IA (Ativo)';
-      btnLLM.onclick = () => toggleWebLLM(false);
-    } else {
-      if (aiCard) aiCard.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-      aiStatusLbl.innerText = 'Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)';
-      aiStatusLbl.style.color = '#f59e0b';
-      btnLLM.className = 'btn-resend btn-resend-amber';
-      btnLLM.innerHTML = '<i data-lucide="zap"></i> Ativar Processamento por IA';
-      btnLLM.onclick = () => toggleWebLLM(true);
+    if (!_isTogglingLLM) {
+      btnLLM.disabled = false;
+      btnLLM.style.opacity = '1';
+      
+      if (data.use_llm && data.ollama_online) {
+        if (aiCard) aiCard.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        aiStatusLbl.innerText = 'Modo Ativo: 🟢 IA Local (Ollama) Habilitado';
+        aiStatusLbl.style.color = '#10b981';
+        btnLLM.className = 'btn-resend btn-resend-emerald';
+        btnLLM.innerHTML = '<i data-lucide="check-circle-2"></i> Processamento c/ IA (Ativo)';
+        btnLLM.onclick = () => toggleWebLLM(false);
+      } else {
+        if (aiCard) aiCard.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        aiStatusLbl.innerText = 'Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)';
+        aiStatusLbl.style.color = '#f59e0b';
+        btnLLM.className = 'btn-resend btn-resend-amber';
+        btnLLM.innerHTML = '<i data-lucide="zap"></i> Ativar Processamento por IA';
+        btnLLM.onclick = () => toggleWebLLM(true);
+      }
+      if (window.lucide) window.lucide.createIcons();
     }
-    if (window.lucide) window.lucide.createIcons();
   }
 
   // Círculo 1: Lidos na pasta (Painel 1)
@@ -805,6 +811,17 @@ async function toggleWebMonitoring() {
 }
 
 async function toggleWebLLM(enable) {
+  if (_isTogglingLLM) return;
+  _isTogglingLLM = true;
+
+  const btnLLM = document.getElementById('web-btn-toggle-llm');
+  if (btnLLM) {
+    btnLLM.disabled = true;
+    btnLLM.style.opacity = '0.7';
+    btnLLM.innerHTML = '<i data-lucide="loader-2" class="spin-icon"></i> ' + (enable ? 'Testando IA (Ollama)...' : 'Desativando IA...');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   try {
     const res = await fetch('/api/v1/monitoring/toggle-llm', {
       method: 'POST',
@@ -813,9 +830,11 @@ async function toggleWebLLM(enable) {
     });
     const data = await res.json();
     appendWebLog(data.use_llm ? '🟢 Modo de extração por IA Local (Ollama) ATIVADO.' : '⚡ Modo de extração rápida (Regex / Sem IA) ATIVADO.');
-    fetchMonitoringStatus();
   } catch (err) {
     console.error('Erro ao alterar chave da IA:', err);
+  } finally {
+    _isTogglingLLM = false;
+    fetchMonitoringStatus();
   }
 }
 
