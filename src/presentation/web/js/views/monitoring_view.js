@@ -19,7 +19,7 @@ function renderMonitoringView(container) {
       </div>
 
       <!-- Seletor de Sub-Abas -->
-      <div style="display: flex; gap: 8px; background: #121212; padding: 4px; border-radius: 8px; border: 1px solid var(--hairline-strong);">
+      <div style="display: flex; gap: 8px;">
         <button id="subtab-btn-panel" class="btn-resend" onclick="switchMonitoringSubTab('panel')" style="background: var(--surface-elevated); color: #ffffff; border-color: rgba(255,255,255,0.14);">
           <i data-lucide="cpu"></i> Painel & Console Logs
         </button>
@@ -33,11 +33,11 @@ function renderMonitoringView(container) {
     <!-- Style local para animações e barras de rolagem customizadas -->
     <style>
       @keyframes progressGlow {
-        0% { opacity: 0.75; filter: brightness(0.9); }
-        50% { opacity: 1; filter: brightness(1.25); }
-        100% { opacity: 0.75; filter: brightness(0.9); }
+        0% { filter: brightness(0.95) drop-shadow(0 0 4px rgba(255,255,255,0.15)); opacity: 0.85; }
+        50% { filter: brightness(1.4) drop-shadow(0 0 16px rgba(255,255,255,0.5)); opacity: 1; }
+        100% { filter: brightness(0.95) drop-shadow(0 0 4px rgba(255,255,255,0.15)); opacity: 0.85; }
       }
-      .bar-active { animation: progressGlow 1.2s infinite ease-in-out; }
+      .bar-active { animation: progressGlow 1.5s infinite ease-in-out; }
 
       @keyframes spinSmooth {
         0% { transform: rotate(0deg); }
@@ -114,12 +114,9 @@ function renderMonitoringView(container) {
             📁 Diretório de Monitoramento dos RELINTs (Servidor Local)
           </div>
           <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="web-dir-input" class="form-control" placeholder="Selecione ou cole o caminho da pasta local no servidor (ex: D:\\RELINTs)..." style="flex: 1; min-width: 200px;" />
+            <input type="text" id="web-dir-input" class="form-control" placeholder="Selecione ou cole o caminho da pasta local no servidor (ex: D:\\RELINTs)..." onchange="setWebMonitoringPath()" onkeydown="if(event.key==='Enter') setWebMonitoringPath()" style="flex: 1; min-width: 200px;" />
             <button class="btn-resend btn-resend-emerald" onclick="browseWebFolder()">
               <i data-lucide="folder-search"></i> Procurar Pasta no PC
-            </button>
-            <button class="btn-resend" onclick="setWebMonitoringPath()">
-              <i data-lucide="search"></i> Definir & Inspecionar
             </button>
           </div>
         </div>
@@ -148,9 +145,9 @@ function renderMonitoringView(container) {
             </div>
             
             <div style="position: relative; width: 130px; height: 130px;">
-              <svg width="130" height="130" viewBox="0 0 140 140" style="transform: rotate(-90deg);">
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" />
-                <circle id="web-circle1-ring" cx="70" cy="70" r="55" fill="none" stroke="url(#emerald-grad)" stroke-width="10" stroke-dasharray="345.57" stroke-dashoffset="345.57" stroke-linecap="round" style="transition: stroke-dashoffset 0.5s ease;" />
+              <svg width="130" height="130" viewBox="0 0 140 140" style="transform: rotate(-90deg); overflow: visible;">
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8" />
+                <circle id="web-circle1-ring" cx="70" cy="70" r="55" fill="none" stroke="url(#emerald-grad)" stroke-width="14" stroke-dasharray="345.57" stroke-dashoffset="345.57" stroke-linecap="round" style="transition: stroke-dashoffset 0.5s ease;" />
                 <defs>
                   <linearGradient id="emerald-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#059669" />
@@ -176,9 +173,9 @@ function renderMonitoringView(container) {
             </div>
 
             <div style="position: relative; width: 130px; height: 130px;">
-              <svg width="130" height="130" viewBox="0 0 140 140" style="transform: rotate(-90deg);">
-                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" />
-                <circle id="web-circle2-ring" cx="70" cy="70" r="55" fill="none" stroke="url(#purple-grad)" stroke-width="10" stroke-dasharray="345.57" stroke-dashoffset="345.57" stroke-linecap="round" style="transition: stroke-dashoffset 0.5s ease;" />
+              <svg width="130" height="130" viewBox="0 0 140 140" style="transform: rotate(-90deg); overflow: visible;">
+                <circle cx="70" cy="70" r="55" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8" />
+                <circle id="web-circle2-ring" cx="70" cy="70" r="55" fill="none" stroke="url(#purple-grad)" stroke-width="14" stroke-dasharray="345.57" stroke-dashoffset="345.57" stroke-linecap="round" style="transition: stroke-dashoffset 0.5s ease;" />
                 <defs>
                   <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#7c3aed" />
@@ -211,24 +208,23 @@ function renderMonitoringView(container) {
         </div>
 
         <!-- 4. Card em Destaque: Inteligência Artificial (Ollama Local) -->
-        <div class="card" style="border: 1px solid rgba(16, 185, 129, 0.4); background: #18181b; display: flex; justify-content: space-between; align-items: center;">
+        <div id="web-ai-card" class="card" style="border: 1px solid rgba(16, 185, 129, 0.4); background: #18181b; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
           <div>
             <div style="font-size: 14px; font-weight: 700; color: #34d399;">⚡ INTELIGÊNCIA ARTIFICIAL (Ollama Local)</div>
             <div id="web-ai-status-lbl" style="font-size: 12px; color: #10b981; margin-top: 4px;">
               Modo Ativo: 🟢 IA Local (Ollama) Habilitado
             </div>
           </div>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
-            <input type="checkbox" id="web-switch-llm" onchange="toggleWebLLM(this.checked)" checked style="width: 18px; height: 18px; accent-color: #10b981;" />
-            Usar Processamento por IA
-          </label>
+          <button id="web-btn-toggle-llm" class="btn-resend btn-resend-emerald" onclick="toggleWebLLM(false)">
+            <i data-lucide="check-circle-2"></i> Processamento c/ IA (Ativo)
+          </button>
         </div>
 
       </div>
 
       <!-- COLUNA 2: CONSOLE DE LOGS DO SISTEMA EM TEMPO REAL (48% de largura / Puxado para o lado direito) -->
       <div style="flex: 1 1 45%; min-width: 320px; display: flex; flex-direction: column;">
-        <div class="card" style="display: flex; flex-direction: column; max-height: calc(100vh - 180px); overflow: hidden;">
+        <div class="card" style="display: flex; flex-direction: column; height: calc(100vh - 200px); max-height: calc(100vh - 200px); overflow: hidden;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
             <span style="font-size: 14px; font-weight: 700; color: var(--head); display: flex; align-items: center; gap: 8px;">
               <i data-lucide="terminal" style="color: #38bdf8;"></i> Console de Logs do Sistema em Tempo Real
@@ -237,7 +233,7 @@ function renderMonitoringView(container) {
               <i data-lucide="trash-2"></i> Limpar Console
             </button>
           </div>
-          <pre id="web-log-console" style="background: #09090b; color: #38bdf8; font-family: 'Consolas', 'JetBrains Mono', monospace; font-size: 12px; padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); overflow-y: auto; white-space: pre-wrap; margin: 0; height: 380px; max-height: calc(100vh - 240px); line-height: 1.5;"></pre>
+          <pre id="web-log-console" style="background: #09090b; color: #38bdf8; font-family: 'Consolas', 'JetBrains Mono', monospace; font-size: 12px; padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); overflow-y: auto; white-space: pre-wrap; margin: 0; flex: 1; min-height: 0; line-height: 1.5;"></pre>
         </div>
       </div>
 
@@ -421,8 +417,9 @@ function updateMonitoringUIState(data) {
   const btnToggle = document.getElementById('web-btn-toggle-monitor');
   const readingIconWrapper = document.getElementById('web-reading-icon-wrapper');
   const currentReadingText = document.getElementById('web-current-reading-text');
-  const switchLLM = document.getElementById('web-switch-llm');
+  const btnLLM = document.getElementById('web-btn-toggle-llm');
   const aiStatusLbl = document.getElementById('web-ai-status-lbl');
+  const aiCard = document.getElementById('web-ai-card');
 
   if (statusBadge && btnToggle) {
     if (data.is_monitoring) {
@@ -458,16 +455,23 @@ function updateMonitoringUIState(data) {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // Atualiza switch de IA
-  if (switchLLM && aiStatusLbl) {
-    switchLLM.checked = data.use_llm;
+  if (btnLLM && aiStatusLbl) {
     if (data.use_llm && data.ollama_online) {
+      if (aiCard) aiCard.style.borderColor = 'rgba(16, 185, 129, 0.4)';
       aiStatusLbl.innerText = 'Modo Ativo: 🟢 IA Local (Ollama) Habilitado';
       aiStatusLbl.style.color = '#10b981';
+      btnLLM.className = 'btn-resend btn-resend-emerald';
+      btnLLM.innerHTML = '<i data-lucide="check-circle-2"></i> Processamento c/ IA (Ativo)';
+      btnLLM.onclick = () => toggleWebLLM(false);
     } else {
+      if (aiCard) aiCard.style.borderColor = 'rgba(245, 158, 11, 0.4)';
       aiStatusLbl.innerText = 'Modo Ativo: ⚡ Processamento Ultra-Rápido (Regex / Sem IA)';
       aiStatusLbl.style.color = '#f59e0b';
+      btnLLM.className = 'btn-resend btn-resend-amber';
+      btnLLM.innerHTML = '<i data-lucide="zap"></i> Ativar Processamento por IA';
+      btnLLM.onclick = () => toggleWebLLM(true);
     }
+    if (window.lucide) window.lucide.createIcons();
   }
 
   // Círculo 1: Lidos na pasta (Painel 1)
@@ -486,7 +490,7 @@ function updateMonitoringUIState(data) {
     prog1Val.innerText = `${prog1.toFixed(1)}%`;
     if (prog1Sub) prog1Sub.innerText = `${readCnt} / ${total} arquivos lidos`;
     
-    if (data.is_monitoring && data.current_filename) {
+    if (data.is_monitoring) {
       circle1Ring.classList.add('bar-active');
     } else {
       circle1Ring.classList.remove('bar-active');

@@ -45,6 +45,10 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
   - Dashboard de Crimes & Analytics com gráficos offline **ApexCharts** (`crimes_view.js`).
   - Galeria de imagens geral com visualizador Lightbox com zoom.
 - [x] **Suíte de Testes Automatizados:** 67 testes unitários e de integração de API com `pytest` cobrindo 100% da aplicação com execução em ~3.4s.
+- [x] **Unificação de Ações e Minimalismo no Header Web:** Remoção do botão `Abrir Dashboard` e Badge de Status do topo, centralizando ações de UX na interface principal e limpando componentes obsoletos. O botão de recolher a Sidebar foi convertido em um botão circular flutuante elegante.
+- [x] **Botões e Navegação Enxutos:** Remoção do box-border redundante nos botões de abas da visualização de Monitoramento. Troca do Checkbox estático do motor IA por um Botão de Status Interativo e Inteligente (Verde Esmeralda p/ ativo, Amarelo de Alerta p/ Modo Regex).
+- [x] **Melhoria Gráfica Circular Avançada:** Engrossamento dos SVGs da aba de Monitoramento para o formato Anel Premium (tipo Apple Watch), com ajuste dinâmico do `overflow: visible` para eliminação do corte na caixa da animação incandescente e aumento da pulsação e velocidade das barras luminosas.
+- [x] **Indicador Animado de Carregamento:** O painel de leitura agora conta com um Spinner animado inline (`<svg class="spin-fast">`) elegante em vez de texto seco durante a leitura do conteúdo do relatório.
 
 ## 2. Próximas Etapas (Prioridade)
 

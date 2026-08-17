@@ -140,7 +140,14 @@ async function loadHomicideDetail(reportId) {
     el.classList.toggle('active', el.dataset.id === reportId);
   });
 
-  detailPane.innerHTML = '<div class="loading-state">Carregando detalhes do RELINT...</div>';
+  detailPane.innerHTML = `
+    <div class="loading-state">
+      <svg class="spin-fast" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+      </svg>
+      <span style="font-weight: 600; font-size: 14px;">Carregando detalhes do RELINT...</span>
+    </div>
+  `;
 
   try {
     const res = await fetch(`/api/v1/relints/${reportId}`);

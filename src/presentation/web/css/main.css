@@ -56,7 +56,7 @@ body {
   z-index: 20;
   position: relative;
   transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), min-width 280ms cubic-bezier(0.4, 0, 0.2, 1), padding 280ms cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Sidebar Collapsed State */
@@ -75,7 +75,6 @@ body {
   position: relative;
 }
 
-
 .sidebar-title {
   font-size: 14px;
   font-weight: 600;
@@ -87,31 +86,35 @@ body {
 }
 
 .sidebar-toggle-btn {
-  width: 32px;
-  height: 32px;
-  background-color: var(--surface-card);
-  border: 1px solid var(--hairline-strong);
+  position: absolute;
+  right: -12px;
+  top: 22px;
+  width: 24px;
+  height: 24px;
+  background-color: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--ash);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--r-md);
-  margin-left: auto;
-  flex-shrink: 0;
-  transition: background-color var(--ease-fast), border-color var(--ease-fast), color var(--ease-fast);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  transition: background-color var(--ease-fast), border-color var(--ease-fast), color var(--ease-fast), transform 200ms ease;
 }
 
 .sidebar-toggle-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-toggle-btn:hover {
   background-color: var(--surface-elevated);
-  border-color: var(--ink);
-  color: var(--ink);
+  border-color: #10b981;
+  color: #ffffff;
+  transform: scale(1.12);
 }
 
 /* Collapsed Header Adjustments */
@@ -122,11 +125,6 @@ body {
 .sidebar.collapsed .sidebar-logo,
 .sidebar.collapsed .sidebar-title {
   display: none;
-}
-
-.sidebar.collapsed .sidebar-toggle-btn {
-  display: flex;
-  margin: 0 auto;
 }
 
 .sidebar.collapsed .sidebar-toggle-btn svg {
@@ -531,14 +529,23 @@ body {
 
 .loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100px;
+  height: 100%;
+  min-height: 200px;
   color: var(--ash);
   font-size: var(--text-sm);
-  gap: var(--sp-sm);
+  gap: var(--sp-md);
 }
 
+@keyframes globalSpin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-fast {
+  animation: globalSpin 1s linear infinite;
+}
 .error-state {
   display: flex;
   align-items: center;

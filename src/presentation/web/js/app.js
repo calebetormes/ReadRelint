@@ -73,11 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleSidebar();
   });
 
-  document.getElementById('top-sidebar-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    window.toggleSidebar();
-  });
-
   // Check API Connection Status
   fetchApiStatus();
 });
