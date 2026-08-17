@@ -5,7 +5,7 @@ Expõe endpoints REST e SSE (Server-Sent Events) em tempo real para a interface 
 import asyncio
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse

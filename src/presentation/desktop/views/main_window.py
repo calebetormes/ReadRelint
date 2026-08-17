@@ -1,5 +1,3 @@
-import sys
-import threading
 import customtkinter as ctk
 from PIL import Image, ImageDraw
 import pystray
