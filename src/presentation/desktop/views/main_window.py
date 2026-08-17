@@ -29,17 +29,15 @@ class MainWindow(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("green")
 
-        self.title("ReadRelint • Painel de Controle")
-        self.geometry("520x700")
+        self.title("ReadRelint • Central de Serviços")
+        self.geometry("480x580")
         self.resizable(True, True)
-        self.minsize(460, 620)
+        self.minsize(440, 520)
         self.configure(fg_color="#121212")
 
         # 1. Recuperando as classes injetadas dinamicamente via Registry
         MainControllerCls = ModuleLoader.get_class("MainController")
         StatusTabCls = ModuleLoader.get_class("StatusTab")
-        ControlPanelTabCls = ModuleLoader.get_class("ControlPanelTab")
-        ReportTabCls = ModuleLoader.get_class("ReportTab")
 
         # 2. Inicializando o Controlador de Domínio
         self.controller = MainControllerCls()
@@ -56,31 +54,12 @@ class MainWindow(ctk.CTk):
         )
         self.title_label.pack(side="left")
 
-        # 4. Construindo as 3 Abas (Status em 1º Lugar)
-        self.tabview = ctk.CTkTabview(
-            self, 
-            fg_color="#18181b", 
-            segmented_button_selected_color="#10b981",
-            segmented_button_selected_hover_color="#059669"
-        )
-        self.tabview.pack(pady=4, padx=15, fill="both", expand=True)
-
-        self.tabview.add("Status")
-        self.tabview.add("Monitoramento")
-        self.tabview.add("Relatórios de Leitura")
-
-        # Injetando o controlador nas 3 abas
-        self.status_panel = StatusTabCls(master=self.tabview.tab("Status"), controller=self.controller)
-        self.status_panel.pack(fill="both", expand=True)
-
-        self.control_panel = ControlPanelTabCls(master=self.tabview.tab("Monitoramento"), controller=self.controller)
-        self.control_panel.pack(fill="both", expand=True)
-
-        self.report_panel = ReportTabCls(master=self.tabview.tab("Relatórios de Leitura"), controller=self.controller)
-        self.report_panel.pack(fill="both", expand=True)
+        # 4. Construindo o Painel Principal de Status & Serviços
+        self.status_panel = StatusTabCls(master=self, controller=self.controller)
+        self.status_panel.pack(fill="both", expand=True, padx=15, pady=(4, 15))
 
         # 5. Registrando os callbacks (Eventos) para ligar o Controller à View
-        self.controller.on_log_message = self.control_panel.log_message
+        self.controller.on_log_message = lambda msg: None
         self.controller.on_stats_updated = self._sync_ui_state
 
         # 6. Interceptação do evento de fechar janela (X) -> Minimizar para a Bandeja
@@ -147,13 +126,9 @@ class MainWindow(ctk.CTk):
         self.after(0, self._sync_ui_state_thread_safe)
 
     def _sync_ui_state_thread_safe(self):
-        """Atualiza o estado de todas as 3 abas."""
+        """Atualiza o estado do painel de status."""
         if hasattr(self, "status_panel"):
             self.status_panel.update_stats()
-        if hasattr(self, "control_panel"):
-            self.control_panel.update_stats()
-        if hasattr(self, "report_panel"):
-            self.report_panel.refresh_state()
 
     def destroy(self):
         """Hook de encerramento da janela."""

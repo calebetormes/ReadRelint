@@ -203,21 +203,21 @@ class StatusTab(ctk.CTkFrame):
         is_mon = getattr(self.controller, "is_monitoring", False)
 
         if is_mon:
-            path_short = path if len(path) <= 45 else path[:20] + "..." + path[-22:]
+            path_short = path if len(path) <= 42 else path[:18] + "..." + path[-20:]
             self.lbl_mon_status.configure(
                 text=f"Status: 🟢 Monitorando pasta: \"{path_short}\"",
                 text_color="#4ade80"
             )
         elif path:
-            path_short = path if len(path) <= 45 else path[:20] + "..." + path[-22:]
+            path_short = path if len(path) <= 42 else path[:18] + "..." + path[-20:]
             self.lbl_mon_status.configure(
                 text=f"Status: ⏸️ Monitoramento Pausado: \"{path_short}\"",
                 text_color="#f59e0b"
             )
         else:
             self.lbl_mon_status.configure(
-                text="Status: ⏹️ Parado - Nenhuma pasta selecionada",
-                text_color="#f59e0b"
+                text="Status: ⏹️ Nenhuma pasta selecionada (Gerenciada via Painel Web)",
+                text_color="#a1a1aa"
             )
 
         # 2. Status do Painel Web & Botão Dinâmico
