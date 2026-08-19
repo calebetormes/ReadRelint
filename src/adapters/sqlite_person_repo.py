@@ -9,7 +9,7 @@ from src.ports.person_repo import IPersonRepo
 class SqlitePersonRepo(IPersonRepo):
     """
     Implementação concreta (Adapter) para o repositório de Pessoas (Dossiê consolidado)
-    utilizando a tabela relacional normalizada 'persons' e junções com 'relint_participants'.
+    utilizando a tabela relacional normalizada 'pessoas' e junções com 'relint_participantes' em Português.
     """
 
     def __init__(self, db_path: Path):
@@ -32,46 +32,54 @@ class SqlitePersonRepo(IPersonRepo):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA journal_mode=WAL;")
+
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='persons';")
+            if cursor.fetchone():
+                cursor.execute("ALTER TABLE persons RENAME TO pessoas;")
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS relints (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    source_file TEXT UNIQUE NOT NULL,
-                    subject TEXT,
-                    main_fact TEXT,
-                    date_of_fact TEXT,
-                    time_of_fact TEXT,
-                    bm_group TEXT,
-                    relint_type TEXT,
-                    municipality TEXT,
-                    neighborhood TEXT,
-                    address TEXT,
-                    police_unit TEXT,
-                    coordinates TEXT,
-                    map_url TEXT,
-                    summary TEXT,
-                    content TEXT,
-                    user_edited INTEGER DEFAULT 0
+                    arquivo_origem TEXT UNIQUE NOT NULL,
+                    assunto TEXT,
+                    fato_principal TEXT,
+                    data_fato TEXT,
+                    hora_fato TEXT,
+                    grupo_bm TEXT,
+                    tipo_relint TEXT,
+                    municipio TEXT,
+                    bairro TEXT,
+                    endereco TEXT,
+                    unidade_policial TEXT,
+                    coordenadas TEXT,
+                    url_mapa TEXT,
+                    resumo TEXT,
+                    conteudo TEXT,
+                    metodo_extracao TEXT DEFAULT 'Ollama (IA)',
+                    editado_usuario INTEGER DEFAULT 0
                 );
             """)
+
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS persons (
+                CREATE TABLE IF NOT EXISTS pessoas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    person_key TEXT UNIQUE NOT NULL,
-                    name TEXT NOT NULL,
-                    nickname TEXT,
-                    document TEXT,
-                    background TEXT
+                    chave_pessoa TEXT UNIQUE NOT NULL,
+                    nome TEXT NOT NULL,
+                    alcunha TEXT,
+                    documento TEXT,
+                    antecedentes TEXT
                 );
             """)
+
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS relint_participants (
+                CREATE TABLE IF NOT EXISTS relint_participantes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     relint_id INTEGER NOT NULL,
-                    person_id INTEGER NOT NULL,
-                    participation_type TEXT,
-                    photo_path TEXT,
+                    pessoa_id INTEGER NOT NULL,
+                    tipo_participacao TEXT,
+                    caminho_foto TEXT,
                     FOREIGN KEY (relint_id) REFERENCES relints(id) ON DELETE CASCADE,
-                    FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE
+                    FOREIGN KEY (pessoa_id) REFERENCES pessoas(id) ON DELETE CASCADE
                 );
             """)
             conn.commit()
@@ -90,12 +98,12 @@ class SqlitePersonRepo(IPersonRepo):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO persons (person_key, name, nickname, document, background)
+                INSERT INTO pessoas (chave_pessoa, nome, alcunha, documento, antecedentes)
                 VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(person_key) DO UPDATE SET
-                    name=excluded.name,
-                    nickname=CASE WHEN excluded.nickname != '' THEN excluded.nickname ELSE persons.nickname END,
-                    document=CASE WHEN excluded.document != '' THEN excluded.document ELSE persons.document END;
+                ON CONFLICT(chave_pessoa) DO UPDATE SET
+                    nome=excluded.nome,
+                    alcunha=CASE WHEN excluded.alcunha != '' THEN excluded.alcunha ELSE pessoas.alcunha END,
+                    documento=CASE WHEN excluded.documento != '' THEN excluded.documento ELSE pessoas.documento END;
             """, (p_key, p_name, p_nick, p_doc, p_back))
             conn.commit()
             return p_key
@@ -108,23 +116,22 @@ class SqlitePersonRepo(IPersonRepo):
 
     def _build_person_from_row(self, conn: sqlite3.Connection, row: sqlite3.Row) -> Person:
         person_db_id = row["id"]
-        person_key = row["person_key"]
-        name = row["name"]
-        nickname = row["nickname"] or ""
-        document = row["document"] or ""
+        person_key = row["chave_pessoa"] if "chave_pessoa" in row.keys() else row["person_key"]
+        name = row["nome"] if "nome" in row.keys() else row["name"]
+        nickname = (row["alcunha"] if "alcunha" in row.keys() else row["nickname"]) or ""
+        document = (row["documento"] if "documento" in row.keys() else row["document"]) or ""
 
         cursor = conn.cursor()
-        # Busca RELINTs vinculados via tabela de junção relint_participants
         cursor.execute("""
-            SELECT r.source_file, rp.photo_path
-            FROM relint_participants rp
+            SELECT r.arquivo_origem, rp.caminho_foto
+            FROM relint_participantes rp
             JOIN relints r ON rp.relint_id = r.id
-            WHERE rp.person_id = ?;
+            WHERE rp.pessoa_id = ?;
         """, (person_db_id,))
         p_rows = cursor.fetchall()
 
-        linked_relints = list(set(r["source_file"] for r in p_rows if r["source_file"]))
-        photos = list(set(r["photo_path"] for r in p_rows if r["photo_path"]))
+        linked_relints = list(set(r["arquivo_origem"] for r in p_rows if r["arquivo_origem"]))
+        photos = list(set(r["caminho_foto"] for r in p_rows if r["caminho_foto"]))
         aliases = [a.strip() for a in nickname.split(",") if a.strip()]
         documents = [document] if document else []
 
@@ -140,12 +147,15 @@ class SqlitePersonRepo(IPersonRepo):
 
     def get_by_id(self, person_id: str) -> Optional[Person]:
         """
-        Busca uma pessoa no SQLite pelo seu person_key.
+        Busca uma pessoa no SQLite pela sua chave_pessoa.
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM persons WHERE person_key = ? LIMIT 1;", (person_id,))
+            cursor.execute("SELECT * FROM pessoas WHERE chave_pessoa = ? LIMIT 1;", (person_id,))
             row = cursor.fetchone()
+            if not row:
+                cursor.execute("SELECT * FROM pessoas WHERE person_key = ? LIMIT 1;", (person_id,))
+                row = cursor.fetchone()
             if not row:
                 return None
             return self._build_person_from_row(conn, row)
@@ -160,7 +170,7 @@ class SqlitePersonRepo(IPersonRepo):
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM persons WHERE REPLACE(REPLACE(document, '.', ''), '-', '') = ? LIMIT 1;", (clean_doc,))
+            cursor.execute("SELECT * FROM pessoas WHERE REPLACE(REPLACE(documento, '.', ''), '-', '') = ? LIMIT 1;", (clean_doc,))
             row = cursor.fetchone()
             if not row:
                 return None
@@ -172,7 +182,7 @@ class SqlitePersonRepo(IPersonRepo):
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM persons ORDER BY name ASC;")
+            cursor.execute("SELECT * FROM pessoas ORDER BY nome ASC;")
             rows = cursor.fetchall()
             persons = []
             for row in rows:
@@ -188,5 +198,5 @@ class SqlitePersonRepo(IPersonRepo):
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM persons;")
+            cursor.execute("DELETE FROM pessoas;")
             conn.commit()

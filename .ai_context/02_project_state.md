@@ -50,14 +50,21 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
 - [x] **Melhoria Gráfica Circular Avançada:** Engrossamento dos SVGs da aba de Monitoramento para o formato Anel Premium (tipo Apple Watch), com ajuste dinâmico do `overflow: visible` para eliminação do corte na caixa da animação incandescente e aumento da pulsação e velocidade das barras luminosas.
 - [x] **Indicador Animado de Carregamento:** O painel de leitura agora conta com um Spinner animado inline (`<svg class="spin-fast">`) elegante em vez de texto seco durante a leitura do conteúdo do relatório.
 - [x] **Estabilidade e Loading Otimista da IA:** Adição de feedback visual instantâneo (spinner "Testando IA..." ou "Desativando...") ao alternar o modo de processamento de Inteligência Artificial. Implementação de proteção de concorrência (flag `_isTogglingLLM`) para impedir que o polling assíncrono de gráficos sobreponha o estado do botão durante a latência de rede/Ollama, e correção do bug que travava cliques subsequentes.
-- [x] **Edição Relacional de RELINTs e Participantes (`PUT /api/v1/relints/{id}`):**
-  - Atualização com suporte a endereço (`street` e `number`), preservação de fotos e antecedentes de participantes nas tabelas `persons` e `relint_participants`, e conversão polimórfica dinâmica entre `IncidentReport` e `HomicideReport` (`homicide_details`).
-  - Atualização da UI Web (modal de edição com campo Antecedentes).
-  - Suíte ampliada para 70 testes com 100% de aprovação (~3.1s).
+- [x] **Migração de Esquema do Banco de Dados e Sistema para Português (pt-BR):**
+  - Tradução de todas as tabelas (`relints`, `homicidio_detalhes`, `pessoas`, `relint_participantes`, `relint_imagens`) e colunas no SQLite nativo e adapters (`SqliteRepo`, `SqlitePersonRepo`).
+  - Auto-migração transparente de bancos legados executada em `_init_db()` via `ALTER TABLE RENAME COLUMN`.
+  - Atualização do arquivo de especificação do banco `schema.dbml` com todas as colunas e tabelas de especialidade polimórficas (Tráfico, Roubos e Furtos) em Português.
+  - Suporte completo a aliases Pydantic e fallbacks retrocompatíveis na API REST e na interface Web SPA (`relints_view.js`, `homicides_view.js`).
+  - Suíte de 69 testes automatizados aprovada com 100% de cobertura (~3.1s).
+- [x] **Unificação Global e Modularização de Abas (DRY Architecture):**
+  - **Componente Único de Participantes (`ParticipantsTabComponent`):** Layout Master-Detail (40% Lista / 60% Dossiê) com busca em tempo real por nome/vulgo, badges de função e suporte a galeria de imagens vinculadas.
+  - **Biblioteca Central de Abas (`RelintTabsComponents`):** Renderização padronizada de `Síntese` (caixa compacta invertida + resumo), `Especialidades` (atributos estruturados), `Fotos` (galeria com lightbox), `Localização` (dashboard geográfico com OSM iframe e badges de precisão) e `Transcrição` (leitor literal).
+  - Eliminação de duplicação de código entre os painéis `relints_view.js` e `homicides_view.js`.
 
 ## 2. Próximas Etapas (Prioridade)
 
-### ETAPA 1 — Melhoria Avançada da UX do Monitoramento (Aba Web & Desktop)
+### ETAPA 1 — Recursos Avançados de Vinculação e Edição
+- [ ] Implementar seletor interativo para vincular fotos específicas a participantes durante o modal de edição do RELINT.
 - [ ] Refinar feedback visual e notificações de conclusão de arquivos na Web.
 - [ ] Adicionar ordenação rápida e filtros por status de erro no relatório de leitura.
 

@@ -28,15 +28,16 @@ async function loadGlobalGallery() {
 
     let allImages = [];
     fullRelints.forEach(r => {
-      if (r.images && Array.isArray(r.images)) {
-        r.images.forEach(img => {
+      const imgs = r.images || r.imagens || [];
+      if (imgs && Array.isArray(imgs)) {
+        imgs.forEach(img => {
           allImages.push({
-            path: img.path,
-            caption: img.caption || r.subject || 'Foto do Fato',
+            path: img.path || img.caminho || img.file_path || '',
+            caption: img.caption || r.subject || r.assunto || 'Foto do Fato',
             page: img.page || 1,
             relintId: r.id,
-            sourceFile: r.source_file,
-            subject: r.subject
+            sourceFile: r.source_file || r.arquivo_origem || 'RELINT',
+            subject: r.subject || r.assunto || ''
           });
         });
       }

@@ -172,7 +172,24 @@ def test_normalize_whitespace_and_paragraphs():
     assert "estabelecimento e, durante o atendimento, solicitou" in cleaned
     assert "anos , ATUAL" not in cleaned
 
+def test_header_anexos_blank_line_separation():
+    raw_header_text = (
+        "RELATÓRIO DE INTELIGÊNCIA Nº 467/ADJ-INT-CRIM – 02/08/2026\n"
+        "DATA: 02/08/2026\n"
+        "ASSUNTO: HOMICÍDIO DOLOSO EM PANAMBI - RS\n"
+        "ORIGEM: ARI/AJ DIFUSÃO: ACI DIFUSÃO ANTERIOR: XXX REFERÊNCIA:\n"
+        "ANEXOS: XXX\n"
+        "No dia 02 de agosto de 2026, por volta das 22h, a guarnição foi acionada..."
+    )
 
+    cleaned = clean_relint_text(raw_header_text)
+    assert "ANEXOS: XXX\n\nNo dia 02 de agosto" in cleaned
 
+def test_clean_person_name():
+    from src.application.text_cleaner import clean_person_name
 
+    assert clean_person_name("Posteriormente Identificado Como Johnny Schroeder") == "Johnny Schroeder"
+    assert clean_person_name("Estavam João Witor Fagundes Garmatz") == "João Witor Fagundes Garmatz"
+    assert clean_person_name("momento em que foi feito contato com Mariane") == "Mariane"
+    assert clean_person_name("Vítima identificada como LUANA MARIA DE LIMA - RG: 8127846916") == "Luana Maria De Lima"
 

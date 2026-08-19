@@ -62,14 +62,19 @@ class OllamaClient(ILlmProcessor):
         schema_str = json.dumps(schema, indent=2, ensure_ascii=False)
 
         prompt = f"""
+Você é um assistente especialista em análise de Relatórios de Inteligência (RELINT) e Ocorrências Policiais do Brasil.
+O documento a seguir é um RELINT em Português (pt-BR). Analise o texto integralmente e extraia os dados solicitados.
+
 {system_prompt}
 
 INSTRUÇÕES DE SAÍDA:
 1. Você DEVE retornar EXATAMENTE UM objeto JSON válido que obedeça ao seguinte JSON Schema.
 2. Não inclua comentários, explicações ou texto fora do JSON.
 3. Se um campo do tipo Enum for exigido, você só pode usar os valores listados em 'enum'.
-4. PARTICIPANTES: Extraia apenas civis envolvidos (vítimas, acusados, suspeitos, testemunhas). NUNCA inclua os Policiais Militares que atenderam a ocorrência.
+4. PARTICIPANTES (participants): Extraia o NOME LIMPO de cada pessoa civil citada (ex: "Johnny Schroeder" e NÃO "Posteriormente Identificado Como Johnny Schroeder", "João Witor Fagundes Garmatz" e NÃO "Estavam João Witor Fagundes Garmatz", "Mariane da Silva" e NÃO "momento em que foi feito contato com Mariane"). NUNCA inclua prefixos narrativos policiais ("Posteriormente identificado como", "Estavam", "Conforme relato", "Vítima", "Contato com"). NUNCA inclua Policiais Militares que atenderam a ocorrência.
 5. RESUMO (summary): Escreva um resumo narrativo explicativo em 1 parágrafo com os fatos principais.
+6. LOCALIZAÇÃO: Extraia município (municipality), bairro (neighborhood), endereço completo (address) e unidade policial (police_unit) quando citados.
+7. REGISTRO POLICIAL: Extraia o número de registro (registry_number), órgão (registry_agency) e ano (registry_year) se identificados no texto.
 
 JSON SCHEMA:
 {schema_str}

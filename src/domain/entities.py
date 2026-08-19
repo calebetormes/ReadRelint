@@ -75,10 +75,13 @@ class Participant(BaseModel):
 
 class IncidentReport(BaseModel):
     """
-    Representa a entidade de domínio de um relatório de inteligência (RELINT) processado.
+    Representa a entidade de domínio de um relatório de incidente (RELINT) processado.
     """
     id: Optional[str] = Field(default=None, description="ID único no banco de dados")
     source_file: str = Field(description="Nome do arquivo PDF de origem")
+    registry_number: Optional[str] = Field(default=None, description="Número do registro Policial ou DP (ex: 516/151641/2026)")
+    registry_agency: Optional[str] = Field(default=None, description="Órgão de Registro Policial (ex: DP)")
+    registry_year: Optional[str] = Field(default=None, description="Ano de registro Policial (ex: 2026)")
     date_of_fact: Optional[str] = Field(default=None, description="Extraia a data de ocorrência do fato (ex: DD/MM/AAAA ou DD de mês de AAAA) mencionada na introdução ou primeira frase do histórico")
     time_of_fact: Optional[str] = Field(default=None, description="Extraia a hora exata ou aproximada do fato (ex: 14h30min, 01:30h, por volta das 18h) mencionada no primeiro parágrafo")
     modification_date_history: Optional[str] = Field(default=None, description="Mapear a sequência/histórico de datas de alteração do arquivo ou data do fato")
@@ -151,9 +154,6 @@ class HomicideReport(IncidentReport):
     """
     Entidade especializada para relatórios de homicídio.
     """
-    registry_number: Optional[str] = Field(default=None, description="Número do registro Policial ou DP (ex: 516/151641/2026)")
-    registry_agency: Optional[str] = Field(default=None, description="Órgão de Registro Policial (ex: DP)")
-    registry_year: Optional[str] = Field(default=None, description="Ano de registro Policial (ex: 2026)")
     fact_type: Optional[str] = Field(default=None, description="Determine o Tipo de Fato (Tentado ou Consumado)")
     motivation: Optional[Union[HomicideMotivation, str]] = Field(default="Desconhecido", description="Determine a Motivação baseada nas opções fornecidas")
 
@@ -177,6 +177,61 @@ class HomicideReport(IncidentReport):
         if "latrocinio" in lower or "latrocínio" in lower:
             return "Latrocídio"
         return val.title() if val else "Desconhecido"
+
+class DrugTraffickingReport(IncidentReport):
+    """
+    Entidade especializada para prisões por tráfico de drogas.
+    """
+    drug_quantity: Optional[str] = Field(default=None, description="Quantidade total de entorpecentes apreendidos (ex: 500g, 2kg, 5 buchas)")
+    drug_types: Optional[str] = Field(default=None, description="Tipos de drogas apreendidas (ex: Cocaína, Maconha, Crack)")
+
+
+class EstablishmentRobberyReport(IncidentReport):
+    """
+    Entidade especializada para roubo a estabelecimento (comercial, bancário, etc).
+    """
+    establishment_type: Optional[str] = Field(default=None, description="Tipo de estabelecimento (Comércio, Banco, Lotérica, Posto de Combustível, etc.)")
+    location_type: Optional[str] = Field(default="Urbano", description="Determine se o local é Urbano ou Rural")
+    injured_victims: Optional[int] = Field(default=0, description="1 se houve vítimas lesionadas ou com agressão física, 0 se não")
+    hostage_victim: Optional[int] = Field(default=0, description="1 se houve reféns retidos, 0 se não")
+
+
+class ResidenceRobberyReport(IncidentReport):
+    """
+    Entidade especializada para roubo a residência.
+    """
+    location_type: Optional[str] = Field(default="Urbano", description="Determine se o local é Urbano ou Rural")
+    injured_victims: Optional[int] = Field(default=0, description="1 se houve vítimas lesionadas ou com agressão física, 0 se não")
+    hostage_victim: Optional[int] = Field(default=0, description="1 se houve reféns retidos, 0 se não")
+
+
+class VehicleRobberyReport(IncidentReport):
+    """
+    Entidade especializada para roubo de veículo.
+    """
+    vehicle_model: Optional[str] = Field(default=None, description="Marca e modelo do veículo roubado")
+    license_plate: Optional[str] = Field(default=None, description="Placa do veículo roubado")
+    recovered: Optional[int] = Field(default=0, description="1 se o veículo foi recuperado, 0 se não")
+    recovery_location: Optional[str] = Field(default=None, description="Coordenadas ou endereço do local de recuperação (se recuperado)")
+
+
+class PedestrianRobberyReport(IncidentReport):
+    """
+    Entidade especializada para roubo a pedestre.
+    """
+    injured_victims: Optional[int] = Field(default=0, description="1 se houve vítimas lesionadas ou agressão, 0 se não")
+    weapon_used: Optional[str] = Field(default=None, description="Arma utilizada (Arma de fogo, Arma branca, Agressão física)")
+    stolen_object: Optional[str] = Field(default=None, description="Objeto(s) roubado(s) da vítima (ex: celular, carteira, bolsa)")
+
+
+class VehicleTheftReport(IncidentReport):
+    """
+    Entidade especializada para furto de veículo.
+    """
+    vehicle_model: Optional[str] = Field(default=None, description="Marca e modelo do veículo furtado")
+    license_plate: Optional[str] = Field(default=None, description="Placa do veículo furtado")
+    recovered: Optional[int] = Field(default=0, description="1 se o veículo foi recuperado, 0 se não")
+    recovery_location: Optional[str] = Field(default=None, description="Coordenadas ou endereço do local de recuperação (se recuperado)")
 
 
 class Person(BaseModel):

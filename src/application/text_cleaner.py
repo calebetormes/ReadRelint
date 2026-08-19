@@ -74,6 +74,12 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
     # 1. Normaliza finais de linha \r\n para \n e limpa espaços ao redor das quebras
     text = re.sub(r'[ \t]*\r?\n[ \t]*', '\n', text)
 
+    # 1b. Trata casos onde o cabeçalho 'ANEXOS: XXX' está grudado na mesma linha com o texto narrativo ou com divisórias '____'
+    pattern_inline = re.compile(
+        r'(?i)\b(ANEXOS?\s*:\s*(?:XXX|NENHUMA?|NADA|\-|\d+|[A-Z0-9_\-\.]{1,20}))(?:\s*_{3,})?\s+(?=[A-Z\d\"][a-z\u00C0-\u00FF]|\bEm\b|\bNo\b|\bNa\b|\bConforme\b|\bSegundo\b|\bAo\b|\bUm\b|\bUma\b)'
+    )
+    text = re.sub(pattern_inline, r'\1\n\n', text)
+
     # 2. Preserva parágrafos reais (\n\n ou mais) usando um marcador temporário
     MARKER = "___PARAGRAPH_BREAK___"
     text = re.sub(r'\n{2,}', MARKER, text)
@@ -97,11 +103,12 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
                 # Critérios para MANTER uma quebra de linha individual:
                 # - A linha atual é um campo formal (ex: ASSUNTO:, DATA:, ORIGEM:, RG:, NOME:, SUSPEITO 01:)
                 # - A linha atual começa com um marcador de lista (- ou * ou 1. ou 2.)
-                # - A linha anterior termina com dois pontos (:)
+                # - A linha anterior termina com dois pontos (:) ou é a linha de ANEXOS:
                 is_field_header = bool(re.match(r'^(?:[A-Z0-9_\-\.\s]{2,30}:|SUSPEITO|ANTECEDENTES|FOTO|REGISTRO|IMAGEM|ANEXOS|\-|\*|\d+[\.\)])', line, re.IGNORECASE))
                 last_ended_with_colon = last_line.endswith(':')
+                last_is_anexos = bool(re.match(r'^ANEXOS?\s*:', last_line, re.IGNORECASE))
 
-                if is_field_header or last_ended_with_colon:
+                if is_field_header or last_ended_with_colon or last_is_anexos:
                     merged_lines.append(line)
                 else:
                     # Junta com a linha anterior usando um espaço
@@ -112,10 +119,18 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
     # 4. Reconstitui os parágrafos com quebra dupla (\n\n)
     result = "\n\n".join(cleaned_blocks)
 
-    # 5. Normaliza múltiplos espaços horizontais consecutivos no meio da linha
+    # 5. Garante que após a linha de ANEXOS: haja uma linha em branco (\n\n) separando o cabeçalho do corpo do texto
+    result = re.sub(
+        r'((?:ANEXOS?\s*:[^\n]*))(\n+)(?=[^\s\n])',
+        r'\1\n\n',
+        result,
+        flags=re.IGNORECASE
+    )
+
+    # 6. Normaliza múltiplos espaços horizontais consecutivos no meio da linha
     result = re.sub(r'[ \t]{2,}', ' ', result)
 
-    # 6. Corrige pontuação com espaço antes (ex: "anos , ATUAL" -> "anos, ATUAL")
+    # 7. Corrige pontuação com espaço antes (ex: "anos , ATUAL" -> "anos, ATUAL")
     result = re.sub(r'\s+([,\.\;:\?\!])', r'\1', result)
 
     return result.strip()
@@ -297,6 +312,52 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
     return narrative
 
 
+def clean_person_name(name: str) -> str:
+    """
+    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas (ex: 'Posteriormente Identificado Como Johnny Schroeder' -> 'Johnny Schroeder').
+    """
+    if not name:
+        return ""
+
+    clean = name.strip()
+
+    # Prefixo de frases narrativas policiais
+    prefixes = [
+        r'posteriormente\s+identificad[oa]\s+(?:apenas\s+)?como',
+        r'identificad[oa]\s+(?:apenas\s+)?como',
+        r'v[íi]tima\s+identificad[oa]\s+como',
+        r'conforme\s+relato\s+d[ao](?:\s+v[íi]tima)?',
+        r'momento\s+em\s+que\s+foi\s+feito\s+contato\s+com',
+        r'(?:foi\s+)?feito\s+contato\s+com',
+        r'em\s+contato\s+com',
+        r'contato\s+com',
+        r'estavam?\s+presentes?',
+        r'estavam?',
+        r'estava',
+        r'tratar-se\s+de',
+        r'trata-se\s+de',
+        r'v[íi]tima',
+        r'suspeito',
+        r'acusado',
+        r'comunicante',
+        r'testemunha',
+        r'envolvid[oa]',
+        r'sr[a]?\.',
+        r'sr[a]?'
+    ]
+
+    for p in prefixes:
+        clean = re.sub(r'(?i)^\s*' + p + r'\s+', '', clean)
+
+    # Limpa sufixos com RG, CPF ou números de documentos grudados
+    clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA)[:\s\.\d\-]+.*)$', '', clean)
+
+    # Limpa pontuações isoladas nas pontas
+    clean = clean.strip(' ,.-–—:;')
+
+    return clean.title() if clean.isupper() or clean.islower() else clean
+
+
 def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     """
     Extrai deterministicamente participantes citados no texto do RELINT via expressões regulares
@@ -314,7 +375,7 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
         re.MULTILINE
     )
     for m in block_pattern.finditer(text):
-        name = m.group(1).strip()
+        name = clean_person_name(m.group(1))
         rg = (m.group(2) or "").strip()
         cpf = (m.group(3) or "").strip()
         nick = (m.group(4) or "").strip()
@@ -329,7 +390,7 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
         if name and upper_name not in seen_names:
             seen_names.add(upper_name)
             participants.append({
-                "name": name.title(),
+                "name": name,
                 "nickname": nick,
                 "document": doc,
                 "participation_type": "Suspeito"
@@ -341,24 +402,17 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
         re.MULTILINE
     )
     for m in inline_pattern.finditer(text):
-        name = m.group(1).strip()
+        name = clean_person_name(m.group(1))
         doc = m.group(2).strip()
         upper_name = name.upper()
         
         if any(bad in upper_name for bad in ["RELATÓRIO", "BRIGADA", "POLÍCIA"]) and "SANTOS SILVA" not in upper_name:
             continue
 
-        # Limpa prefixos comuns de nomes extraídos inline
-        for prefix in ["VÍTIMA ", "VITIMA ", "CONDUZIDO POR ", "RESIDÊNCIA DE ", "IDENTIFICADO COMO "]:
-            if upper_name.startswith(prefix):
-                name = name[len(prefix):].strip()
-                upper_name = name.upper()
-                break
-
         if name and len(name) > 3 and upper_name not in seen_names:
             seen_names.add(upper_name)
             participants.append({
-                "name": name.title(),
+                "name": name,
                 "nickname": "",
                 "document": doc,
                 "participation_type": "Acusado"

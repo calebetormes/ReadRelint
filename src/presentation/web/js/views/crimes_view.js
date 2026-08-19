@@ -121,12 +121,12 @@ function updateKPIs(relints) {
   const muniCounts = {};
 
   relints.forEach(r => {
-    const bm = (r.bm_group || '').toLowerCase();
+    const bm = (r.bm_group || r.grupo_bm || '').toLowerCase();
     if (bm.includes('homicíd') || bm.includes('homicid')) homicides++;
     if (bm.includes('tráfico') || bm.includes('trafico')) trafficking++;
 
-    const muni = r.municipality || 'Não Informado';
-    if (muni !== 'Não Informado' && muni !== 'N/I') {
+    const muni = r.municipality || r.municipio || 'Não Informado';
+    if (muni !== 'Não Informado' && muni !== 'N/I' && muni.trim() !== '') {
       muniCounts[muni] = (muniCounts[muni] || 0) + 1;
     }
   });
@@ -154,7 +154,7 @@ function renderBMDistributionChart(relints) {
 
   const counts = {};
   relints.forEach(r => {
-    const bm = r.bm_group || 'Outros';
+    const bm = r.bm_group || r.grupo_bm || 'Outros';
     counts[bm] = (counts[bm] || 0) + 1;
   });
 
@@ -241,8 +241,8 @@ function renderTimelineChart(relints) {
 
   const dateCounts = {};
   relints.forEach(r => {
-    const date = r.date_of_fact || 'Indefinido';
-    if (date !== 'Indefinido') {
+    const date = r.date_of_fact || r.data_fato || 'Indefinido';
+    if (date !== 'Indefinido' && date.trim() !== '') {
       dateCounts[date] = (dateCounts[date] || 0) + 1;
     }
   });
@@ -330,8 +330,12 @@ function renderRecentIncidentsFeed(relints) {
   const recent = sorted.slice(0, 6);
 
   container.innerHTML = recent.map(r => {
-    const isHomicide = (r.bm_group || '').toLowerCase().includes('homicíd') || (r.bm_group || '').toLowerCase().includes('homicid');
+    const bmVal = r.bm_group || r.grupo_bm || '';
+    const isHomicide = bmVal.toLowerCase().includes('homicíd') || bmVal.toLowerCase().includes('homicid');
     const badgeClass = isHomicide ? 'badge-rose' : 'badge-amber';
+    const subj = r.subject || r.assunto || r.source_file || r.arquivo_origem || 'Sem Assunto';
+    const muni = r.municipality || r.municipio || 'Local Indefinido';
+    const dateVal = r.date_of_fact || r.data_fato || 'Data Indefinida';
 
     return `
       <div class="card" style="padding: 14px 18px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; background-color: var(--surface-card); border-color: var(--hairline-strong);">
@@ -340,15 +344,15 @@ function renderRecentIncidentsFeed(relints) {
             <i data-lucide="${isHomicide ? 'crosshair' : 'file-text'}" style="width: 18px; height: 18px;"></i>
           </div>
           <div>
-            <div style="font-weight: 500; font-size: 14px; color: var(--ink);">${r.subject || r.source_file}</div>
+            <div style="font-weight: 500; font-size: 14px; color: var(--ink);">${escapeHtml(subj)}</div>
             <div style="font-size: 12px; color: var(--ash); margin-top: 2px;">
-              <i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i> ${r.municipality || 'Local Indefinido'} &bull; ${r.date_of_fact || 'Data Indefinida'}
+              <i data-lucide="map-pin" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i> ${escapeHtml(muni)} &bull; ${escapeHtml(dateVal)}
             </div>
           </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px;">
-          <span class="badge ${badgeClass}">${r.bm_group || 'Outros'}</span>
+          <span class="badge ${badgeClass}">${escapeHtml(bmVal || 'Outros')}</span>
         </div>
       </div>
     `;

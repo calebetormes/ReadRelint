@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.presentation.api.routers import relints, monitoring
+from src.presentation.api.routers import relints, monitoring, events, participants
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths resolvidos relativos a este arquivo para evitar dependência de CWD
@@ -54,6 +54,8 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 # Rotas da API REST
 app.include_router(relints.router, prefix="/api/v1")
 app.include_router(monitoring.router, prefix="/api/v1")
+app.include_router(events.router, prefix="/api/v1")
+app.include_router(participants.router, prefix="/api/v1")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

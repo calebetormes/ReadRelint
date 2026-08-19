@@ -1,11 +1,11 @@
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Any, List
 from src.ports.file_parser import IFileParser
 from src.ports.llm_processor import ILlmProcessor
 from src.ports.database_repo import IDatabaseRepo
 from src.ports.person_repo import IPersonRepo
-from src.domain.entities import IncidentReport, Person
+from src.domain.entities import IncidentReport, Person, Participant
 from src.application.text_cleaner import (
     clean_relint_text,
     extract_history_from_annex,
@@ -40,6 +40,66 @@ class EtlService:
         self.processed_registry = processed_registry
         self.person_repo = person_repo
         self.use_llm = use_llm
+
+    def _normalize_response_dict(self, response_dict: dict) -> dict:
+        """Normaliza chaves em Português/Inglês retornadas pela LLM para o padrão da entidade de domínio."""
+        if not isinstance(response_dict, dict):
+            return {}
+
+        key_map = {
+            "assunto": "subject",
+            "fato_principal": "main_fact",
+            "data_fato": "date_of_fact",
+            "hora_fato": "time_of_fact",
+            "grupo_bm": "bm_group",
+            "tipo_relint": "relint_type",
+            "municipio": "municipality",
+            "bairro": "neighborhood",
+            "endereco": "address",
+            "unidade_policial": "police_unit",
+            "coordenadas": "coordinates",
+            "url_mapa": "map_url",
+            "resumo": "summary",
+            "participantes": "participants",
+            "numero_registro": "registry_number",
+            "orgao_registro": "registry_agency",
+            "ano_registro": "registry_year",
+            "tipo_fato": "fact_type",
+            "motivacao": "motivation"
+        }
+
+        normalized = {}
+        for k, v in response_dict.items():
+            std_key = key_map.get(str(k).lower(), k)
+            normalized[std_key] = v
+
+        raw_parts = normalized.get("participants", [])
+        if isinstance(raw_parts, list):
+            from src.application.text_cleaner import clean_person_name
+            norm_parts = []
+            p_key_map = {
+                "nome": "name",
+                "alcunha": "nickname",
+                "vulgo": "nickname",
+                "documento": "document",
+                "cpf": "document",
+                "rg": "document",
+                "antecedentes": "background",
+                "tipo_participacao": "participation_type"
+            }
+            for p in raw_parts:
+                if isinstance(p, dict):
+                    norm_p = {}
+                    for pk, pv in p.items():
+                        norm_p[p_key_map.get(str(pk).lower(), pk)] = pv
+                    if "name" in norm_p and norm_p["name"]:
+                        norm_p["name"] = clean_person_name(str(norm_p["name"]))
+                    norm_parts.append(norm_p)
+                else:
+                    norm_parts.append(p)
+            normalized["participants"] = norm_parts
+
+        return normalized
 
     def process_file(
         self,
@@ -105,15 +165,15 @@ class EtlService:
                 response_dict = {}
                 extraction_method = "Regex (Sem IA)"
 
+            response_dict = self._normalize_response_dict(response_dict)
             response_dict["extraction_method"] = extraction_method
 
-            # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT (RELATÓRIO DE INTELIGÊNCIA Nº, ASSUNTO, ORIGEM, DIFUSÃO, ANEXOS)
+            # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT
             final_content = clean_relint_text(cleaned_text)
             if "content" in response_dict:
                 del response_dict["content"]
 
-            # 1.1 Classificação determinística por Regra específica (prioridade máxima)
-            # A regra da especialidade (ex: HomicideRule) força o bm_group.
+            # 1.1 Classificação determinística por Regra específica
             rule_forced_bm = None
             if rule and hasattr(rule, 'get_bm_group'):
                 rule_forced_bm = rule.get_bm_group(
@@ -127,8 +187,7 @@ class EtlService:
                             on_progress(f"[{filename}] ⚡ BM Group corrigido: '{llm_bm}' → '{rule_forced_bm}' (regra determinística)")
                     response_dict["bm_group"] = rule_forced_bm
 
-            # 1.2 Classificação determinística por padrões regex (fallback para relints sem regra específica)
-            # Roda apenas se a Regra específica não já definiu o bm_group OU se a LLM retornou 'Outros'.
+            # 1.2 Classificação determinística por padrões regex
             current_bm = response_dict.get("bm_group", "Outros")
             if not rule_forced_bm and current_bm in ("Outros", "outros", None, ""):
                 classified_bm = classify_bm_group(
@@ -142,7 +201,7 @@ class EtlService:
                         on_progress(f"[{filename}] 🎯 BM Group classificado: '{current_bm}' → '{classified_bm}' (classificador regex)")
                     response_dict["bm_group"] = classified_bm
 
-            # 2. Extração / Sanitização da data e hora do fato (date_of_fact, time_of_fact)
+            # 2. Extração / Sanitização da data e hora do fato
             extracted_date = extract_date_of_fact(final_content)
             date_val = response_dict.get("date_of_fact") or response_dict.get("modification_date_history")
             if not date_val or str(date_val).strip() in ["Não Informado", "None", ""]:
@@ -237,7 +296,6 @@ class EtlService:
             response_dict["participants"] = parsed_participants
             response_dict["images"] = general_scene_images
 
-
             # Instancia a entidade de domínio principal (RELINT)
             report_data = {
                 "source_file": filename,
@@ -246,57 +304,45 @@ class EtlService:
             }
             
             try:
-                report = schema_model(**report_data)
+                report = schema_model.model_validate(report_data)
             except Exception as model_err:
-                # Se falhar o parse direto do Pydantic (IA fugiu muito do schema), injeta de forma relaxada
-                if on_progress: on_progress(f"[{filename}] Aviso: IA não seguiu estritamente o Schema. Salvando relaxado.")
-                report = schema_model(
-                    source_file=filename,
-                    content=final_content,
-                    subject=response_dict.get("subject", ""),
-                    summary=summary_val,
-                    main_fact=response_dict.get("main_fact", ""),
-                    address=response_dict.get("address", ""),
-                    date_of_fact=date_val,
-                    modification_date_history=date_val,
-                    extraction_method=extraction_method,
-                    participants=parsed_participants,
-                    images=general_scene_images
-                )
-
+                if on_progress: on_progress(f"[{filename}] Aviso: IA não seguiu estritamente o Schema. Salvando com reconstrução segura.")
+                report = schema_model.model_construct(**report_data)
 
             # Salva o RELINT no banco central
             self.database_repo.save(report)
 
             # Upsert de Participantes no banco de Pessoas
             for participant in report.participants:
-                if not participant.name:
+                p_name = participant.name if isinstance(participant, Participant) else (participant.get("name") if isinstance(participant, dict) else "")
+                if not p_name:
                     continue
                 
-                # Tenta buscar por documento ou por nome como fallback simplificado
-                person_id = participant.document if participant.document else participant.name.lower()
+                p_doc = participant.document if isinstance(participant, Participant) else (participant.get("document") if isinstance(participant, dict) else "")
+                p_nick = participant.nickname if isinstance(participant, Participant) else (participant.get("nickname") if isinstance(participant, dict) else "")
+                p_photo = participant.photo_path if isinstance(participant, Participant) else (participant.get("photo_path") if isinstance(participant, dict) else "")
+
+                person_id = p_doc if p_doc else p_name.lower()
                 existing_person = self.person_repo.get_by_id(person_id)
                 
                 if existing_person:
                     if filename not in existing_person.linked_relints:
                         existing_person.linked_relints.append(filename)
-                    if participant.nickname and participant.nickname not in existing_person.aliases:
-                        existing_person.aliases.append(participant.nickname)
-                    if participant.photo_path and participant.photo_path not in existing_person.photos:
-                        existing_person.photos.append(participant.photo_path)
+                    if p_nick and p_nick not in existing_person.aliases:
+                        existing_person.aliases.append(p_nick)
+                    if p_photo and p_photo not in existing_person.photos:
+                        existing_person.photos.append(p_photo)
                     self.person_repo.update(existing_person)
                 else:
                     new_person = Person(
                         person_id=person_id,
-                        name=participant.name,
-                        aliases=[participant.nickname] if participant.nickname else [],
-                        documents=[participant.document] if participant.document else [],
-                        photos=[participant.photo_path] if participant.photo_path else [],
+                        name=p_name,
+                        aliases=[p_nick] if p_nick else [],
+                        documents=[p_doc] if p_doc else [],
+                        photos=[p_photo] if p_photo else [],
                         linked_relints=[filename]
                     )
                     self.person_repo.save(new_person)
-
-
 
             if rule:
                 self.processed_registry.register_processed(filename, rule.name, "confirmed")
@@ -307,6 +353,20 @@ class EtlService:
             
             if on_success:
                 on_success(report)
+
+            # Transmite o evento SSE em tempo real para atualização instantânea dos clientes Web
+            try:
+                from src.presentation.api.routers.events import broadcaster
+                bm_str = report.bm_group.value if hasattr(report.bm_group, "value") else str(report.bm_group or "Outros")
+                broadcaster.broadcast("relint_created", {
+                    "id": str(report.id or ""),
+                    "source_file": report.source_file or "",
+                    "subject": report.subject or "",
+                    "bm_group": bm_str,
+                    "municipality": report.municipality or ""
+                })
+            except Exception:
+                pass
 
             return report
 
