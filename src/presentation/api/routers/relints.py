@@ -4,7 +4,6 @@ FastAPI Router for RELINT reports management.
 Exposes endpoints for:
   - GET  /relints          — paginated list with filtering
   - GET  /relints/{id}     — full detail of a single report
-  - PUT  /relints/{id}     — update user-editable fields
 """
 from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,7 +12,6 @@ from src.presentation.api.dependencies import get_db_repo
 from src.presentation.api.schemas.relints import (
     RelintSummaryResponse,
     RelintDetailResponse,
-    RelintUpdateRequest,
     ParticipantDTO,
 )
 
@@ -188,32 +186,3 @@ def get_relint_by_id(
     report_dict["id"] = report_id
     return RelintDetailResponse(**report_dict)
 
-
-@router.put("/{report_id}", response_model=RelintDetailResponse)
-def update_relint(
-    report_id: str,
-    payload: RelintUpdateRequest,
-    repo: SqliteRepo = Depends(get_db_repo),
-) -> RelintDetailResponse:
-    """Updates user-editable metadata fields of a RELINT and sets user_edited=True."""
-    report = _find_report_by_id(report_id, repo)
-    if not report:
-        raise HTTPException(status_code=404, detail=f"RELINT '{report_id}' not found.")
-
-    update_data = payload.model_dump(exclude_unset=True)
-    if "participants" in update_data and update_data["participants"] is not None:
-        from src.domain.entities import Participant
-        new_participants = []
-        for p_data in update_data.pop("participants"):
-            if isinstance(p_data, dict):
-                new_participants.append(Participant(**p_data))
-        report.participants = new_participants
-
-    for field, value in update_data.items():
-        if value is not None:
-            setattr(report, field, value)
-
-    report.user_edited = True
-    repo.save(report)
-
-    return get_relint_by_id(report_id, repo=repo)

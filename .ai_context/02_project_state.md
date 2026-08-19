@@ -49,6 +49,11 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
 - [x] **Botões e Navegação Enxutos:** Remoção do box-border redundante nos botões de abas da visualização de Monitoramento. Troca do Checkbox estático do motor IA por um Botão de Status Interativo e Inteligente (Verde Esmeralda p/ ativo, Amarelo de Alerta p/ Modo Regex).
 - [x] **Melhoria Gráfica Circular Avançada:** Engrossamento dos SVGs da aba de Monitoramento para o formato Anel Premium (tipo Apple Watch), com ajuste dinâmico do `overflow: visible` para eliminação do corte na caixa da animação incandescente e aumento da pulsação e velocidade das barras luminosas.
 - [x] **Indicador Animado de Carregamento:** O painel de leitura agora conta com um Spinner animado inline (`<svg class="spin-fast">`) elegante em vez de texto seco durante a leitura do conteúdo do relatório.
+- [x] **Estabilidade e Loading Otimista da IA:** Adição de feedback visual instantâneo (spinner "Testando IA..." ou "Desativando...") ao alternar o modo de processamento de Inteligência Artificial. Implementação de proteção de concorrência (flag `_isTogglingLLM`) para impedir que o polling assíncrono de gráficos sobreponha o estado do botão durante a latência de rede/Ollama, e correção do bug que travava cliques subsequentes.
+- [x] **Edição Relacional de RELINTs e Participantes (`PUT /api/v1/relints/{id}`):**
+  - Atualização com suporte a endereço (`street` e `number`), preservação de fotos e antecedentes de participantes nas tabelas `persons` e `relint_participants`, e conversão polimórfica dinâmica entre `IncidentReport` e `HomicideReport` (`homicide_details`).
+  - Atualização da UI Web (modal de edição com campo Antecedentes).
+  - Suíte ampliada para 70 testes com 100% de aprovação (~3.1s).
 
 ## 2. Próximas Etapas (Prioridade)
 

@@ -183,9 +183,6 @@ function renderHomicideDetail(report) {
         <span class="badge badge-rose">
           <i data-lucide="crosshair" style="width:14px;height:14px;margin-right:4px;"></i> ${factType.toUpperCase()}
         </span>
-        <button class="btn btn-secondary btn-sm" onclick="openEditRelintModal('${report.id}')">
-          <i data-lucide="edit-3" style="width:14px;height:14px;margin-right:4px;display:inline;"></i> Revisar
-        </button>
       </div>
     </div>
 

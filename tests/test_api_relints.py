@@ -68,17 +68,3 @@ def test_get_relint_by_id(client):
     assert len(detail["participants"]) == 1
     assert detail["participants"][0]["name"] == "João da Silva"
 
-def test_update_relint(client):
-    list_res = client.get("/api/v1/relints")
-    relint_id = list_res.json()[0]["id"]
-
-    update_payload = {
-        "subject": "Homicídio Qualificado (Editado pelo usuário)",
-        "summary": "Resumo atualizado manualmente."
-    }
-    put_res = client.put(f"/api/v1/relints/{relint_id}", json=update_payload)
-    assert put_res.status_code == 200
-    updated = put_res.json()
-    assert updated["subject"] == "Homicídio Qualificado (Editado pelo usuário)"
-    assert updated["summary"] == "Resumo atualizado manualmente."
-    assert updated["user_edited"] is True

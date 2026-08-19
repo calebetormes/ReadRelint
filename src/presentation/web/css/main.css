@@ -1464,7 +1464,7 @@ body {
 
 .edit-participant-row {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1.5fr 2fr 36px;
+  grid-template-columns: 2fr 1.3fr 1.2fr 2fr 1.5fr 36px;
   gap: 8px;
   align-items: center;
   padding: 8px;

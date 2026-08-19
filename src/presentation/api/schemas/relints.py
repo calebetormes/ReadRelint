@@ -59,27 +59,4 @@ class RelintDetailResponse(BaseModel):
     images: List[Dict[str, Any]] = Field(default_factory=list)
     participants: List[ParticipantDTO] = Field(default_factory=list)
 
-class RelintUpdateRequest(BaseModel):
-    """Payload for updating user-editable RELINT metadata and content."""
-    subject: Optional[str] = None
-    main_fact: Optional[str] = None
-    summary: Optional[str] = None
-    content: Optional[str] = None
-    date_of_fact: Optional[str] = None
-    time_of_fact: Optional[str] = None
-    bm_group: Optional[str] = None
-    relint_type: Optional[str] = None
-    municipality: Optional[str] = None
-    neighborhood: Optional[str] = None
-    address: Optional[str] = None
-    police_unit: Optional[str] = None
-    coordinates: Optional[str] = None
-    map_url: Optional[str] = None
-    participants: Optional[List[ParticipantDTO]] = None
-    
-    # Homicide specific optional fields
-    registry_number: Optional[str] = None
-    registry_agency: Optional[str] = None
-    registry_year: Optional[str] = None
-    fact_type: Optional[str] = None
-    motivation: Optional[str] = None
+

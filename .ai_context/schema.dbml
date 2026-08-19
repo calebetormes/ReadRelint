@@ -1,0 +1,58 @@
+Project ReadRelint {
+  database_type: 'SQLite'
+  Note: 'Schema do Banco de Dados SQLite (data/relints.db)'
+}
+
+Table relints {
+  id integer [primary key, increment, note: 'PK auto incremento']
+  source_file text [unique, not null, note: 'Caminho/Nome do PDF original']
+  subject text [note: 'Assunto principal extraído']
+  main_fact text [note: 'Fato principal ou crime']
+  date_of_fact text [note: 'Data do fato (DD/MM/YYYY)']
+  time_of_fact text [note: 'Hora do fato (HH:MM)']
+  bm_group text [note: 'Grupo do BM / Classificação']
+  relint_type text [note: 'Tipo do relatório (Geral, Homicídio, etc)']
+  municipality text [note: 'Município']
+  neighborhood text [note: 'Bairro']
+  address text [note: 'Endereço estruturado']
+  police_unit text [note: 'Unidade policial (BPM/Cia)']
+  coordinates text [note: 'Latitude, Longitude extraída (se houver)']
+  map_url text [note: 'URL limpa extraída para o mapa (Google Maps)']
+  summary text [note: 'Resumo / Síntese dos fatos']
+  content text [note: 'Histórico literal bruto (Regex)']
+  extraction_method text [default: 'Ollama (IA)', note: 'Ollama (IA) ou Regex (Sem IA)']
+  user_edited integer [default: 0, note: 'Boolean: 1 se humano editou (trava IA)']
+}
+
+Table homicide_details {
+  relint_id integer [primary key, ref: - relints.id, note: 'Extensão polimórfica (1:1)']
+  registry_number text [note: 'Número do Registro / BOP']
+  registry_agency text [note: 'Agência / Delegacia do Registro']
+  registry_year text [note: 'Ano do Registro']
+  fact_type text [note: 'Fato/Natureza do Crime (Tentado, Consumado)']
+  motivation text [note: 'Motivação (Tráfico, Passional, etc)']
+}
+
+Table persons {
+  id integer [primary key, increment, note: 'PK da pessoa']
+  person_key text [unique, not null, note: 'Chave hash/slug única para deduplicação cruzada']
+  name text [not null, note: 'Nome completo']
+  nickname text [note: 'Vulgo / Apelido']
+  document text [note: 'CPF/RG se houver']
+  background text [note: 'Antecedentes criminais / passagens (IA)']
+}
+
+Table relint_participants {
+  id integer [primary key, increment, note: 'Tabela de ligação N:N']
+  relint_id integer [ref: > relints.id, note: 'FK para a ocorrência']
+  person_id integer [ref: > persons.id, note: 'FK para a pessoa única']
+  participation_type text [note: 'Autor, Vítima, Testemunha, etc']
+  photo_path text [note: 'Caminho/URL da foto (se a IA associou, obsoleto)']
+}
+
+Table relint_images {
+  id integer [primary key, increment, note: 'Mídias isoladas']
+  relint_id integer [ref: > relints.id, note: 'FK para a ocorrência']
+  file_path text [not null, note: 'Caminho absoluto ou relativo da imagem salva']
+  caption text [note: 'Legenda opcional (IA)']
+}
