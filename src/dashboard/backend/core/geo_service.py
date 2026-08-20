@@ -40,9 +40,20 @@ def extract_structured_address(report: Any) -> Dict[str, str]:
 
     # 2. Neighborhood Fallback
     if not neigh or neigh in ["Não Informado", "None", ""]:
-        m_bairro = re.search(r'(?i)bairro\s+([a-zA-Z\u00C0-\u00FF\s\-]+?)(?:,|\sen\b|\sem\b|\s-|\.|$)', text_source)
+        m_bairro = re.search(
+            r'(?i)\bbairro\s+([a-zA-Z\u00C0-\u00FF0-9\s\-]{2,35}?)(?:,|\sen\b|\sem\b|\s-|\.|\bsem\b|\bcom\b|\bna\b|\bno\b|\bpróximo\b|\besquina\b|\brua\b|\bavenida\b|\bav\b|\bnº\b|\bnúmero\b|$)',
+            text_source
+        )
         if m_bairro:
-            neigh = m_bairro.group(1).strip()
+            raw_neigh = m_bairro.group(1).strip()
+            # Limpa ruídos como "sem precisar o nome..." ou frases longas
+            words = raw_neigh.split()
+            valid_words = []
+            for w in words:
+                if w.lower() in ["sem", "precisar", "nome", "completo", "da", "do", "de", "rua"]:
+                    break
+                valid_words.append(w)
+            neigh = " ".join(valid_words).title() if valid_words else "Não Informado"
         else:
             neigh = "Não Informado"
 

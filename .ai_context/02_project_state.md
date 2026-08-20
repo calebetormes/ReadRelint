@@ -60,6 +60,15 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
   - **Componente Único de Participantes (`ParticipantsTabComponent`):** Layout Master-Detail (40% Lista / 60% Dossiê) com busca em tempo real por nome/vulgo, badges de função e suporte a galeria de imagens vinculadas.
   - **Biblioteca Central de Abas (`RelintTabsComponents`):** Renderização padronizada de `Síntese` (caixa compacta invertida + resumo), `Especialidades` (atributos estruturados), `Fotos` (galeria com lightbox), `Localização` (dashboard geográfico com OSM iframe e badges de precisão) e `Transcrição` (leitor literal).
   - Eliminação de duplicação de código entre os painéis `relints_view.js` e `homicides_view.js`.
+- [x] **Aprimoramento do Motor de Leitura (Modo Sem LLM):**
+  - **Migração para `pymupdf` (api estável):** Substituição do `import fitz` depreciado por `import pymupdf` em `pdf_reader.py` e `docling_reader.py`, eliminando warnings em runtime.
+  - **Pós-processamento do Markdown Docling (`_postprocess_docling_markdown`):** Remoção de `<!-- image -->`, separadores visuais (`___`, `---`), colapso de 3+ linhas em branco para no máximo 1 linha vazia.
+  - **Limpeza Ampliada em `text_cleaner.py`:** Remoção de separadores visuais isolados em linha (`___`, `---`, `===`), marcadores `<!-- image -->` do Docling, rodapé "DOCUMENTO PREPARATÓRIO – ACESSO RESTRITO..." em forma truncada (apenas a linha do cabeçalho sem o final esperado pelo regex original), colapso de 3+ quebras de linha, melhoria em `extract_fallback_summary` para não capturar linhas de preenchimento nem trechos curtos como bairros.
+  - **Filtro de Legendas Inválidas (`is_invalid_caption`):** Função compartilhada entre `pdf_reader.py` e `docling_reader.py` para descartar texto de rodapé institucional que aparecia como legenda de foto extraída.
+  - **Correção do path de imagens no dashboard (`_normalize_image_path`):** O normalizador agora converte caminhos absolutos Windows (`E:\www\...\data\media\...`) para `/media/...`, resolvendo o bug que mostrava imagens quebradas no dashboard.
+  - **Correção do seletor de foto em participantes (`addParticipantEditRow`):** Compatibilidade com `images` como array de objetos `{path, caption}` (formato atual da API) em vez de strings planas.
+  - **Suite de testes atualizada:** `test_pdf_reader.py` migrado para mockar `pymupdf.open` em vez de `fitz.open`. **76 testes passando.**
+
 
 ## 2. Próximas Etapas (Prioridade)
 
