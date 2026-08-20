@@ -529,10 +529,12 @@ function addParticipantEditRow(data = {}, relintImages = []) {
   const selectedPhoto = data.photo_path || data.caminho_foto || '';
 
   let photoOptions = `<option value="">Sem foto vinculada</option>`;
-  images.forEach((imgUrl, idx) => {
-    const filename = imgUrl.split('/').pop();
-    const isSel = (imgUrl === selectedPhoto) ? 'selected' : '';
-    photoOptions += `<option value="${escapeHtml(imgUrl)}" ${isSel}>Foto ${idx + 1} (${escapeHtml(filename)})</option>`;
+  images.forEach((img, idx) => {
+    // Suporta tanto objeto {path, caption} quanto string legada
+    const imgPath = (typeof img === 'object' && img !== null) ? (img.path || '') : String(img);
+    const filename = imgPath.split('/').pop();
+    const isSel = (imgPath === selectedPhoto) ? 'selected' : '';
+    photoOptions += `<option value="${escapeHtml(imgPath)}" ${isSel}>Foto ${idx + 1} (${escapeHtml(filename)})</option>`;
   });
 
   const row = document.createElement('div');

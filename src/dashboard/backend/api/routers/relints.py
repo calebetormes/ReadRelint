@@ -34,13 +34,22 @@ def _enum_to_str(val: Any, fallback: str = "Outros") -> str:
 
 def _normalize_image_path(raw_path: str) -> str:
     """
-    Converts a filesystem path stored in the database (e.g. data/media/folder/img.jpeg)
-    into a publicly accessible web URL path (/media/folder/img.jpeg).
+    Converts a filesystem path stored in the database into a publicly accessible web URL.
+    Handles:
+      - Relative paths: 'data/media/folder/img.jpeg' -> '/media/folder/img.jpeg'
+      - Absolute Windows paths: 'E:/www/.../data/media/folder/img.jpeg' -> '/media/folder/img.jpeg'
+      - Already-normalized paths: '/media/folder/img.jpeg' (passthrough)
     """
     clean = str(raw_path).replace("\\", "/")
-    if "data/media/" in clean:
-        return "/media/" + clean.split("data/media/", 1)[1]
-    if not clean.startswith("/") and not clean.startswith("http"):
+    # Encontra o segmento 'data/media/' em qualquer posição do caminho (absoluto ou relativo)
+    marker = "data/media/"
+    if marker in clean:
+        return "/media/" + clean.split(marker, 1)[1]
+    # Caminho que já começa com /media/ ou http
+    if clean.startswith("/media/") or clean.startswith("http"):
+        return clean
+    # Caminho relativo sem 'data/media/' — adiciona barra inicial
+    if not clean.startswith("/"):
         return "/" + clean
     return clean
 

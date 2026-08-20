@@ -20,9 +20,10 @@ from src.dashboard.backend.api.routers import relints, monitoring, events, parti
 # Paths resolvidos relativos a este arquivo para evitar dependência de CWD
 # ─────────────────────────────────────────────────────────────────────────────
 # Define caminhos para a estrutura unificada
-BASE_DIR = Path(__file__).resolve().parents[3]  # Agora aponta para src/
+BASE_DIR = Path(__file__).resolve().parents[3]  # Aponta para src/
+PROJECT_ROOT = Path(__file__).resolve().parents[4]  # Aponta para a raiz do projeto ReadRelint
 WEB_DIR = BASE_DIR / "dashboard" / "frontend"
-MEDIA_DIR = BASE_DIR / "data" / "media"
+MEDIA_DIR = PROJECT_ROOT / "data" / "media"
 
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -2,10 +2,30 @@ import re
 from typing import Tuple, List, Dict, Any
 
 
+# Padrão de legenda inválida — rodapé institucional que pode aparecer logo abaixo de imagens
+_INVALID_CAPTION_PATTERNS = re.compile(
+    r'(?i)DOCUMENTO\s+PREPARAT[OÓ]RIO|ACESSO\s+RESTRITO|Lei\s+n[oº°]?\s*12\.527|'
+    r'fundamento\s+da\s+tomada\s+de\s+decis[aã]o|n[aã]o\s+autorizados|'
+    r'BRIGADA\s+MILITAR|SECRETARIA\s+DA\s+SEGURAN[ÇC]A|SISTEMA\s+DE\s+INTELIG[ÊE]NCIA|'
+    r'P[aá]g(?:ina)?\s*\d+',
+    re.IGNORECASE
+)
+
+
+def is_invalid_caption(text: str) -> bool:
+    """Verifica se um texto de legenda é na verdade conteúdo de rodapé institucional ou ruído curto."""
+    if not text:
+        return True
+    cleaned = text.strip()
+    if len(cleaned) < 4:
+        return True
+    return bool(_INVALID_CAPTION_PATTERNS.search(cleaned))
+
+
 def clean_relint_text(text: str) -> str:
     """
     Remove blocos administrativos, cabeçalhos institucionais, avisos legais de sigilo,
-    numeração de páginas e assinaturas inúteis do texto do RELINT.
+    numeração de páginas, marcadores de imagem Docling e assinaturas inúteis do texto do RELINT.
 
     :param text: Texto bruto extraído do PDF ou histórico.
     :return: Texto limpo pronto para envio à LLM ou salvamento.
@@ -22,14 +42,29 @@ def clean_relint_text(text: str) -> str:
     )
     cleaned_text = re.sub(disclaimer_pattern, "", text)
 
-    # 1b. Fallback para aviso legal isolado da Lei 12.527/2011
+    # 1b. Fallback para aviso legal isolado da Lei 12.527/2011 (qualquer forma)
     legal_notice_pattern = re.compile(
-        r'Nos\s+termos\s+do\s+Art\.\s*7.*?n[ãa]o\s+autorizados\.?',
+        r'Nos\s+termos\s+do\s+Art\.?\s*7[°oº]?,?\s*§?\s*3[°oº]?.*?n[ãa]o\s+autorizados\.?',
         re.IGNORECASE | re.DOTALL
     )
     cleaned_text = re.sub(legal_notice_pattern, "", cleaned_text)
 
-    # 2. Remove cabeçalhos repetitivos da Brigada Militar / Segurança Pública
+    # 1c. Captura truncada: apenas a linha "DOCUMENTO PREPARATÓRIO – ACESSO RESTRITO..." sem o final
+    truncated_disclaimer = re.compile(
+        r'DOCUMENTO\s+PREPARAT[OÓ]RIO\s*[\–\-\—]\s*ACESSO\s+RESTRITO[^\n]*',
+        re.IGNORECASE
+    )
+    cleaned_text = re.sub(truncated_disclaimer, "", cleaned_text)
+
+    # 2. Remove marcadores de imagem do Docling (<!-- image -->) e placeholders "IMAGEM CRIMINOSOS" isolados
+    cleaned_text = re.sub(r'<!--\s*image\s*-->', '', cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r'(?m)^[ \t]*[#]{1,6}[ \t]*$', '', cleaned_text)
+    cleaned_text = re.sub(r'(?m)^[ \t]*(?:IMAGEM|FOTO|REGISTRO|CÂMERA)\b[^\n]*$', '', cleaned_text, flags=re.IGNORECASE)
+
+    # 3. Remove sequências de preenchimento (___, \_\_\_\_, ---, ===, ***) isoladas ou ao final de frases
+    cleaned_text = re.sub(r'(?:\\?[_\-=\*]){3,}', '', cleaned_text)
+
+    # 4. Remove cabeçalhos repetitivos da Brigada Militar / Segurança Pública
     header_pattern = re.compile(
         r'ESTADO\s+DO\s+RIO\s+GRANDE\s+DO\s+SUL\s*'
         r'SECRETARIA\s+DA\s+SEGURAN[ÇC]A\s+P[ÚU]BLICA\s*'
@@ -39,32 +74,38 @@ def clean_relint_text(text: str) -> str:
     )
     cleaned_text = re.sub(header_pattern, "", cleaned_text)
 
-    # 3. Remover numeração de páginas (ex: "Página 1 de 5", "Pág. 2", "Pg 3", "Page 1 of 2")
+    # 5. Junta rótulos de campos de cabeçalho isolados por quebras de linha (ex: DATA:\n\n06/01/2025 -> DATA: 06/01/2025)
+    field_header_join = re.compile(
+        r'(?i)\b(DATA|ASSUNTO|ORIGEM|DIFUS[AÃ]O|DIFUS[AÃ]O\s+ANTERIOR|REFER[EÊ]NCIA|ANEXOS|REGISTRO|RELAT[OÓ]RIO\s+DE\s+INTELIG[EÊ]NCIA\s+N[º°]?)\s*:\s*\n+([^\n]+)'
+    )
+    cleaned_text = re.sub(field_header_join, r'\1: \2', cleaned_text)
+
+    # 6. Remover numeração de páginas (ex: "Página 1 de 5", "Pág. 2", "Pg 3", "Page 1 of 2")
     page_pattern = re.compile(
         r'(?i)\b(?:p[aá]g(?:ina)?|pg|page)\.?[ \t]*\d+(?:[ \t]+(?:de|of)[ \t]+\d+)?\b'
     )
     cleaned_text = re.sub(page_pattern, "", cleaned_text)
 
-    # 4. Remover números de páginas isolados em uma única linha
+    # 7. Remover números de páginas isolados em uma única linha
     isolated_number_pattern = re.compile(
         r'(?m)^\s*\d+\s*$'
     )
     cleaned_text = re.sub(isolated_number_pattern, "", cleaned_text)
 
-    # 5. Padrão regex cobrindo termos de corte de rodapé (Distribuição:, Assinatura:, Instruções:)
+    # 8. Padrão regex cobrindo termos de corte de rodapé (Distribuição:, Assinatura:, Instruções:)
     pattern = re.compile(
         r'(?:^|\n)\s*(?:distribui[çc][ãa]o|assinatura|instru[çc][õo]es)\s*:.*',
         re.IGNORECASE | re.DOTALL
     )
-
     cleaned_text = re.sub(pattern, "", cleaned_text)
+
     return normalize_whitespace_and_paragraphs(cleaned_text)
 
 
 def normalize_whitespace_and_paragraphs(text: str) -> str:
     """
     Remove quebras de linha artificiais no meio de parágrafos (oriundas do layout do PDF),
-    preservando quebras de linha duplas (\n\n) para parágrafos reais, itens de lista (- ou *),
+    preservando quebras de linha duplas (\\n\\n) para parágrafos reais, itens de lista (- ou *),
     e campos de cabeçalho (ex: DATA:, ASSUNTO:, RG:, NOME:).
     Também elimina múltiplos espaços consecutivos em branco e pontuações isoladas.
     """
@@ -74,7 +115,10 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
     # 1. Normaliza finais de linha \r\n para \n e limpa espaços ao redor das quebras
     text = re.sub(r'[ \t]*\r?\n[ \t]*', '\n', text)
 
-    # 1b. Trata casos onde o cabeçalho 'ANEXOS: XXX' está grudado na mesma linha com o texto narrativo ou com divisórias '____'
+    # 1b. Colapsa 3 ou mais linhas em branco consecutivas para no máximo 2
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # 1c. Trata casos onde o cabeçalho 'ANEXOS: XXX' está grudado na mesma linha com o texto narrativo
     pattern_inline = re.compile(
         r'(?i)\b(ANEXOS?\s*:\s*(?:XXX|NENHUMA?|NADA|\-|\d+|[A-Z0-9_\-\.]{1,20}))(?:\s*_{3,})?\s+(?=[A-Z\d\"][a-z\u00C0-\u00FF]|\bEm\b|\bNo\b|\bNa\b|\bConforme\b|\bSegundo\b|\bAo\b|\bUm\b|\bUma\b)'
     )
@@ -95,6 +139,10 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
 
         merged_lines = []
         for line in lines:
+            # Descarta linhas que são apenas separadores (mesmo com barra invertida)
+            if re.match(r'^(?:\\?[_\-=\*]){3,}$', line.strip()):
+                continue
+
             if not merged_lines:
                 merged_lines.append(line)
             else:
@@ -103,7 +151,7 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
                 # Critérios para MANTER uma quebra de linha individual:
                 # - A linha atual é um campo formal (ex: ASSUNTO:, DATA:, ORIGEM:, RG:, NOME:, SUSPEITO 01:)
                 # - A linha atual começa com um marcador de lista (- ou * ou 1. ou 2.)
-                # - A linha anterior termina com dois pontos (:) ou é a linha de ANEXOS:
+                # - A linha anterior termina com dois pontos (:) que NÃO seja um rótulo que deve grudar no valor
                 is_field_header = bool(re.match(r'^(?:[A-Z0-9_\-\.\s]{2,30}:|SUSPEITO|ANTECEDENTES|FOTO|REGISTRO|IMAGEM|ANEXOS|\-|\*|\d+[\.\)])', line, re.IGNORECASE))
                 last_ended_with_colon = last_line.endswith(':')
                 last_is_anexos = bool(re.match(r'^ANEXOS?\s*:', last_line, re.IGNORECASE))
@@ -121,7 +169,7 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
 
     # 5. Garante que após a linha de ANEXOS: haja uma linha em branco (\n\n) separando o cabeçalho do corpo do texto
     result = re.sub(
-        r'((?:ANEXOS?\s*:[^\n]*))(\n+)(?=[^\s\n])',
+        r'(ANEXOS?\s*:[^\n]*)\n+(?=[^\s\n])',
         r'\1\n\n',
         result,
         flags=re.IGNORECASE
@@ -131,7 +179,7 @@ def normalize_whitespace_and_paragraphs(text: str) -> str:
     result = re.sub(r'[ \t]{2,}', ' ', result)
 
     # 7. Corrige pontuação com espaço antes (ex: "anos , ATUAL" -> "anos, ATUAL")
-    result = re.sub(r'\s+([,\.\;:\?\!])', r'\1', result)
+    result = re.sub(r'\s+([,\.;\:?\!])', r'\1', result)
 
     return result.strip()
 
@@ -158,7 +206,6 @@ def extract_date_of_fact(text: str) -> str:
     if not text:
         return ""
 
-    # Limita a busca aos primeiros 1500 caracteres para focar na introdução/primeiro parágrafo do histórico
     snippet = text[:1500]
 
     # 1. Padrão: "01 de janeiro de 2025" ou "12 de Maio de 2026"
@@ -167,7 +214,7 @@ def extract_date_of_fact(text: str) -> str:
         return match.group(1).strip()
 
     # 2. Padrão: "15/08/2026" ou "15.08.2026" ou "15-08-2026"
-    match = re.search(r'\b(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})\b', snippet)
+    match = re.search(r'\b(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4})\b', snippet)
     if match:
         return match.group(1).strip()
 
@@ -228,7 +275,7 @@ def resolve_coordinates_and_map_info(text: str, map_url: str = "") -> Tuple[str,
 
     # 2. Se não encontrou decimais simples, buscar formato DMS (Graus, Minutos e Segundos)
     if not coords:
-        match_dms = re.search(r'(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+"?\s*[Ss])\s*[\s,;]+\s*(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+"?\s*[WwOo])', text)
+        match_dms = re.search(r'(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[Ss])\s*[\s,;]+\s*(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[WwOo])', text)
         if match_dms:
             coords = f"{match_dms.group(1)} {match_dms.group(2)}"
 
@@ -257,6 +304,8 @@ def extract_subject_fallback(text: str, filename: str = "") -> str:
         match = re.search(r'(?i)ASSUNTO\s*:\s*([^\r\n]+)', text)
         if match:
             sub = match.group(1).strip()
+            # Limpa preenchimentos residuais
+            sub = re.sub(r'(?:\\?[_\-=\*]){2,}', '', sub).strip()
             if len(sub) > 3:
                 return sub
 
@@ -286,26 +335,41 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
     match_body = re.search(r'(?i)ANEXOS?\s*:\s*(?:XXX|\w+)?\s*[\r\n]+(.*)', text, re.DOTALL)
     body = match_body.group(1).strip() if match_body else text
 
-    # 2. Remove legendas de fotos comuns
+    # 2. Remove legendas de fotos comuns, marcadores Docling e separadores visuais com/sem escape
     body = re.sub(r'(?i)(?:FOTO|IMAGEM|REGISTRO|CÂMERA)\s+D[OE]\s+[^\r\n]+', '', body)
+    body = re.sub(r'<!--\s*image\s*-->', '', body, flags=re.IGNORECASE)
+    body = re.sub(r'(?:\\?[_\-=\*]){3,}', '', body)
 
     # 3. Divide em parágrafos e busca o primeiro parágrafo narrativo significativo
-    paragraphs = [p.strip() for p in body.split('\n') if len(p.strip()) > 30]
+    paragraphs = [p.strip() for p in re.split(r'\n{1,}', body) if len(p.strip()) > 30]
 
     narrative = ""
     for p in paragraphs:
         upper_p = p.upper()
+        # Ignora linhas de metadados, separadores e texto de legendas/placeholder
         if any(kw in upper_p for kw in ["RELATÓRIO DE INTELIGÊNCIA", "ORIGEM:", "DIFUSÃO:", "REFERÊNCIA:", "DATA:"]):
+            continue
+        # Ignora linhas com preenchimento
+        if re.match(r'^[_\-=\*\s]{3,}$', p):
+            continue
+        # Ignora textos muito curtos (apenas bairro, cidade, etc.)
+        if len(p.split()) < 5:
             continue
         narrative = p
         break
 
     if not narrative and len(body) > 0:
-        narrative = body[:400]
+        body_clean = re.sub(r'^[\s_\-=\*\n\\]+', '', body)
+        narrative = body_clean[:400]
 
     # Limita tamanho a 450 caracteres sem cortar palavra
     if len(narrative) > 450:
         narrative = narrative[:450].rsplit(' ', 1)[0] + "..."
+
+    # Limpa pontuação final solta
+    narrative = narrative.strip(r" ._\-\\").strip()
+    if narrative and not narrative.endswith('.'):
+        narrative += "."
 
     if subject and not narrative.lower().startswith(subject.lower()[:15]):
         return f"{subject}. {narrative}"
@@ -314,14 +378,13 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
 
 def clean_person_name(name: str) -> str:
     """
-    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas (ex: 'Posteriormente Identificado Como Johnny Schroeder' -> 'Johnny Schroeder').
+    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas.
     """
     if not name:
         return ""
 
     clean = name.strip()
 
-    # Prefixo de frases narrativas policiais
     prefixes = [
         r'posteriormente\s+identificad[oa]\s+(?:apenas\s+)?como',
         r'identificad[oa]\s+(?:apenas\s+)?como',
@@ -349,10 +412,7 @@ def clean_person_name(name: str) -> str:
     for p in prefixes:
         clean = re.sub(r'(?i)^\s*' + p + r'\s+', '', clean)
 
-    # Limpa sufixos com RG, CPF ou números de documentos grudados
     clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA)[:\s\.\d\-]+.*)$', '', clean)
-
-    # Limpa pontuações isoladas nas pontas
     clean = clean.strip(' ,.-–—:;')
 
     return clean.title() if clean.isupper() or clean.islower() else clean
@@ -369,7 +429,6 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     participants = []
     seen_names = set()
 
-    # 1. Busca por blocos estruturados (ex: NOME: ..., RG: ..., ALCUNHA: ...)
     block_pattern = re.compile(
         r'(?i)NOME:\s*([A-Z\u00C0-\u00FF\s\.]{3,60})\s*\n\s*(?:RG:\s*([\d\.\-]+))?\s*(?:CPF:\s*([\d\.\-]+))?\s*(?:ALCUNHA:\s*([^\n]+))?',
         re.MULTILINE
@@ -396,7 +455,6 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
                 "participation_type": "Suspeito"
             })
 
-    # 2. Busca inline por "NOME COMPLETO, RG: 123456" ou "NOME - RG 123456"
     inline_pattern = re.compile(
         r'(?i)\b([A-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z\u00C0-\u00FF]{2,})+)\s*(?:[,\-\–\s]+)(?:RG|CPF)(?:\s*n[º°]|\s*:\s*|\s+)\s*([\d\.\-]+)',
         re.MULTILINE
@@ -419,8 +477,3 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
             })
 
     return participants
-
-
-
-
-

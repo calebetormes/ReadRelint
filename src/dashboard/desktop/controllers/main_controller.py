@@ -5,7 +5,7 @@ from pathlib import Path
 from queue import Queue, Empty
 from typing import Callable, Optional, Set
 
-from src.engine.parsers.pdf_reader import PdfReader
+from src.engine.parsers.docling_reader import DoclingPdfReader
 from src.engine.llm.ollama_client import OllamaClient
 from src.dashboard.backend.database.sqlite_repo import SqliteRepo
 from src.dashboard.backend.database.sqlite_person_repo import SqlitePersonRepo
@@ -48,7 +48,7 @@ class MainController:
         self.session_skipped_files: Set[str] = set()
 
         # Injeção de Dependências do Domínio e Aplicação (SQLite)
-        self.pdf_reader = PdfReader()
+        self.pdf_reader = DoclingPdfReader()
         self.use_llm: bool = True
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()

@@ -60,6 +60,15 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
   - **Componente Único de Participantes (`ParticipantsTabComponent`):** Layout Master-Detail (40% Lista / 60% Dossiê) com busca em tempo real por nome/vulgo, badges de função e suporte a galeria de imagens vinculadas.
   - **Biblioteca Central de Abas (`RelintTabsComponents`):** Renderização padronizada de `Síntese` (caixa compacta invertida + resumo), `Especialidades` (atributos estruturados), `Fotos` (galeria com lightbox), `Localização` (dashboard geográfico com OSM iframe e badges de precisão) e `Transcrição` (leitor literal).
   - Eliminação de duplicação de código entre os painéis `relints_view.js` e `homicides_view.js`.
+- [x] **Aprimoramento do Motor de Leitura (Arquitetura Docling + PyMuPDF):**
+  - **Decisão Arquitetural:** Escolha pragmática de manter o **Docling** para a estruturação textual avançada do layout do PDF (via modelos locais como LayoutModel/TableFormer) e o **PyMuPDF** para a extração paramétrica de imagens (posicionamento geométrico e controle fino sobre rodapés e brasões institucionais).
+  - **Limpeza Agressiva de Markdown em `text_cleaner.py`:** Refatoração completa de regex para capturar *underscores* escapados pelo Docling (`\_\_\_\_`), remoção de marcadores HTML soltos (`<!-- image -->`), eliminação total de cabeçalhos genéricos e quebras de linha excessivas, e agrupamento inteligente de labels-valores (ex: `DATA:\n\n01/01/2025` -> `DATA: 01/01/2025`).
+  - **Higienização de Legendas Institucionais:** Criação e aprimoramento de `is_invalid_caption()` que filtra avisos legais como "DOCUMENTO PREPARATÓRIO – ACESSO RESTRITO" truncados, lixo de marcação, ruídos curtos (`< 4` caracteres) e numerações de página.
+  - **Refatoração Dinâmica de Geolocalização (`geo_service.py`):** Inversão de hierarquia priorizando a extração locativa determinística precisa em frases como `em Cerro Grande - RS` via Regex (`(?i)\b(?:em|no|na|município de)\s+([A-Za-z\u00C0-\u00FF\s\-]+?)\s*-\s*(?:RS|ES)\b`) *antes* de tentar extrair do cabeçalho regional pela lista estática, acabando com os falsos positivos (ex: cidade "Palmeira das Missões" aparecendo ao invés da real do fato). Além da nova capacidade de ler nomes de ruas, avenidas e números dentro da descrição do Bairro e do Fato.
+  - **Correção Raiz da Galeria de Fotos:** Identificação e solução do bug "404 Not Found" da galeria. O diretório estático `MEDIA_DIR` no `app.py` estava incorretamente montado em `src/data/media`. O caminho foi fixado para `PROJECT_ROOT / "data" / "media"`, restaurando a visualização de fotos.
+  - **Reprocessamento Dinâmico de Banco de Dados Existente:** Escrita e execução de scripts de migração que limparam retroativamente toda a base de `relints.db` (11 RELINTs) substituindo textos sujos e recalculando bairros e endereços sem a necessidade de o usuário dropar as tabelas.
+  - **Suite de Testes Atualizada & Estabilidade Python 3:** Correção de SyntaxWarnings de strings (adoção de `raw strings r""`) e refatoração passando 76 testes consecutivos.
+
 
 ## 2. Próximas Etapas (Prioridade)
 

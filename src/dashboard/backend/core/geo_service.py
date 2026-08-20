@@ -31,20 +31,65 @@ def extract_structured_address(report: Any) -> Dict[str, str]:
 
     # 1. Municipality Fallback
     if not muni or muni in ["Não Informado", "None", ""]:
-        for c in KNOWN_MUNICIPALITIES:
-            if re.search(r'\b' + re.escape(c) + r'\b', text_source, re.IGNORECASE):
-                muni = c.title()
-                break
+        # 1a. Tenta buscar pelo padrão "Cidade - UF" (ex: "em Cerro Grande - RS")
+        m_cidade_uf = re.search(r'(?i)\b(?:em|no|na|município de|cidade de|interior de)\s+([a-zA-Z\u00C0-\u00FF\s\-]+?)\s*-\s*(?:RS|ES)\b', text_source)
+        if m_cidade_uf:
+            candidate = m_cidade_uf.group(1).strip()
+            # Validação simples para não pegar frases muito longas
+            if len(candidate.split()) <= 4:
+                muni = candidate.title()
+        
+        # 1b. Tenta buscar nas cidades conhecidas como último recurso
+        if not muni or muni in ["Não Informado", "None", ""]:
+            for c in KNOWN_MUNICIPALITIES:
+                if re.search(r'\b' + re.escape(c) + r'\b', text_source, re.IGNORECASE):
+                    muni = c.title()
+                    break
+        
         if not muni or muni in ["None", ""]:
             muni = "Não Informado"
 
     # 2. Neighborhood Fallback
     if not neigh or neigh in ["Não Informado", "None", ""]:
-        m_bairro = re.search(r'(?i)bairro\s+([a-zA-Z\u00C0-\u00FF\s\-]+?)(?:,|\sen\b|\sem\b|\s-|\.|$)', text_source)
+        m_bairro = re.search(
+            r'(?i)\bbairro\s+([a-zA-Z\u00C0-\u00FF0-9\s\-]{2,35}?)(?:,|\sen\b|\sem\b|\s-|\.|\bsem\b|\bcom\b|\bna\b|\bno\b|\bpróximo\b|\besquina\b|\brua\b|\bavenida\b|\bav\b|\bnº\b|\bnúmero\b|$)',
+            text_source
+        )
         if m_bairro:
-            neigh = m_bairro.group(1).strip()
+            raw_neigh = m_bairro.group(1).strip()
+            # Limpa ruídos como "sem precisar o nome..." ou frases longas
+            words = raw_neigh.split()
+            valid_words = []
+            for w in words:
+                if w.lower() in ["sem", "precisar", "nome", "completo", "da", "do", "de", "rua"]:
+                    break
+                valid_words.append(w)
+            neigh = " ".join(valid_words).title() if valid_words else "Não Informado"
         else:
             neigh = "Não Informado"
+
+    # 3. Extração da Rua / Endereço Completo no meio do texto
+    if not addr_raw or addr_raw in ["Não Informado", "None", ""]:
+        # Busca padrões como "na Rua X", "na Avenida Y", "Av. Z", "Rodovia W"
+        # Capturando até encontrar uma vírgula, "nº", "bairro", ou ponto final
+        m_rua = re.search(
+            r'(?i)(?:na\s+|no\s+)?(rua|avenida|av\.|rodovia|br[ \-]?\d+|rs[ \-]?\d+)\s+([a-zA-Z\u00C0-\u00FF0-9\s\.\-]{3,50}?)(?:,|\bno\b|\bna\b|\bem\b|\b[nN][oº°]\b|bairro|\.$)',
+            text_source
+        )
+        if m_rua:
+            tipo = m_rua.group(1).title()
+            nome = m_rua.group(2).strip()
+            
+            # Tenta encontrar o número logo em seguida (ex: "Rua X, nº 123" ou "Rua X, 123")
+            num = ""
+            m_num = re.search(r'(?i)' + re.escape(nome) + r'[^a-zA-Z0-9]{0,5}(?:n[oº°]\s*|num\s*|numero\s*)?(\d{1,5})', text_source)
+            if m_num:
+                num = m_num.group(1)
+                addr_raw = f"{tipo} {nome}, {num}".strip()
+            else:
+                addr_raw = f"{tipo} {nome}".strip()
+        else:
+            addr_raw = ""
 
     # Assemble formatted address string
     formatted_address = addr_raw if addr_raw not in ["Não Informado", "None", ""] else ""
