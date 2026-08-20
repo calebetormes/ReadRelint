@@ -405,6 +405,10 @@ def clean_person_name(name: str) -> str:
         r'comunicante',
         r'testemunha',
         r'envolvid[oa]',
+        r'o\s+indiv[íi]duo',
+        r'indiv[íi]duos?',
+        r'para\s+[oa]',
+        r'para',
         r'sr[a]?\.',
         r'sr[a]?'
     ]
