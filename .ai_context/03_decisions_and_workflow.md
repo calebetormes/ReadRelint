@@ -7,7 +7,6 @@ Este documento contém os registros de decisões arquiteturais importantes (ADRs
 ### Prompt Inicial Recomendado (Sempre que reiniciar contexto)
 ```text
 Olá! Vamos trabalhar no Administrador de RELINTs. Leia estritamente a nova estrutura consolidada da pasta `.ai_context` (`01_project_blueprint.md`, `02_project_state.md`, `03_decisions_and_workflow.md`) para absorver a arquitetura e entender em que passo estamos.
-Lembre-se da REGRA DE IDIOMA HÍBRIDO: Código-fonte sempre em Inglês; Documentação e comentários em pt-BR. Não escreva código ainda. Apenas confirme o entendimento.
 ```
 
 ### Prompt de Encerramento (Finalização de Sessões)

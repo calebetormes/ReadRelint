@@ -67,6 +67,11 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
   - **Refatoração Dinâmica de Geolocalização (`geo_service.py`):** Inversão de hierarquia priorizando a extração locativa determinística precisa em frases como `em Cerro Grande - RS` via Regex (`(?i)\b(?:em|no|na|município de)\s+([A-Za-z\u00C0-\u00FF\s\-]+?)\s*-\s*(?:RS|ES)\b`) *antes* de tentar extrair do cabeçalho regional pela lista estática, acabando com os falsos positivos (ex: cidade "Palmeira das Missões" aparecendo ao invés da real do fato). Além da nova capacidade de ler nomes de ruas, avenidas e números dentro da descrição do Bairro e do Fato.
   - **Correção Raiz da Galeria de Fotos:** Identificação e solução do bug "404 Not Found" da galeria. O diretório estático `MEDIA_DIR` no `app.py` estava incorretamente montado em `src/data/media`. O caminho foi fixado para `PROJECT_ROOT / "data" / "media"`, restaurando a visualização de fotos.
   - **Reprocessamento Dinâmico de Banco de Dados Existente:** Escrita e execução de scripts de migração que limparam retroativamente toda a base de `relints.db` (11 RELINTs) substituindo textos sujos e recalculando bairros e endereços sem a necessidade de o usuário dropar as tabelas.
+  - [x] **Arquitetura de Limpeza Híbrida em 3 Camadas (Unstructured + GLiNER + Ollama):**
+  - Implementação do módulo `HybridCleaner` ([hybrid_cleaner.py](file:///e:/www/ReadRelint/src/engine/cleaners/hybrid_cleaner.py)) unindo particionamento visual de PDFs via `Unstructured` (descarte automático de `Header` e `Footer`) com Zero-Shot NER via `GLiNER` (`urchade/gliner_small-v2.1`).
+  - Injeção das entidades pré-extraídas diretamente no prompt do `OllamaClient` para garantir resiliência contra alucinações.
+  - Uso das entidades do GLiNER como Fallback Premium de alta precisão quando o Ollama/LLM estiver desativado ou offline.
+  - Refinamento de rótulos (`Nome e Sobrenome da Pessoa`) e blindagem de prompt para isolar estritamente nomes de registro civil sem trechos de ações narrativas.
   - **Suite de Testes Atualizada & Estabilidade Python 3:** Correção de SyntaxWarnings de strings (adoção de `raw strings r""`) e refatoração passando 76 testes consecutivos.
 
 

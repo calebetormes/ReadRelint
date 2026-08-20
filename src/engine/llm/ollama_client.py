@@ -41,7 +41,7 @@ class OllamaClient(ILlmProcessor):
         except Exception:
             return False, f"Serviço Ollama indisponível ou desativado em {self.base_url}"
 
-    def process_text(self, text: str, questions: Optional[Dict[str, str]] = None, schema_model: type = None) -> dict:
+    def process_text(self, text: str, questions: Optional[Dict[str, str]] = None, schema_model: type = None, pre_extracted_entities: list = None) -> dict:
         """
         Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON
         baseado no JSON Schema do modelo IncidentReport (ou do schema_model se fornecido).
@@ -67,11 +67,16 @@ O documento a seguir é um RELINT em Português (pt-BR). Analise o texto integra
 
 {system_prompt}
 
+ENTIDADES PRÉ-EXTRAÍDAS (ZERO-SHOT NER):
+Utilize a lista de entidades abaixo (Nomes, CPFs, RGs, Locais) identificadas no texto como base de consulta.
+ATENÇÃO: As entidades pré-extraídas podem conter trechos narrativos longos misturados aos nomes. Sua tarefa é higienizá-las e extrair ESTRITAMENTE o Nome e Sobrenome civil (ex: 'Elemar Soares da Silva'), removendo qualquer verbo, ação ou contexto narrativo (como 'uma mordida efetuada pelo condutor da motocicleta') que tenha vindo junto.
+{json.dumps(pre_extracted_entities, ensure_ascii=False, indent=2) if pre_extracted_entities else 'Nenhuma entidade pré-extraída.'}
+
 INSTRUÇÕES DE SAÍDA:
 1. Você DEVE retornar EXATAMENTE UM objeto JSON válido que obedeça ao seguinte JSON Schema.
 2. Não inclua comentários, explicações ou texto fora do JSON.
 3. Se um campo do tipo Enum for exigido, você só pode usar os valores listados em 'enum'.
-4. PARTICIPANTES (participants): Extraia o NOME LIMPO de cada pessoa civil citada (ex: "Johnny Schroeder" e NÃO "Posteriormente Identificado Como Johnny Schroeder", "João Witor Fagundes Garmatz" e NÃO "Estavam João Witor Fagundes Garmatz", "Mariane da Silva" e NÃO "momento em que foi feito contato com Mariane"). NUNCA inclua prefixos narrativos policiais ("Posteriormente identificado como", "Estavam", "Conforme relato", "Vítima", "Contato com"). NUNCA inclua Policiais Militares que atenderam a ocorrência.
+4. PARTICIPANTES (participants): Extraia ESTRITAMENTE O NOME E SOBRENOME LIMPOS de cada pessoa civil citada (ex: "Elemar Soares da Silva" e NUNCA "uma mordida efetuada pelo condutor da motocicleta ELEMAR SOARES DA SILVA", "Johnny Schroeder" e NÃO "Posteriormente Identificado Como Johnny Schroeder"). Remova totalmente ações, veículos, verbos ou descrições da ocorrência associados ao nome. NUNCA inclua prefixos narrativos policiais ("Posteriormente identificado como", "Estavam", "Conforme relato", "Vítima", "Contato com"). NUNCA inclua Policiais Militares que atenderam a ocorrência.
 5. RESUMO (summary): Escreva um resumo narrativo explicativo em 1 parágrafo com os fatos principais.
 6. LOCALIZAÇÃO: Extraia município (municipality), bairro (neighborhood), endereço completo (address) e unidade policial (police_unit) quando citados.
 7. REGISTRO POLICIAL: Extraia o número de registro (registry_number), órgão (registry_agency) e ano (registry_year) se identificados no texto.

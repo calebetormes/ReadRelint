@@ -131,7 +131,10 @@ class EtlService:
             if on_progress: on_progress(f"[{filename}] -> Extraindo texto do PDF...")
             raw_text = self.file_parser.extract_text(file_path)
             
-            cleaned_text = clean_relint_text(raw_text)
+            from src.engine.cleaners.hybrid_cleaner import HybridCleaner
+            if on_progress: on_progress(f"[{filename}] -> Limpeza Híbrida (ML + NER)...")
+            cleaned_text, pre_extracted_entities = HybridCleaner.process_hybrid(file_path)
+            
             if not cleaned_text.strip():
                 raise ValueError("O arquivo PDF está vazio após a limpeza.")
 
@@ -149,7 +152,7 @@ class EtlService:
                 if on_progress: on_progress(f"[{filename}] -> Processando com IA local (Ollama)...")
                 if on_sent_to_llm: on_sent_to_llm(filename)
                 try:
-                    response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model)
+                    response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model, pre_extracted_entities=pre_extracted_entities)
                     if not isinstance(response_dict, dict):
                         response_dict = {}
                     extraction_method = "Ollama (IA)"
@@ -161,8 +164,22 @@ class EtlService:
                     response_dict = {}
                     extraction_method = "Regex (Sem IA)"
             else:
-                if on_progress: on_progress(f"[{filename}] ⚡ Processamento Ultra-Rápido (Regex / Sem IA)...")
+                if on_progress: on_progress(f"[{filename}] ⚡ Processamento Ultra-Rápido (Sem IA + NER)...")
                 response_dict = {}
+                # Usar entidades GLiNER como fallback premium
+                from src.engine.cleaners.text_cleaner import clean_person_name
+                fallback_parts = []
+                for ent in pre_extracted_entities:
+                    if ent["label"] == "Pessoa":
+                        c_name = clean_person_name(ent["text"])
+                        if c_name:
+                            fallback_parts.append({"name": c_name, "participation_type": "Suspeito", "document": "", "nickname": ""})
+                    elif ent["label"] in ["CPF", "RG"] and fallback_parts:
+                        fallback_parts[-1]["document"] = ent["text"]
+                    elif ent["label"] == "Endereço" and "address" not in response_dict:
+                        response_dict["address"] = ent["text"]
+                if fallback_parts:
+                    response_dict["participants"] = fallback_parts
                 extraction_method = "Regex (Sem IA)"
 
             response_dict = self._normalize_response_dict(response_dict)
@@ -242,6 +259,7 @@ class EtlService:
             raw_participants = response_dict.get("participants", [])
             if not raw_participants:
                 from src.engine.cleaners.text_cleaner import extract_fallback_participants
+                # Regex fallback de último recurso caso GLiNER e LLM falhem
                 raw_participants = extract_fallback_participants(final_content)
 
             filtered_participants = []
