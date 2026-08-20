@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadRelint - Administrador de RELINTs</title>
+  
+  <!-- Vendor CSS (Offline) -->
+  <link rel="stylesheet" href="/static/assets/vendor/leaflet.css">
+
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div id="app-container">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar collapsed" id="sidebar">
+      <button class="sidebar-toggle-btn" id="sidebar-toggle" title="Recolher/Expandir Menu Lateral">
+        <svg class="sidebar-toggle-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <div>
+        <div class="sidebar-header">
+          <div class="sidebar-title">ReadRelint</div>
+        </div>
+
+        <ul class="nav-list">
+          <li class="nav-item active" data-tab="relints" title="RELINTs">
+            <i data-lucide="file-text"></i>
+            <span>RELINTs</span>
+          </li>
+          <li class="nav-item" data-tab="homicides" title="Especialidades">
+            <i data-lucide="crosshair"></i>
+            <span>Especialidades</span>
+          </li>
+          <li class="nav-item" data-tab="participants" title="Participantes">
+            <i data-lucide="users"></i>
+            <span>Participantes</span>
+          </li>
+          <li class="nav-item" data-tab="municipalities" title="Municípios">
+            <i data-lucide="map-pin"></i>
+            <span>Municípios</span>
+          </li>
+          <li class="nav-item" data-tab="crimes" title="Estatísticas">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Estatísticas</span>
+          </li>
+          <li class="nav-item" data-tab="gallery" title="Anexos & Fotos">
+            <i data-lucide="image"></i>
+            <span>Anexos & Fotos</span>
+          </li>
+          <li class="nav-item" data-tab="monitoring" title="Monitoramento & IA">
+            <i data-lucide="cpu"></i>
+            <span>Monitoramento & IA</span>
+          </li>
+          <li class="nav-item" data-tab="about" title="Sobre">
+            <i data-lucide="info"></i>
+            <span>Sobre</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator" title="Motor Local Offline">
+          <span class="dot"></span>
+          <span>Motor Local Offline</span>
+        </div>
+        <div class="sidebar-footer-text">v2.0.0 (FastAPI + Web)</div>
+      </div>
+    </aside>
+
+    <!-- Content Workspace -->
+    <main class="content-area">
+      <!-- Top Bar -->
+      <header class="top-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button type="button" class="mobile-menu-btn" id="mobile-menu-btn" title="Abrir Menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <h1 class="page-title" id="page-title">RELINTs</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--mute); font-weight: 500;">🎨 Tema:</span>
+          <select id="theme-selector" onchange="ThemeManager.setTheme(this.value)" style="background: var(--surface-card); color: var(--ink); border: 1px solid var(--hairline-strong); padding: 4px 10px; border-radius: var(--r-sm); font-size: 12px; cursor: pointer; outline: none;">
+            <option value="resend-dark">Resend Dark</option>
+            <option value="emerald-dark">Emerald Dark</option>
+            <option value="nord-dark">Nord Slate</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Tab Content Area -->
+      <!-- Aba 1: RELINTs -->
+      <section class="tab-content active" id="tab-relints">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="file-check"></i>
+            Relatórios de Inteligência (RELINTs)
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Tabela Master-Detail com filtros interativos, busca por palavra-chave e visualizador de dossiês.
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba Especialidade: Especialidades Criminais -->
+      <section class="tab-content" id="tab-homicides">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="crosshair"></i>
+            Especialidades Criminais
+          </div>
+          <p style="color: var(--text-secondary);">
+            Carregando interface exclusiva de especialidades...
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 2: Participantes -->
+      <section class="tab-content" id="tab-participants">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="user-check"></i>
+            Cruzamento de Vínculos de Participantes
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Dossiê completo de envolvidos (RG/CPF, alcunha, fotos e histórico de ocorrências).
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 3: Municípios -->
+      <section class="tab-content" id="tab-municipalities">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="map"></i>
+            Mancha Criminal & Geolocalização
+          </div>
+          <p style="color: var(--text-secondary);">
+            Em breve: Mapa interativo Leaflet.js com pontos de ocorrência e ranking por cidade.
+          </p>
+        </div>
+      </section>
+
+      <!-- Aba 4: Crimes & Estatísticas (Dashboard Analytics) -->
+      <section class="tab-content" id="tab-crimes">
+        <div class="loading-state">Carregando painel estatístico...</div>
+      </section>
+
+      <!-- Aba 5: Anexos & Fotos -->
+      <section class="tab-content" id="tab-gallery">
+        <div class="card">
+          <div class="gallery-header">
+            <div class="card-title" style="margin-bottom: 0;">
+              <i data-lucide="image"></i> Galeria Geral de Fotos & Anexos do Fato
+            </div>
+            <span class="badge badge-blue" id="gallery-count-badge">0 Imagens Extraídas</span>
+          </div>
+          <div id="gallery-container" class="gallery-grid-full">
+            <div class="loading-state">Carregando galeria de fotos...</div>
+          </div>
+      </section>
+
+      <!-- Aba 6: Monitoramento & IA -->
+      <section class="tab-content" id="tab-monitoring">
+        <div class="loading-state">Carregando painel de monitoramento e IA...</div>
+      </section>
+
+      <!-- Aba 7: Sobre -->
+      <section class="tab-content" id="tab-about">
+        <div class="card" style="max-width: 720px; margin: 0 auto;">
+          <div class="card-title" style="font-size: 20px; margin-bottom: 16px;">
+            <i data-lucide="shield-alert" style="color: var(--accent-orange); width: 24px; height: 24px;"></i>
+            ReadRelint — Sistema de Inteligência Policial
+          </div>
+          <p style="color: var(--body); line-height: 1.6; margin-bottom: 20px;">
+            O <strong>ReadRelint</strong> é uma plataforma local de inteligência voltada ao processamento, extração cognitiva e análise de Relatórios de Inteligência (RELINTs). O sistema opera 100% offline, garantindo sigilo absoluto dos documentos.
+          </p>
+          <div class="grid-2" style="margin-bottom: 20px;">
+            <div class="meta-item">
+              <span class="meta-label">Versão do Sistema</span>
+              <span class="meta-value">v2.0.0 (FastAPI + Web SPA)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Motor Cognitivo</span>
+              <span class="meta-value">Ollama NLP Local</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Banco de Dados</span>
+              <span class="meta-value">SQLite3 (WAL Mode)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Design System</span>
+              <span class="meta-value">Resend Dark System</span>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--ash); border-top: 1px solid var(--hairline); padding-top: 12px;">
+            Desenvolvido para análise inteligente e curadoria automatizada de boletins de ocorrência e inteligência policial.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+
+  <!-- Edit RELINT Modal -->
+  <div id="edit-relint-modal" class="modal-backdrop" onclick="closeEditRelintModal(event)">
+    <div class="modal-card" style="width: 840px; max-width: 95vw; height: 85vh;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i data-lucide="edit-3" class="modal-icon"></i>
+          <h3 id="edit-modal-title">Editar RELINT</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeEditRelintModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Modal Tabs -->
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab-btn active" onclick="switchEditTab(this, 'edit-tab-general')">
+            <i data-lucide="file-text" style="width:13px;height:13px;display:inline;"></i> Geral
+          </button>
+          <button type="button" class="modal-tab-btn" onclick="switchEditTab(this, 'edit-tab-geo')">
+            <i data-lucide="map-pin" style="width:13px;height:13px;display:inline;"></i> Localização
+          </button>
+          <button type="button" class="modal-tab-btn" onclick="switchEditTab(this, 'edit-tab-specialty')" id="edit-tab-specialty-btn">
+            <i data-lucide="crosshair" style="width:13px;height:13px;display:inline;"></i> Especialidade
+          </button>
+          <button type="button" class="modal-tab-btn" onclick="switchEditTab(this, 'edit-tab-participants')">
+            <i data-lucide="users" style="width:13px;height:13px;display:inline;"></i> Participantes
+          </button>
+          <button type="button" class="modal-tab-btn" onclick="switchEditTab(this, 'edit-tab-transcript')">
+            <i data-lucide="file-code" style="width:13px;height:13px;display:inline;"></i> Transcrição
+          </button>
+        </div>
+
+        <form id="edit-relint-form" onsubmit="submitEditRelint(event)">
+          <input type="hidden" id="edit-report-id" value="" />
+
+          <!-- Tab 1: Geral -->
+          <div class="modal-tab-pane active" id="edit-tab-general">
+            <div class="form-row">
+              <div class="form-group col-8">
+                <label>Assunto (Subject)</label>
+                <input type="text" id="edit-subject" class="form-control" placeholder="Assunto principal..." required />
+              </div>
+              <div class="form-group col-4">
+                <label>Unidade PM Responsável</label>
+                <input type="text" id="edit-police-unit" class="form-control" placeholder="ex: 16º BPM" />
+              </div>
+            </div>
+
+            <!-- Registro Policial Unificado -->
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group col">
+                <label>1. Nº do Registro Policial</label>
+                <input type="text" id="edit-reg-number" class="form-control" placeholder="ex: 516" />
+              </div>
+              <div class="form-group col">
+                <label>2. Órgão do Registro (Código/DP)</label>
+                <input type="text" id="edit-reg-agency" class="form-control" placeholder="ex: 151641" />
+              </div>
+              <div class="form-group col">
+                <label>3. Ano do Registro</label>
+                <input type="text" id="edit-reg-year" class="form-control" placeholder="ex: 2026" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Evento Principal (Main Fact)</label>
+              <input type="text" id="edit-main-fact" class="form-control" placeholder="Descrição resumida do evento..." />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col">
+                <label>Data do Fato</label>
+                <input type="text" id="edit-date-of-fact" class="form-control" placeholder="AAAA-MM-DD ou DD/MM/AAAA" />
+              </div>
+              <div class="form-group col">
+                <label>Hora do Fato</label>
+                <input type="text" id="edit-time-of-fact" class="form-control" placeholder="ex: 22:30" />
+              </div>
+              <div class="form-group col">
+                <label>Tipo de RELINT</label>
+                <select id="edit-relint-type" class="form-control">
+                  <option value="Ocorrência">Ocorrência</option>
+                  <option value="Disk Denúncia">Disk Denúncia</option>
+                  <option value="Resposta a PB">Resposta a PB</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div class="form-group col">
+                <label>Grupo BM</label>
+                <select id="edit-bm-group" class="form-control" onchange="toggleSpecialtyFormTab()">
+                  <option value="Homicídio">Homicídio</option>
+                  <option value="Prisão por Tráfico">Prisão por Tráfico</option>
+                  <option value="Roubo a Estabelecimento">Roubo a Estabelecimento</option>
+                  <option value="Roubo a Residência">Roubo a Residência</option>
+                  <option value="Roubo de Veículo">Roubo de Veículo</option>
+                  <option value="Roubo a Pedestre">Roubo a Pedestre</option>
+                  <option value="Furto Qualificado">Furto Qualificado</option>
+                  <option value="Furto de Veículo">Furto de Veículo</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Síntese da Ocorrência (Summary)</label>
+              <textarea id="edit-summary" class="form-control" rows="4" placeholder="Síntese explicativa dos fatos..."></textarea>
+            </div>
+          </div>
+
+          <!-- Tab 2: Localização -->
+          <div class="modal-tab-pane" id="edit-tab-geo">
+            <div class="form-row">
+              <div class="form-group col">
+                <label>Município</label>
+                <input type="text" id="edit-municipality" class="form-control" placeholder="Cidade..." />
+              </div>
+              <div class="form-group col">
+                <label>Bairro</label>
+                <input type="text" id="edit-neighborhood" class="form-control" placeholder="Bairro..." />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Endereço Completo</label>
+              <input type="text" id="edit-address" class="form-control" placeholder="Rua, número, complemento..." />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col">
+                <label>Coordenadas GPS (Lat, Long)</label>
+                <input type="text" id="edit-coordinates" class="form-control code-font" placeholder="-28.2612, -53.4912" />
+              </div>
+              <div class="form-group col">
+                <label>Link Google Maps</label>
+                <input type="text" id="edit-map-url" class="form-control" placeholder="https://maps.google.com/..." />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Especialidade -->
+          <div class="modal-tab-pane" id="edit-tab-specialty">
+            <div id="homicide-specialty-fields">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos da Especialidade: Homicídio
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Tipo de Fato</label>
+                  <select id="edit-hom-fact-type" class="form-control">
+                    <option value="Consumado">Consumado</option>
+                    <option value="Tentado">Tentado</option>
+                  </select>
+                </div>
+                <div class="form-group col">
+                  <label>Motivação Presumida</label>
+                  <select id="edit-hom-motivation" class="form-control">
+                    <option value="Envolvimento com o Tráfico">Envolvimento com o Tráfico</option>
+                    <option value="Feminicídio">Feminicídio</option>
+                    <option value="Oposição a Ação PM">Oposição a Ação PM</option>
+                    <option value="Desavença">Desavença</option>
+                    <option value="Latrocínio">Latrocínio</option>
+                    <option value="Desconhecido">Desconhecido</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div id="drug-trafficking-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos da Especialidade: Tráfico de Drogas
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Quantidade de Drogas</label>
+                  <input type="text" id="edit-drug-quantity" class="form-control" placeholder="Ex: 50g, 2 tijolos..." />
+                </div>
+                <div class="form-group col">
+                  <label>Tipos de Drogas</label>
+                  <input type="text" id="edit-drug-types" class="form-control" placeholder="Ex: Maconha, Cocaína..." />
+                </div>
+              </div>
+            </div>
+
+            <div id="establishment-robbery-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos: Roubo a Estabelecimento
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Tipo de Estabelecimento</label>
+                  <input type="text" id="edit-estab-type" class="form-control" placeholder="Ex: Mercado, Farmácia..." />
+                </div>
+                <div class="form-group col">
+                  <label>Tipo de Local</label>
+                  <select id="edit-estab-loc-type" class="form-control">
+                    <option value="Urbano">Urbano</option>
+                    <option value="Rural">Rural</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Vítimas Lesionadas (Qtd)</label>
+                  <input type="number" id="edit-estab-injured" class="form-control" value="0" min="0" />
+                </div>
+                <div class="form-group col">
+                  <label>Houve Reféns?</label>
+                  <select id="edit-estab-hostage" class="form-control">
+                    <option value="0">Não</option>
+                    <option value="1">Sim</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div id="residence-robbery-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos: Roubo a Residência
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Tipo de Local</label>
+                  <select id="edit-res-loc-type" class="form-control">
+                    <option value="Urbano">Urbano</option>
+                    <option value="Rural">Rural</option>
+                  </select>
+                </div>
+                <div class="form-group col">
+                  <label>Vítimas Lesionadas (Qtd)</label>
+                  <input type="number" id="edit-res-injured" class="form-control" value="0" min="0" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Houve Reféns?</label>
+                  <select id="edit-res-hostage" class="form-control">
+                    <option value="0">Não</option>
+                    <option value="1">Sim</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div id="vehicle-robbery-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos: Roubo de Veículo
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Modelo do Veículo</label>
+                  <input type="text" id="edit-vrob-model" class="form-control" />
+                </div>
+                <div class="form-group col">
+                  <label>Placa</label>
+                  <input type="text" id="edit-vrob-plate" class="form-control" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Recuperado?</label>
+                  <select id="edit-vrob-recovered" class="form-control">
+                    <option value="0">Não</option>
+                    <option value="1">Sim</option>
+                  </select>
+                </div>
+                <div class="form-group col">
+                  <label>Local de Recuperação</label>
+                  <input type="text" id="edit-vrob-rec-loc" class="form-control" />
+                </div>
+              </div>
+            </div>
+
+            <div id="pedestrian-robbery-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos: Roubo a Pedestre
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Vítimas Lesionadas (Qtd)</label>
+                  <input type="number" id="edit-ped-injured" class="form-control" value="0" min="0" />
+                </div>
+                <div class="form-group col">
+                  <label>Arma Utilizada</label>
+                  <input type="text" id="edit-ped-weapon" class="form-control" placeholder="Ex: Faca, Revólver..." />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Objeto Roubado</label>
+                <input type="text" id="edit-ped-object" class="form-control" placeholder="Ex: Celular, Bolsa..." />
+              </div>
+            </div>
+
+            <div id="vehicle-theft-specialty-fields" style="display:none;">
+              <div class="field-hint" style="margin-bottom:12px;color:var(--accent-orange);font-weight:600;">
+                🎯 Campos Específicos: Furto de Veículo
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Modelo do Veículo</label>
+                  <input type="text" id="edit-vtheft-model" class="form-control" />
+                </div>
+                <div class="form-group col">
+                  <label>Placa</label>
+                  <input type="text" id="edit-vtheft-plate" class="form-control" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col">
+                  <label>Recuperado?</label>
+                  <select id="edit-vtheft-recovered" class="form-control">
+                    <option value="0">Não</option>
+                    <option value="1">Sim</option>
+                  </select>
+                </div>
+                <div class="form-group col">
+                  <label>Local de Recuperação</label>
+                  <input type="text" id="edit-vtheft-rec-loc" class="form-control" />
+                </div>
+              </div>
+            </div>
+
+            <div id="other-specialty-fields" style="display:none;padding:12px;color:var(--ash);font-size:13px;">
+              Nenhuma especialidade estendida associada ao grupo selecionado.
+            </div>
+          </div>
+
+          <!-- Tab 4: Participantes -->
+          <div class="modal-tab-pane" id="edit-tab-participants">
+            <div class="participants-edit-header">
+              <span>Pessoas &amp; Participantes Citados</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addParticipantEditRow()">
+                <i data-lucide="user-plus" style="width:12px;height:12px;display:inline;"></i> Adicionar Participante
+              </button>
+            </div>
+            <div id="edit-participants-container">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Tab 5: Transcrição Integral -->
+          <div class="modal-tab-pane" id="edit-tab-transcript">
+            <div class="form-group">
+              <label>Transcrição Literal Completa (Conteúdo do PDF)</label>
+              <textarea id="edit-content" class="form-control code-font" rows="12" style="height: 300px;"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeEditRelintModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-save-edit-relint" onclick="submitEditRelint(event)">
+          <i data-lucide="check" style="width:14px;height:14px;display:inline;"></i> Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+      <img id="lightbox-img" src="" alt="Imagem Ampliada" class="lightbox-img" />
+      <div id="lightbox-caption" class="lightbox-caption">Legenda da imagem</div>
+    </div>
+  </div>
+
+  <!-- Vendor JS Libraries (Offline) -->
+  <script src="/static/assets/vendor/lucide.min.js"></script>
+  <script src="/static/assets/vendor/leaflet.js"></script>
+  <script src="/static/assets/vendor/apexcharts.min.js"></script>
+
+  <!-- Application JS -->
+  <script src="/static/js/theme_manager.js?v=2.0.1"></script>
+  <script src="/static/js/components/relint_tabs_components.js?v=2.0.1"></script>
+  <script src="/static/js/components/participants_tab_component.js?v=2.0.1"></script>
+  <script src="/static/js/views/relints_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/homicides_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/participants_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/crimes_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/gallery_view.js?v=2.0.1"></script>
+  <script src="/static/js/views/monitoring_view.js?v=2.0.1"></script>
+  <script src="/static/js/app.js?v=2.0.1"></script>
+</body>
+</html>

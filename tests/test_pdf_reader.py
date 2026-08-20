@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from src.adapters.pdf_reader import PdfReader
+from src.engine.parsers.pdf_reader import PdfReader
 
 def test_pdf_reader_extract_text_success():
     # Mock das páginas

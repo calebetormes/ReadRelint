@@ -1,8 +1,8 @@
 import pytest
 from pathlib import Path
-from src.domain.entities import IncidentReport, Person
-from src.adapters.sqlite_repo import SqliteRepo
-from src.adapters.sqlite_person_repo import SqlitePersonRepo
+from src.dashboard.backend.core.entities import IncidentReport, Person
+from src.dashboard.backend.database.sqlite_repo import SqliteRepo
+from src.dashboard.backend.database.sqlite_person_repo import SqlitePersonRepo
 
 
 def test_sqlite_repo_crud(tmp_path: Path):

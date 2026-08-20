@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "tables": {
+    "public.homicide_details": { "x": -112, "y": 528 },
+    "public.persons": { "x": 1104, "y": 464 },
+    "public.relint_images": { "x": -16, "y": 160 },
+    "public.relint_participants": { "x": 720, "y": 528 },
+    "public.relints": { "x": 368, "y": 384 }
+  },
+  "groups": {
+  },
+  "edges": {}
+}

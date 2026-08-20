@@ -3,7 +3,7 @@ Testes unitários e de integração para os endpoints de Participantes e Dossiê
 """
 import pytest
 from fastapi.testclient import TestClient
-from src.presentation.api.app import app
+from src.dashboard.backend.api.app import app
 
 def test_list_participants_endpoint():
     client = TestClient(app)

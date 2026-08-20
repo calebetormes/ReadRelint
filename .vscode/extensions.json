@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "dbdiagram.dbdiagram-vscode",
+    "yandeu.five-server",
+    "nextcortex.nextcortex-antigravity-monitor"
+  ]
+}

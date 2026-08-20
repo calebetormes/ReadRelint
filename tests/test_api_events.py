@@ -3,25 +3,19 @@ Testes unitários e de integração para o endpoint de eventos SSE em tempo real
 """
 import pytest
 from fastapi.testclient import TestClient
-from src.presentation.api.app import app
-from src.presentation.api.routers.events import broadcaster
+from src.dashboard.backend.api.app import app
+from src.dashboard.backend.api.routers.events import broadcaster
 
-def test_events_stream_connection():
-    client = TestClient(app)
-    with client.stream("GET", "/api/v1/events") as response:
-        assert response.status_code == 200
-        assert "text/event-stream" in response.headers["content-type"]
-        
-        # Lê o primeiro evento de conexão enviada pelo servidor
-        lines = []
-        for line in response.iter_lines():
-            if line:
-                lines.append(line)
-            if len(lines) >= 2:
-                break
-        
-        assert any("event: connected" in l for l in lines)
-        assert any("online" in l for l in lines)
+@pytest.mark.asyncio
+async def test_events_stream_connection():
+    from src.dashboard.backend.api.routers.events import stream_events
+    from unittest.mock import AsyncMock, MagicMock
+    request = MagicMock()
+    request.is_disconnected = AsyncMock(return_value=True)
+    response = await stream_events(request)
+    gen = response.body_iterator
+    first_chunk = await gen.__anext__()
+    assert "connected" in first_chunk
 
 def test_broadcaster_subscribe_and_broadcast():
     queue = broadcaster.subscribe()

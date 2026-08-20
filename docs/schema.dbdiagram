@@ -1,10 +1,11 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.0",
   "darkMode": true,
   "gridEnabling": false,
   "currentViewName": null,
   "defaultView": {
     "detailLevel": "All",
+    "relationshipMode": "All",
     "tablePositions": [
       {
         "name": "relints",
@@ -15,26 +16,26 @@
       {
         "name": "homicide_details",
         "schemaName": "public",
-        "x": 509.06750785574263,
-        "y": -55.118081180811814
+        "x": 846.3269622231178,
+        "y": -106.6157822967883
       },
       {
         "name": "persons",
         "schemaName": "public",
-        "x": 118.140221402214,
-        "y": 707.3616236162362
+        "x": -399.14531979438254,
+        "y": 573.0636971765329
       },
       {
         "name": "relint_participants",
         "schemaName": "public",
-        "x": 498.14130859375,
-        "y": 488
+        "x": -402.56358151313253,
+        "y": 342.5947262607723
       },
       {
         "name": "relint_images",
         "schemaName": "public",
-        "x": 569.9420466011301,
-        "y": 289.8044280442804
+        "x": -456.98269918216556,
+        "y": -89.86489783036964
       }
     ],
     "tableGroupCollapseStates": [],

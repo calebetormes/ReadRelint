@@ -1,5 +1,5 @@
 import pytest
-from src.application.text_cleaner import clean_relint_text
+from src.engine.cleaners.text_cleaner import clean_relint_text
 
 def test_clean_relint_text_no_cut():
     # Texto sem nenhuma palavra-chave de corte não deve ser modificado
@@ -94,7 +94,7 @@ def test_clean_relint_text_pagination():
 
 
 def test_extract_date_and_time_of_fact():
-    from src.application.text_cleaner import extract_date_of_fact, extract_time_of_fact
+    from src.engine.cleaners.text_cleaner import extract_date_of_fact, extract_time_of_fact
 
     text = "Fato ocorrido no dia 15 de julho de 2026, por volta das 14h30min, no centro da cidade."
     assert extract_date_of_fact(text) == "15 de julho de 2026"
@@ -106,7 +106,7 @@ def test_extract_date_and_time_of_fact():
 
 
 def test_extract_map_url_and_coordinates():
-    from src.application.text_cleaner import extract_map_url, resolve_coordinates_and_map_info
+    from src.engine.cleaners.text_cleaner import extract_map_url, resolve_coordinates_and_map_info
 
     text = "Localização disponível em https://google.com/maps/place/-28.2612,-53.4912 no município."
     url = extract_map_url(text)
@@ -118,7 +118,7 @@ def test_extract_map_url_and_coordinates():
 
 
 def test_extract_subject_fallback():
-    from src.application.text_cleaner import extract_subject_fallback
+    from src.engine.cleaners.text_cleaner import extract_subject_fallback
 
     text = (
         "RELATÓRIO DE INTELIGÊNCIA Nº 100\n"
@@ -132,7 +132,7 @@ def test_extract_subject_fallback():
 
 
 def test_extract_fallback_summary():
-    from src.application.text_cleaner import extract_fallback_summary
+    from src.engine.cleaners.text_cleaner import extract_fallback_summary
 
     text = (
         "RELATÓRIO DE INTELIGÊNCIA Nº 459/2026\n"
@@ -154,7 +154,7 @@ def test_extract_fallback_summary():
 
 
 def test_normalize_whitespace_and_paragraphs():
-    from src.application.text_cleaner import normalize_whitespace_and_paragraphs
+    from src.engine.cleaners.text_cleaner import normalize_whitespace_and_paragraphs
 
     raw_text = (
         "como\n"
@@ -186,7 +186,7 @@ def test_header_anexos_blank_line_separation():
     assert "ANEXOS: XXX\n\nNo dia 02 de agosto" in cleaned
 
 def test_clean_person_name():
-    from src.application.text_cleaner import clean_person_name
+    from src.engine.cleaners.text_cleaner import clean_person_name
 
     assert clean_person_name("Posteriormente Identificado Como Johnny Schroeder") == "Johnny Schroeder"
     assert clean_person_name("Estavam João Witor Fagundes Garmatz") == "João Witor Fagundes Garmatz"
