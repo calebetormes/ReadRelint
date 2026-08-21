@@ -378,48 +378,14 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
 
 def clean_person_name(name: str) -> str:
     """
-    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas.
+    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas
+    utilizando o parser sintático nativo BrazilianNameParser.
     """
     if not name:
         return ""
 
-    clean = name.strip()
-
-    prefixes = [
-        r'posteriormente\s+identificad[oa]\s+(?:apenas\s+)?como',
-        r'identificad[oa]\s+(?:apenas\s+)?como',
-        r'v[íi]tima\s+identificad[oa]\s+como',
-        r'conforme\s+relato\s+d[ao](?:\s+v[íi]tima)?',
-        r'momento\s+em\s+que\s+foi\s+feito\s+contato\s+com',
-        r'(?:foi\s+)?feito\s+contato\s+com',
-        r'em\s+contato\s+com',
-        r'contato\s+com',
-        r'estavam?\s+presentes?',
-        r'estavam?',
-        r'estava',
-        r'tratar-se\s+de',
-        r'trata-se\s+de',
-        r'v[íi]tima',
-        r'suspeito',
-        r'acusado',
-        r'comunicante',
-        r'testemunha',
-        r'envolvid[oa]',
-        r'o\s+indiv[íi]duo',
-        r'indiv[íi]duos?',
-        r'para\s+[oa]',
-        r'para',
-        r'sr[a]?\.',
-        r'sr[a]?'
-    ]
-
-    for p in prefixes:
-        clean = re.sub(r'(?i)^\s*' + p + r'\s+', '', clean)
-
-    clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA)[:\s\.\d\-]+.*)$', '', clean)
-    clean = clean.strip(' ,.-–—:;')
-
-    return clean.title() if clean.isupper() or clean.islower() else clean
+    from src.engine.cleaners.name_parser import BrazilianNameParser
+    return BrazilianNameParser.clean_name(name)
 
 
 def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
@@ -430,6 +396,8 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     if not text:
         return []
 
+    from src.engine.cleaners.name_parser import BrazilianNameParser
+
     participants = []
     seen_names = set()
 
@@ -438,12 +406,18 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
         re.MULTILINE
     )
     for m in block_pattern.finditer(text):
-        name = clean_person_name(m.group(1))
+        parsed = BrazilianNameParser.parse_person(m.group(1))
+        name = parsed["name"]
+        extracted_nick = parsed["nickname"]
+        
         rg = (m.group(2) or "").strip()
         cpf = (m.group(3) or "").strip()
-        nick = (m.group(4) or "").strip()
-        if nick in ["-", "-.", "Não possui", "Nao possui", "N/I", "None"]:
-            nick = ""
+        nick_match = (m.group(4) or "").strip()
+        
+        if nick_match in ["-", "-.", "Não possui", "Nao possui", "N/I", "None"]:
+            nick_match = ""
+            
+        nick = extracted_nick if extracted_nick else nick_match
         doc = cpf if cpf else rg
         
         upper_name = name.upper()
@@ -464,7 +438,9 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
         re.MULTILINE
     )
     for m in inline_pattern.finditer(text):
-        name = clean_person_name(m.group(1))
+        parsed = BrazilianNameParser.parse_person(m.group(1))
+        name = parsed["name"]
+        extracted_nick = parsed["nickname"]
         doc = m.group(2).strip()
         upper_name = name.upper()
         
@@ -475,9 +451,10 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
             seen_names.add(upper_name)
             participants.append({
                 "name": name,
-                "nickname": "",
+                "nickname": extracted_nick,
                 "document": doc,
                 "participation_type": "Acusado"
             })
 
     return participants
+

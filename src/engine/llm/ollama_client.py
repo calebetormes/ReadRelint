@@ -76,7 +76,13 @@ INSTRUÇÕES DE SAÍDA:
 1. Você DEVE retornar EXATAMENTE UM objeto JSON válido que obedeça ao seguinte JSON Schema.
 2. Não inclua comentários, explicações ou texto fora do JSON.
 3. Se um campo do tipo Enum for exigido, você só pode usar os valores listados em 'enum'.
-4. PARTICIPANTES (participants): Extraia ESTRITAMENTE O NOME E SOBRENOME LIMPOS de cada pessoa civil citada (ex: "Elemar Soares da Silva" e NUNCA "uma mordida efetuada pelo condutor da motocicleta ELEMAR SOARES DA SILVA", "Johnny Schroeder" e NÃO "Posteriormente Identificado Como Johnny Schroeder"). Remova totalmente ações, veículos, verbos ou descrições da ocorrência associados ao nome. NUNCA inclua prefixos narrativos policiais ("Posteriormente identificado como", "Estavam", "Conforme relato", "Vítima", "Contato com"). NUNCA inclua Policiais Militares que atenderam a ocorrência.
+4. PARTICIPANTES (participants): Extraia ESTRITAMENTE O NOME E SOBRENOME LIMPOS de cada pessoa civil citada.
+   Exemplos de Higienização Obrigatória (ENTRADA -> SAÍDA DESEJADA):
+   - "uma agressão sofrida por ELEMAR SOARES DA SILVA no local" -> name: "Elemar Soares da Silva", nickname: ""
+   - "suspeito GUSTAVO SCHMIDT, vulgo Alemão, residente no Centro" -> name: "Gustavo Schmidt", nickname: "Alemão"
+   - "Posteriormente identificado como Johnny Schroeder" -> name: "Johnny Schroeder", nickname: ""
+   - "contato com Mariane, a qual relatou que..." -> name: "Mariane", nickname: ""
+   NUNCA inclua verbos, ações, sufixos de endereço ("residente no..."), prefixos policiais ("vítima", "suspeito", "contato com") nem Policiais Militares no nome. Se houver vulgo/alcunha ("Alemão", "Guto"), coloque no campo 'nickname'.
 5. RESUMO (summary): Escreva um resumo narrativo explicativo em 1 parágrafo com os fatos principais.
 6. LOCALIZAÇÃO: Extraia município (municipality), bairro (neighborhood), endereço completo (address) e unidade policial (police_unit) quando citados.
 7. REGISTRO POLICIAL: Extraia o número de registro (registry_number), órgão (registry_agency) e ano (registry_year) se identificados no texto.

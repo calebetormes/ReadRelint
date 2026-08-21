@@ -113,7 +113,8 @@ def test_etl_service_with_rule_processes_matching_file():
     mock_llm.process_text.assert_called_once_with(
         "Suspeito desferiu tiros e cometeu homicídio.", 
         questions=rule.questions,
-        schema_model=HomicideReport
+        schema_model=HomicideReport,
+        pre_extracted_entities=[]
     )
     # O banco de dados deve ter sido salvo
     mock_db.save.assert_called_once()

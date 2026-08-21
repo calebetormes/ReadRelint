@@ -133,8 +133,15 @@ class EtlService:
             
             from src.engine.cleaners.hybrid_cleaner import HybridCleaner
             if on_progress: on_progress(f"[{filename}] -> Limpeza Híbrida (ML + NER)...")
-            cleaned_text, pre_extracted_entities = HybridCleaner.process_hybrid(file_path)
-            
+            try:
+                cleaned_text, pre_extracted_entities = HybridCleaner.process_hybrid(file_path)
+            except Exception:
+                cleaned_text = ""
+                pre_extracted_entities = []
+
+            if not cleaned_text or not cleaned_text.strip():
+                cleaned_text = clean_relint_text(raw_text)
+
             if not cleaned_text.strip():
                 raise ValueError("O arquivo PDF está vazio após a limpeza.")
 
@@ -262,23 +269,36 @@ class EtlService:
                 # Regex fallback de último recurso caso GLiNER e LLM falhem
                 raw_participants = extract_fallback_participants(final_content)
 
+            from src.engine.cleaners.name_parser import BrazilianNameParser
+
             filtered_participants = []
             pm_keywords = ["SD PM", "SGT PM", "CB PM", "CAP PM", "MAJ PM", "TEN PM", "POLICIAL MILITAR", "GUARNICAO", "GUARNICÃO", "2° SGT", "1° SGT", "3° SGT", " VTR "]
             
             for p in raw_participants:
-                p_name = (p.get("name") if isinstance(p, dict) else getattr(p, "name", "")) or ""
-                p_type = (p.get("participation_type") if isinstance(p, dict) else getattr(p, "participation_type", "")) or ""
+                p_dict = p if isinstance(p, dict) else p.model_dump()
+                raw_p_name = p_dict.get("name", "") or ""
+                p_type = p_dict.get("participation_type", "") or ""
+                
+                # Executa o parser sintático nativo no nome do participante
+                parsed = BrazilianNameParser.parse_person(raw_p_name)
+                clean_p_name = parsed["name"]
+                extracted_nick = parsed["nickname"]
+                
+                if extracted_nick and not p_dict.get("nickname"):
+                    p_dict["nickname"] = extracted_nick
+                    
+                p_dict["name"] = clean_p_name
                 
                 is_pm = False
                 if str(p_type) in ["Parte da Guarnição", "GUARNICAO", "Parte da Guarnicao"]:
                     is_pm = True
                 
-                upper_name = p_name.upper()
+                upper_name = clean_p_name.upper()
                 if any(kw in upper_name for kw in pm_keywords) or upper_name.startswith("SD ") or upper_name.startswith("SGT ") or upper_name.startswith("CB "):
                     is_pm = True
                     
-                if not is_pm and p_name.strip():
-                    filtered_participants.append(p)
+                if not is_pm and clean_p_name.strip():
+                    filtered_participants.append(p_dict)
 
             # 6. Extração de Imagens do PDF (Galeria do RELINT)
             import re

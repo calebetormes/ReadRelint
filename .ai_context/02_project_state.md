@@ -72,7 +72,13 @@ Este arquivo documenta o que já foi construído, o que está sendo finalizado n
   - Injeção das entidades pré-extraídas diretamente no prompt do `OllamaClient` para garantir resiliência contra alucinações.
   - Uso das entidades do GLiNER como Fallback Premium de alta precisão quando o Ollama/LLM estiver desativado ou offline.
   - Refinamento de rótulos (`Nome e Sobrenome da Pessoa`) e blindagem de prompt para isolar estritamente nomes de registro civil sem trechos de ações narrativas.
-  - **Suite de Testes Atualizada & Estabilidade Python 3:** Correção de SyntaxWarnings de strings (adoção de `raw strings r""`) e refatoração passando 76 testes consecutivos.
+  - [x] **Tríplice Barreira & Parser Sintático Nativo de Nomes (`BrazilianNameParser`):**
+    - Criado o módulo [name_parser.py](file:///e:/www/ReadRelint/src/engine/cleaners/name_parser.py) para tokenização sintática e limpeza cirúrgica de nomes próprios civis em pt-BR (preservando conectivos `de`, `da`, `do`, `dos`, `das`, `e`, etc.).
+    - Extração automática de vulgos/alcunhas (`"Alemão"`, `vulgo Guto`) diretamente para o campo `nickname`.
+    - Remoção agressiva de prefixos narrativos policiais (`vítima identificada como`, `suspeito`, `conduzido`, `trata-se de`, `em desfavor de`) e sufixos de endereços/documentos (`, residente no...`, `, RG...`, `, com idade de...`).
+    - Injeção de exemplos negativos Few-Shot no prompt do `OllamaClient` para instruir o modelo LLM local.
+    - Suíte de 98 testes automatizados no Pytest com 100% de aprovação.
+
 
 
 ## 2. Próximas Etapas (Prioridade)
