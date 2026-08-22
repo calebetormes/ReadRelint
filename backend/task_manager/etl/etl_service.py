@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Callable, Optional, Dict, Any, List
 from backend.engine.parsers.file_parser import IFileParser
 from backend.engine.extractors.llm.llm_processor import ILlmProcessor
-from backend.dashboard.backend.database.database_repo import IDatabaseRepo
-from backend.dashboard.backend.database.person_repo import IPersonRepo
-from backend.dashboard.backend.core.entities import IncidentReport, Person, Participant
+from backend.database.database_repo import IDatabaseRepo
+from backend.database.person_repo import IPersonRepo
+from backend.core.entities import IncidentReport, Person, Participant
 from backend.engine.cleaners.text_cleaner import (
     clean_relint_text,
     extract_history_from_annex,

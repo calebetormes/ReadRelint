@@ -8,7 +8,7 @@ import logging
 import requests
 from typing import Any, Dict, Optional, Tuple
 from backend.engine.extractors.llm.llm_processor import ILlmProcessor
-from backend.dashboard.backend.core.entities import IncidentReport
+from backend.core.entities import IncidentReport
 
 logger = logging.getLogger(__name__)
 

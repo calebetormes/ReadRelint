@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from backend.engine.extractors.llm.ollama_client import OllamaClient
 
-@patch("src.engine.extractors.llm.ollama_client.requests.post")
+@patch("backend.engine.extractors.llm.ollama_client.requests.post")
 def test_ollama_client_success(mock_post):
     # Mock da resposta de sucesso da API HTTP do Ollama
     mock_response = MagicMock()
@@ -25,7 +25,7 @@ def test_ollama_client_success(mock_post):
     mock_post.assert_called_once()
 
 
-@patch("src.engine.extractors.llm.ollama_client.requests.post")
+@patch("backend.engine.extractors.llm.ollama_client.requests.post")
 def test_ollama_client_failure(mock_post):
     # Simula erro de conexão/timeout
     mock_post.side_effect = Exception("Connection refused")

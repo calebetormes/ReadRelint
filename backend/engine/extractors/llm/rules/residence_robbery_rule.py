@@ -11,11 +11,11 @@ class ResidenceRobberyRule(IncidentRule):
         return "residence_robbery.json"
         
     def get_schema_model(self) -> type:
-        from backend.dashboard.backend.core.entities import ResidenceRobberyReport
+        from backend.core.entities import ResidenceRobberyReport
         return ResidenceRobberyReport
 
     def get_bm_group(self, filename: str = "", subject: str = "") -> str:
-        from backend.dashboard.backend.core.entities import BmGroup
+        from backend.core.entities import BmGroup
         return BmGroup.ROUBO_RESIDENCIA.value
 
     @property

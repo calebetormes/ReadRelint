@@ -1,0 +1,38 @@
+/* ============================================================
+   TEMA: Resend Light (White Mode)
+   Versão clara minimalista, limpa e de alto contraste do Resend.
+   ============================================================ */
+
+[data-theme="resend-light"] {
+  /* ── Canvas & Superfícies ─────────────────────────────────── */
+  --canvas:           #fbfbfd;
+  --surface-card:     #ffffff;
+  --surface-elevated: #f4f4f6;
+  --surface-deep:     #eaebee;
+
+  /* ── Hairline Borders (Sutis no fundo claro) ─────────────── */
+  --hairline:         rgba(0, 0, 0, 0.08);
+  --hairline-strong:  rgba(0, 0, 0, 0.16);
+  --divider-soft:     rgba(0, 0, 0, 0.04);
+
+  /* ── Cores Tipográficas (Alto Contraste) ───────────────────── */
+  --ink:              #09090b;
+  --body:             rgba(9, 9, 11, 0.88);
+  --charcoal:         rgba(9, 9, 11, 0.68);
+  --mute:             #71717a;
+  --ash:              #a1a1aa;
+  --stone:            #d4d4d8;
+  --on-light:         #ffffff;
+
+  /* ── Cores de Destaque / Accent Calibradas para Fundo Claro ── */
+  --accent-orange:      #ea580c;
+  --accent-orange-glow: rgba(234, 88, 12, 0.14);
+  --accent-yellow:      #d97706;
+  --accent-blue:        #2563eb;
+  --accent-blue-glow:   rgba(37, 99, 235, 0.15);
+  --accent-green:       #16a34a;
+  --accent-green-glow:  rgba(22, 163, 74, 0.14);
+  --accent-red:         #dc2626;
+  --accent-red-glow:    rgba(220, 38, 38, 0.14);
+  --link:               #2563eb;
+}

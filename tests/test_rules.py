@@ -3,7 +3,7 @@ from unittest.mock import Mock, MagicMock
 from pathlib import Path
 from backend.engine.extractors.llm.rules.homicide_rule import HomicideRule
 from backend.task_manager.etl.etl_service import EtlService
-from backend.dashboard.backend.core.entities import IncidentReport
+from backend.core.entities import IncidentReport
 
 def test_homicide_rule_keywords():
     rule = HomicideRule()
@@ -109,7 +109,7 @@ def test_etl_service_with_rule_processes_matching_file():
     assert report.content == "Suspeito desferiu tiros e cometeu homicídio."
     assert report.main_fact == "homicídio consumado"
     # A LLM deve ter sido chamada com as perguntas específicas da regra e o schema model
-    from backend.dashboard.backend.core.entities import HomicideReport
+    from backend.core.entities import HomicideReport
     mock_llm.process_text.assert_called_once_with(
         "Suspeito desferiu tiros e cometeu homicídio.", 
         questions=rule.questions,

@@ -52,7 +52,7 @@ def test_watcher_raises_error_if_folder_does_not_exist():
         watcher.start()
 
 
-@patch("src.task_manager.watcher.folder_watcher.Observer")
+@patch("backend.task_manager.watcher.folder_watcher.Observer")
 def test_watcher_start_stop(mock_observer_class):
     mock_observer = MagicMock()
     mock_observer_class.return_value = mock_observer

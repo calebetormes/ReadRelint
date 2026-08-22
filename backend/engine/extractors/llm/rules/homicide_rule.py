@@ -16,7 +16,7 @@ class HomicideRule(IncidentRule):
         return "homicides.json"
         
     def get_schema_model(self) -> type:
-        from backend.dashboard.backend.core.entities import HomicideReport
+        from backend.core.entities import HomicideReport
         return HomicideReport
 
     def get_bm_group(self, filename: str = "", subject: str = "") -> str:
@@ -26,7 +26,7 @@ class HomicideRule(IncidentRule):
         O nome do arquivo e o assunto são usados como reforço secundário para diagnóstico,
         mas o retorno é sempre garantido.
         """
-        from backend.dashboard.backend.core.entities import BmGroup
+        from backend.core.entities import BmGroup
         return BmGroup.HOMICIDIO.value
 
     @property

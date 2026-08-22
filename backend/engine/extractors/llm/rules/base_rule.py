@@ -50,7 +50,7 @@ class IncidentRule(ABC):
         Retorna a classe Pydantic que deve ser utilizada para extrair os dados.
         Por padrão, retorna a classe genérica IncidentReport.
         """
-        from backend.dashboard.backend.core.entities import IncidentReport
+        from backend.core.entities import IncidentReport
         return IncidentReport
 
     def get_bm_group(self, filename: str = "", subject: str = "") -> str | None:

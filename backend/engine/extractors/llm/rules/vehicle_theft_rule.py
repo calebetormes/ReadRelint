@@ -11,11 +11,11 @@ class VehicleTheftRule(IncidentRule):
         return "vehicle_theft.json"
         
     def get_schema_model(self) -> type:
-        from backend.dashboard.backend.core.entities import VehicleTheftReport
+        from backend.core.entities import VehicleTheftReport
         return VehicleTheftReport
 
     def get_bm_group(self, filename: str = "", subject: str = "") -> str:
-        from backend.dashboard.backend.core.entities import BmGroup
+        from backend.core.entities import BmGroup
         return BmGroup.FURTO_VEICULO.value
 
     @property

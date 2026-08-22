@@ -7,7 +7,7 @@ Exposes endpoints for:
 """
 from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
-from backend.dashboard.backend.database.sqlite_repo import SqliteRepo
+from backend.database.sqlite_repo import SqliteRepo
 from backend.api.dependencies import get_db_repo, get_person_repo
 from backend.api.schemas.relints import (
     RelintSummaryResponse,
@@ -168,7 +168,7 @@ def get_relint_by_id(
     repo: SqliteRepo = Depends(get_db_repo),
 ) -> RelintDetailResponse:
     """Returns the full detail view of a single RELINT report."""
-    from backend.dashboard.backend.core.geo_service import extract_structured_address, resolve_report_map_info
+    from backend.core.geo_service import extract_structured_address, resolve_report_map_info
 
     report = _find_report_by_id(report_id, repo)
     if not report:
@@ -193,7 +193,7 @@ def get_relint_by_id(
         "participants": _build_participants_dto(report.participants or []),
     })
 
-    from backend.dashboard.backend.core.entities import HomicideReport, DrugTraffickingReport, EstablishmentRobberyReport, ResidenceRobberyReport, VehicleRobberyReport, PedestrianRobberyReport, VehicleTheftReport
+    from backend.core.entities import HomicideReport, DrugTraffickingReport, EstablishmentRobberyReport, ResidenceRobberyReport, VehicleRobberyReport, PedestrianRobberyReport, VehicleTheftReport
 
     if isinstance(report, HomicideReport):
         report_dict["homicide_details"] = {
@@ -253,7 +253,7 @@ def update_relint(
     repo: SqliteRepo = Depends(get_db_repo),
 ) -> RelintDetailResponse:
     """Updates an existing RELINT report and its specialty details."""
-    from backend.dashboard.backend.core.entities import IncidentReport, HomicideReport, Participant
+    from backend.core.entities import IncidentReport, HomicideReport, Participant
 
     report = _find_report_by_id(report_id, repo)
     if not report:
@@ -314,13 +314,13 @@ def update_relint(
             if getattr(h_det, "registry_year", None) is not None: updated_dict["registry_year"] = h_det.registry_year
             if getattr(h_det, "fact_type", None) is not None: updated_dict["fact_type"] = h_det.fact_type
             if getattr(h_det, "motivation", None) is not None: updated_dict["motivation"] = h_det.motivation
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["HomicideReport"]).HomicideReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["HomicideReport"]).HomicideReport(**updated_dict)
     elif curr_bm_group == "Prisão por Tráfico" or payload.drug_trafficking_details is not None:
         if payload.drug_trafficking_details:
             d_det = payload.drug_trafficking_details
             if getattr(d_det, "drug_quantity", None) is not None: updated_dict["drug_quantity"] = d_det.drug_quantity
             if getattr(d_det, "drug_types", None) is not None: updated_dict["drug_types"] = d_det.drug_types
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["DrugTraffickingReport"]).DrugTraffickingReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["DrugTraffickingReport"]).DrugTraffickingReport(**updated_dict)
     elif curr_bm_group == "Roubo a Estabelecimento" or payload.establishment_robbery_details is not None:
         if payload.establishment_robbery_details:
             e_det = payload.establishment_robbery_details
@@ -328,14 +328,14 @@ def update_relint(
             if getattr(e_det, "location_type", None) is not None: updated_dict["location_type"] = e_det.location_type
             if getattr(e_det, "injured_victims", None) is not None: updated_dict["injured_victims"] = e_det.injured_victims
             if getattr(e_det, "hostage_victim", None) is not None: updated_dict["hostage_victim"] = e_det.hostage_victim
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["EstablishmentRobberyReport"]).EstablishmentRobberyReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["EstablishmentRobberyReport"]).EstablishmentRobberyReport(**updated_dict)
     elif curr_bm_group == "Roubo a Residência" or payload.residence_robbery_details is not None:
         if payload.residence_robbery_details:
             r_det = payload.residence_robbery_details
             if getattr(r_det, "location_type", None) is not None: updated_dict["location_type"] = r_det.location_type
             if getattr(r_det, "injured_victims", None) is not None: updated_dict["injured_victims"] = r_det.injured_victims
             if getattr(r_det, "hostage_victim", None) is not None: updated_dict["hostage_victim"] = r_det.hostage_victim
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["ResidenceRobberyReport"]).ResidenceRobberyReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["ResidenceRobberyReport"]).ResidenceRobberyReport(**updated_dict)
     elif curr_bm_group == "Roubo de Veículo" or payload.vehicle_robbery_details is not None:
         if payload.vehicle_robbery_details:
             v_det = payload.vehicle_robbery_details
@@ -343,14 +343,14 @@ def update_relint(
             if getattr(v_det, "license_plate", None) is not None: updated_dict["license_plate"] = v_det.license_plate
             if getattr(v_det, "recovered", None) is not None: updated_dict["recovered"] = v_det.recovered
             if getattr(v_det, "recovery_location", None) is not None: updated_dict["recovery_location"] = v_det.recovery_location
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["VehicleRobberyReport"]).VehicleRobberyReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["VehicleRobberyReport"]).VehicleRobberyReport(**updated_dict)
     elif curr_bm_group == "Roubo a Pedestre" or payload.pedestrian_robbery_details is not None:
         if payload.pedestrian_robbery_details:
             p_det = payload.pedestrian_robbery_details
             if getattr(p_det, "injured_victims", None) is not None: updated_dict["injured_victims"] = p_det.injured_victims
             if getattr(p_det, "weapon_used", None) is not None: updated_dict["weapon_used"] = p_det.weapon_used
             if getattr(p_det, "stolen_object", None) is not None: updated_dict["stolen_object"] = p_det.stolen_object
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["PedestrianRobberyReport"]).PedestrianRobberyReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["PedestrianRobberyReport"]).PedestrianRobberyReport(**updated_dict)
     elif curr_bm_group == "Furto de Veículo" or payload.vehicle_theft_details is not None:
         if payload.vehicle_theft_details:
             f_det = payload.vehicle_theft_details
@@ -358,7 +358,7 @@ def update_relint(
             if getattr(f_det, "license_plate", None) is not None: updated_dict["license_plate"] = f_det.license_plate
             if getattr(f_det, "recovered", None) is not None: updated_dict["recovered"] = f_det.recovered
             if getattr(f_det, "recovery_location", None) is not None: updated_dict["recovery_location"] = f_det.recovery_location
-        updated_report = __import__("src.dashboard.backend.core.entities", fromlist=["VehicleTheftReport"]).VehicleTheftReport(**updated_dict)
+        updated_report = __import__("backend.core.entities", fromlist=["VehicleTheftReport"]).VehicleTheftReport(**updated_dict)
     else:
         updated_report = IncidentReport(**updated_dict)
 

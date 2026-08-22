@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, computed_field
 
 from backend.api.dependencies import get_person_repo
-from backend.dashboard.backend.database.person_repo import IPersonRepo
+from backend.database.person_repo import IPersonRepo
 
 router = APIRouter(prefix="/participants", tags=["participants"])
 

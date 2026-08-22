@@ -11,11 +11,11 @@ class DrugTraffickingRule(IncidentRule):
         return "drug_trafficking.json"
         
     def get_schema_model(self) -> type:
-        from backend.dashboard.backend.core.entities import DrugTraffickingReport
+        from backend.core.entities import DrugTraffickingReport
         return DrugTraffickingReport
 
     def get_bm_group(self, filename: str = "", subject: str = "") -> str:
-        from backend.dashboard.backend.core.entities import BmGroup
+        from backend.core.entities import BmGroup
         return BmGroup.PRISAO_TRAFICO.value
 
     @property
