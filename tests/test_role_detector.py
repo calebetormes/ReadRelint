@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from src.engine.extractors.deterministic.participants.role_detector import (
+from backend.engine.extractors.deterministic.participants.role_detector import (
     detect_participation_role,
     extract_nickname,
     extract_document_near_name,

@@ -2,7 +2,7 @@
 Testes unitários para o classificador determinístico de BmGroup.
 """
 import pytest
-from src.engine.cleaners.bm_classifier import classify_bm_group
+from backend.engine.cleaners.bm_classifier import classify_bm_group
 
 
 class TestBmClassifier:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from src.engine.extractors.deterministic.pipeline import DeterministicPipeline
+from backend.engine.extractors.deterministic.pipeline import DeterministicPipeline
 
 
 def test_deterministic_pipeline_full_execution():

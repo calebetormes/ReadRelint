@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from src.dashboard.backend.core.entities import (
+from backend.dashboard.backend.core.entities import (
     IncidentReport,
     Person,
     Participant,

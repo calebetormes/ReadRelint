@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from src.engine.extractors.deterministic.rules.homicide_rule import HomicideDeterministicRule
-from src.engine.extractors.deterministic.rules.drug_trafficking_rule import DrugTraffickingDeterministicRule
+from backend.engine.extractors.deterministic.rules.homicide_rule import HomicideDeterministicRule
+from backend.engine.extractors.deterministic.rules.drug_trafficking_rule import DrugTraffickingDeterministicRule
 
 
 def test_homicide_deterministic_rule_extraction():

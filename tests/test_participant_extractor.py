@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from src.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
+from backend.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
 
 
 def test_participant_extractor_structured_block():

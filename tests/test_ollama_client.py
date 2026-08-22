@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.engine.extractors.llm.ollama_client import OllamaClient
+from backend.engine.extractors.llm.ollama_client import OllamaClient
 
 @patch("src.engine.extractors.llm.ollama_client.requests.post")
 def test_ollama_client_success(mock_post):

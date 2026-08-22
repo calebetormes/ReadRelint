@@ -2,7 +2,7 @@ import pytest
 import tempfile
 import json
 from pathlib import Path
-from src.task_manager.registry.json_processed_registry import JsonProcessedRegistry
+from backend.task_manager.registry.json_processed_registry import JsonProcessedRegistry
 
 @pytest.fixture
 def temp_registry_file():

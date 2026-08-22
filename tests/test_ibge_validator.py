@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from src.engine.extractors.deterministic.participants.ibge_validator import (
+from backend.engine.extractors.deterministic.participants.ibge_validator import (
     is_valid_first_name,
     is_valid_brazilian_name,
 )

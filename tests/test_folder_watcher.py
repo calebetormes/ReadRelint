@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 from watchdog.events import FileCreatedEvent, FileMovedEvent
-from src.task_manager.watcher.folder_watcher import FolderWatcher, NewPdfHandler
+from backend.task_manager.watcher.folder_watcher import FolderWatcher, NewPdfHandler
 
 def test_handler_triggers_callback_for_pdf_created():
     mock_callback = MagicMock()

@@ -4,10 +4,10 @@ Unit tests for RELINTs FastAPI endpoints using TestClient with Portuguese schema
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
-from src.dashboard.backend.core.entities import IncidentReport, Participant, BmGroup, RelintType
-from src.dashboard.backend.database.sqlite_repo import SqliteRepo
-from src.dashboard.backend.api.app import app
-from src.dashboard.backend.api.dependencies import get_db_repo
+from backend.dashboard.backend.core.entities import IncidentReport, Participant, BmGroup, RelintType
+from backend.dashboard.backend.database.sqlite_repo import SqliteRepo
+from backend.api.app import app
+from backend.api.dependencies import get_db_repo
 
 @pytest.fixture
 def mock_db_repo(tmp_path: Path):

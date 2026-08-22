@@ -1,6 +1,6 @@
 import pytest
-from src.engine.extractors.llm.rules.base_rule import IncidentRule
-from src.dashboard.backend.core.entities import IncidentReport
+from backend.engine.extractors.llm.rules.base_rule import IncidentRule
+from backend.dashboard.backend.core.entities import IncidentReport
 
 class DummyRule(IncidentRule):
     @property

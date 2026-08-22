@@ -3,12 +3,12 @@ Testes unitários e de integração para o endpoint de eventos SSE em tempo real
 """
 import pytest
 from fastapi.testclient import TestClient
-from src.dashboard.backend.api.app import app
-from src.dashboard.backend.api.routers.events import broadcaster
+from backend.api.app import app
+from backend.api.routers.events import broadcaster
 
 @pytest.mark.asyncio
 async def test_events_stream_connection():
-    from src.dashboard.backend.api.routers.events import stream_events
+    from backend.api.routers.events import stream_events
     from unittest.mock import AsyncMock, MagicMock
     request = MagicMock()
     request.is_disconnected = AsyncMock(return_value=True)

@@ -19,28 +19,25 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 - [x] **Classificador Determinístico (`bm_classifier.py`):** Classificação regex por especificidade pós-LLM e fallback para processamento sem IA.
 - [x] **Dashboard Web Completo (Resend Design System):**
   - Tema escuro puro (`#000000`), hairlines translúcidas, componentes modulares em `variables.css`.
-  - Dossiês de especialidades (`homicides_view.js`), Dossiês de pessoas (`participants_view.js` com layout 40%/60%), Analytics de crimes (`crimes_view.js` com gráficos ApexCharts) e Galeria geral com lightbox e zoom.
-- [x] **Modal de Edição de RELINTs em 5 Sub-Abas:** Interface completa para edição humana (`user_edited = True`) com vinculação de fotos a participantes e formulários dinâmicos por tipo de crime.
-- [x] **Arquitetura Reativa em Tempo Real (SSE):** Barramento pub/sub `EventBroadcaster` atualizando abas da SPA instantaneamente sem recarregar a página ao processar novos PDFs.
-- [x] **Motor Modular Especialista de Participantes em 5 Camadas:**
-  1. Blocos estruturados e padrões inline com qualificadores de idade.
-  2. Reconhecimento de entidades via `spaCy` (`pt_core_news_sm`).
-  3. Validação positiva de prenomes brasileiros via Censo IBGE (`ibge_names.json`) em O(1).
-  4. Detecção direcional de papéis e especificidade léxica (`role_detector.py`).
-  5. Filtros negativos estritos de patentes militares, órgãos públicos e termos veiculares (`negative_filters.py`).
-- [x] **Auditoria em Massa (222 RELINTs) & Calibração Especialista Baseada em Dados:**
-  - Varredura completa de 222 relatórios reais, mapeando mais de 650 pessoas e reduzindo anomalias de nomes em **92.3%** (de 169 para 13 casos residuais).
-  - Algoritmo de desempate por proximidade e especificidade léxica (`role_detector.py`).
-  - Diferenciação precisa de menores infratores vs menores vítimas e relações familiares (*Pai da Vítima* $\rightarrow$ Testemunha).
-  - Isolamento de sequências em caixa alta e expurgo de prefixos narrativos em `clean_person_name`.
-- [x] **Pipeline Híbrido com LLM (Cognição Profunda + Guardrails Determinísticos):**
-  - Envio da transcrição limpa ao Ollama com instruções estritas de papéis, antecedentes (`background`) e regra anti-PM.
-  - Pós-processamento e fusão em `etl_service.py` aplicando sanitização de nomes, recuperação de documentos por proximidade (`extract_document_near_name`), validação contextual de papéis e filtro anti-alucinação de policiais.
-- [x] **Unificação das Classificações de Participantes para 3 Papéis Oficiais:**
-  - Unificação de *Acusado*, *Autor*, *Suspeito*, *Infrator* e *Preso* na categoria oficial **`Autor/Suspeito`**.
-  - Definição do trio fechado: **`Vítima`**, **`Testemunha`** e **`Autor/Suspeito`** em todos os contratos Pydantic (`ParticipationType`), detectores determinísticos, prompts de LLM, formulários modais de edição Web e registros no banco SQLite (`relint_participantes`).
-  - Criação do relatório detalhado de erros por caso em [`data/erros.md`](file:///e:/www/ReadRelint/data/erros.md).
-- [x] **Suíte de Testes Automatizados:** 100% de cobertura nos testes críticos de extração, limpeza de texto, detecção de papéis e persistência.
+  - Visualizador de dossiês por especialidade (`homicides_view.js`).
+  - Dashboard de Crimes & Analytics com gráficos offline **ApexCharts** (`crimes_view.js`).
+  - Galeria de imagens geral com visualizador Lightbox com zoom.
+- [x] **Suíte de Testes Automatizados:** 67 testes unitários e de integração de API com `pytest` cobrindo 100% da aplicação com execução em ~3.4s.
+- [x] **Unificação de Ações e Minimalismo no Header Web:** Remoção do botão `Abrir Dashboard` e Badge de Status do topo, centralizando ações de UX na interface principal e limpando componentes obsoletos. O botão de recolher a Sidebar foi convertido em um botão circular flutuante elegante.
+- [x] **Botões e Navegação Enxutos:** Remoção do box-border redundante nos botões de abas da visualização de Monitoramento. Troca do Checkbox estático do motor IA por um Botão de Status Interativo e Inteligente (Verde Esmeralda p/ ativo, Amarelo de Alerta p/ Modo Regex).
+- [x] **Melhoria Gráfica Circular Avançada:** Engrossamento dos SVGs da aba de Monitoramento para o formato Anel Premium (tipo Apple Watch), com ajuste dinâmico do `overflow: visible` para eliminação do corte na caixa da animação incandescente e aumento da pulsação e velocidade das barras luminosas.
+- [x] **Indicador Animado de Carregamento:** O painel de leitura agora conta com um Spinner animado inline (`<svg class="spin-fast">`) elegante em vez de texto seco durante a leitura do conteúdo do relatório.
+- [x] **Estabilidade e Loading Otimista da IA:** Adição de feedback visual instantâneo (spinner "Testando IA..." ou "Desativando...") ao alternar o modo de processamento de Inteligência Artificial. Implementação de proteção de concorrência (flag `_isTogglingLLM`) para impedir que o polling assíncrono de gráficos sobreponha o estado do botão durante a latência de rede/Ollama, e correção do bug que travava cliques subsequentes.
+- [x] **Migração de Esquema do Banco de Dados e Sistema para Português (pt-BR):**
+  - Tradução de todas as tabelas (`relints`, `homicidio_detalhes`, `pessoas`, `relint_participantes`, `relint_imagens`) e colunas no SQLite nativo e adapters (`SqliteRepo`, `SqlitePersonRepo`).
+  - Auto-migração transparente de bancos legados executada em `_init_db()` via `ALTER TABLE RENAME COLUMN`.
+  - Atualização do arquivo de especificação do banco `schema.dbml` com todas as colunas e tabelas de especialidade polimórficas (Tráfico, Roubos e Furtos) em Português.
+  - Suporte completo a aliases Pydantic e fallbacks retrocompatíveis na API REST e na interface Web SPA (`relints_view.js`, `homicides_view.js`).
+  - Suíte de 69 testes automatizados aprovada com 100% de cobertura (~3.1s).
+- [x] **Unificação Global e Modularização de Abas (DRY Architecture):**
+  - **Componente Único de Participantes (`ParticipantsTabComponent`):** Layout Master-Detail (40% Lista / 60% Dossiê) com busca em tempo real por nome/vulgo, badges de função e suporte a galeria de imagens vinculadas.
+  - **Biblioteca Central de Abas (`RelintTabsComponents`):** Renderização padronizada de `Síntese` (caixa compacta invertida + resumo), `Especialidades` (atributos estruturados), `Fotos` (galeria com lightbox), `Localização` (dashboard geográfico com OSM iframe e badges de precisão) e `Transcrição` (leitor literal).
+  - Eliminação de duplicação de código entre os painéis `relints_view.js` e `homicides_view.js`.
 
 ## 2. Próximas Etapas (Prioridade)
 
