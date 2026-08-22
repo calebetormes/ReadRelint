@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="resend-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadRelint — Design System & Theme Lab</title>
+  
+  <!-- Vendor CSS (Offline) -->
+  <link rel="stylesheet" href="/static/assets/vendor/leaflet.css">
+
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/main.css">
+
+  <style>
+    /* Estilos dedicados ao laboratório do Design System */
+    .ds-body {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-ui);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar de navegação do Design System */
+    .ds-sidebar {
+      width: 260px;
+      background: var(--surface-deep);
+      border-right: 1px solid var(--hairline-strong);
+      padding: 24px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      box-sizing: border-box;
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .ds-sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .ds-sidebar-logo {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent-orange), #ff4d00);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .ds-sidebar-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .ds-sidebar-subtitle {
+      font-size: 11px;
+      color: var(--mute);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ds-nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ds-nav-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ash);
+      padding: 6px 10px 4px 10px;
+    }
+
+    .ds-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      font-size: 13px;
+      color: var(--charcoal);
+      text-decoration: none;
+      border-radius: var(--r-sm);
+      transition: all var(--ease-fast);
+    }
+
+    .ds-nav-link:hover {
+      background: var(--surface-card);
+      color: var(--ink);
+    }
+
+    .ds-nav-link.active {
+      background: var(--surface-elevated);
+      color: var(--accent-orange);
+      font-weight: 500;
+      border-left: 2px solid var(--accent-orange);
+    }
+
+    .ds-nav-link i {
+      width: 16px;
+      height: 16px;
+      color: var(--mute);
+    }
+
+    .ds-nav-link.active i {
+      color: var(--accent-orange);
+    }
+
+    /* Conteúdo Principal */
+    .ds-content {
+      flex: 1;
+      padding: 40px 48px 80px 48px;
+      max-width: 1200px;
+      box-sizing: border-box;
+    }
+
+    .ds-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--hairline);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .ds-header-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px 0;
+      color: var(--ink);
+    }
+
+    .ds-header-desc {
+      font-size: 14px;
+      color: var(--mute);
+      margin: 0;
+    }
+
+    .ds-theme-switcher {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-card);
+      border: 1px solid var(--hairline-strong);
+      padding: 6px 14px;
+      border-radius: var(--r-md);
+    }
+
+    /* Seções */
+    .ds-section {
+      margin-bottom: 60px;
+      scroll-margin-top: 40px;
+    }
+
+    .ds-section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .ds-section-desc {
+      font-size: 14px;
+      color: var(--charcoal);
+      margin: 0 0 24px 0;
+      line-height: 1.5;
+    }
+
+    .ds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .ds-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    /* Swatches de Cores */
+    .ds-color-card {
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform var(--ease-fast), border-color var(--ease-fast);
+      position: relative;
+    }
+
+    .ds-color-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--hairline-strong);
+    }
+
+    .ds-color-preview {
+      height: 70px;
+      width: 100%;
+      border-bottom: 1px solid var(--hairline);
+      position: relative;
+    }
+
+    .ds-color-info {
+      padding: 12px 14px;
+    }
+
+    .ds-color-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .ds-color-var {
+      font-size: 11px;
+      color: var(--mute);
+      font-family: var(--font-mono);
+    }
+
+    .ds-color-copy-hint {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity var(--ease-fast);
+    }
+
+    .ds-color-card:hover .ds-color-copy-hint {
+      opacity: 1;
+    }
+
+    /* Component Canvas */
+    .ds-showcase-box {
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .ds-showcase-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ash);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .ds-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Toast Flutuante de Cópia */
+    #ds-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface-elevated);
+      color: var(--ink);
+      border: 1px solid var(--hairline-strong);
+      padding: 10px 18px;
+      border-radius: var(--r-md);
+      font-size: 13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all var(--ease-normal);
+      z-index: 9999;
+    }
+
+    #ds-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsividade */
+    @media (max-width: 900px) {
+      .ds-sidebar {
+        display: none;
+      }
+      .ds-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body class="ds-body">
+
+  <!-- Sidebar de Navegação Rápida -->
+  <aside class="ds-sidebar">
+    <div class="ds-sidebar-brand">
+      <div class="ds-sidebar-logo">RR</div>
+      <div>
+        <div class="ds-sidebar-title">ReadRelint</div>
+        <div class="ds-sidebar-subtitle">Design System 2.0</div>
+      </div>
+    </div>
+
+    <div class="ds-nav-group">
+      <div class="ds-nav-header">Fundação & Tokens</div>
+      <a href="#tokens-colors" class="ds-nav-link active">
+        <i data-lucide="palette"></i> Cores & Superfícies
+      </a>
+      <a href="#tokens-typography" class="ds-nav-link">
+        <i data-lucide="type"></i> Tipografia & Textos
+      </a>
+      <a href="#tokens-borders" class="ds-nav-link">
+        <i data-lucide="square"></i> Hairlines & Raios
+      </a>
+    </div>
+
+    <div class="ds-nav-group">
+      <div class="ds-nav-header">Componentes</div>
+      <a href="#comp-buttons" class="ds-nav-link">
+        <i data-lucide="mouse-pointer"></i> Botões & Ações
+      </a>
+      <a href="#comp-inputs" class="ds-nav-link">
+        <i data-lucide="edit-3"></i> Inputs & Formulários
+      </a>
+      <a href="#comp-badges" class="ds-nav-link">
+        <i data-lucide="tag"></i> Badges & Papéis
+      </a>
+      <a href="#comp-cards" class="ds-nav-link">
+        <i data-lucide="layout"></i> Cards & KPIs
+      </a>
+      <a href="#comp-gauges" class="ds-nav-link">
+        <i data-lucide="pie-chart"></i> Medidores SVG (Apple)
+      </a>
+      <a href="#comp-alerts" class="ds-nav-link">
+        <i data-lucide="bell"></i> Alertas & Toasts
+      </a>
+    </div>
+
+    <div class="ds-nav-group" style="margin-top: auto;">
+      <a href="/" class="ds-nav-link" style="color: var(--accent-orange); border: 1px solid var(--hairline-strong); justify-content: center;">
+        <i data-lucide="arrow-left"></i> Voltar ao Dashboard
+      </a>
+    </div>
+  </aside>
+
+  <!-- Conteúdo Principal -->
+  <main class="ds-content">
+    
+    <!-- Topbar com Seletor de Temas -->
+    <header class="ds-topbar">
+      <div>
+        <h1 class="ds-header-title">Design System & Theme Lab</h1>
+        <p class="ds-header-desc">Catálogo vivo de componentes, tokens visuais e testes de temas do ReadRelint.</p>
+      </div>
+
+      <div class="ds-theme-switcher">
+        <span style="font-size: 12px; color: var(--mute); font-weight: 500;">🎨 Alternar Tema:</span>
+        <select id="theme-selector" onchange="ThemeManager.setTheme(this.value)" style="background: var(--surface-card); color: var(--ink); border: 1px solid var(--hairline-strong); padding: 5px 12px; border-radius: var(--r-sm); font-size: 13px; cursor: pointer; outline: none;">
+          <option value="resend-dark">Resend Dark (Padrão)</option>
+          <option value="resend-light">Resend Light (White Mode)</option>
+          <option value="emerald-dark">Emerald Dark (Esmeralda)</option>
+          <option value="nord-dark">Nord Slate (Ártico)</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- 01. TOKENS: CORES E SUPERFÍCIES -->
+    <section id="tokens-colors" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="palette"></i> 01. Cores e Superfícies (Design Tokens)</h2>
+      <p class="ds-section-desc">Tokens de superfícies hierárquicas e cores de destaque. Clique em qualquer card para copiar a variável CSS.</p>
+
+      <div class="ds-grid">
+        <!-- Canvas -->
+        <div class="ds-color-card" onclick="copyToken('--canvas')">
+          <div class="ds-color-preview" style="background: var(--canvas);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Canvas (Fundo)</div>
+            <div class="ds-color-var">--canvas</div>
+          </div>
+        </div>
+
+        <!-- Card Surface -->
+        <div class="ds-color-card" onclick="copyToken('--surface-card')">
+          <div class="ds-color-preview" style="background: var(--surface-card);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Surface Card</div>
+            <div class="ds-color-var">--surface-card</div>
+          </div>
+        </div>
+
+        <!-- Elevated Surface -->
+        <div class="ds-color-card" onclick="copyToken('--surface-elevated')">
+          <div class="ds-color-preview" style="background: var(--surface-elevated);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Surface Elevated</div>
+            <div class="ds-color-var">--surface-elevated</div>
+          </div>
+        </div>
+
+        <!-- Surface Deep -->
+        <div class="ds-color-card" onclick="copyToken('--surface-deep')">
+          <div class="ds-color-preview" style="background: var(--surface-deep);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Surface Deep</div>
+            <div class="ds-color-var">--surface-deep</div>
+          </div>
+        </div>
+
+        <!-- Accent Orange -->
+        <div class="ds-color-card" onclick="copyToken('--accent-orange')">
+          <div class="ds-color-preview" style="background: var(--accent-orange);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Accent Orange</div>
+            <div class="ds-color-var">--accent-orange</div>
+          </div>
+        </div>
+
+        <!-- Accent Green -->
+        <div class="ds-color-card" onclick="copyToken('--accent-green')">
+          <div class="ds-color-preview" style="background: var(--accent-green);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Accent Green / Emerald</div>
+            <div class="ds-color-var">--accent-green</div>
+          </div>
+        </div>
+
+        <!-- Accent Blue -->
+        <div class="ds-color-card" onclick="copyToken('--accent-blue')">
+          <div class="ds-color-preview" style="background: var(--accent-blue);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Accent Blue</div>
+            <div class="ds-color-var">--accent-blue</div>
+          </div>
+        </div>
+
+        <!-- Accent Red -->
+        <div class="ds-color-card" onclick="copyToken('--accent-red')">
+          <div class="ds-color-preview" style="background: var(--accent-red);"></div>
+          <span class="ds-color-copy-hint">Copiar</span>
+          <div class="ds-color-info">
+            <div class="ds-color-name">Accent Red / Danger</div>
+            <div class="ds-color-var">--accent-red</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02. TIPOGRAFIA -->
+    <section id="tokens-typography" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="type"></i> 02. Hierarquia Tipográfica (Inter & Monospace)</h2>
+      <p class="ds-section-desc">Escala modular de textos em tema escuro com contraste calibrado.</p>
+
+      <div class="ds-showcase-box">
+        <div>
+          <div class="ds-showcase-title">Page Title (24px - 28px)</div>
+          <h1 style="font-size: 26px; font-weight: 700; margin: 0; color: var(--ink); letter-spacing: -0.03em;">Dossiê Criminal & Inteligência Policial</h1>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--hairline); margin: 8px 0;">
+        <div>
+          <div class="ds-showcase-title">Card Title / Section (16px - 18px)</div>
+          <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: var(--ink);">Relatório de Inteligência Policial #2024-00192</h3>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--hairline); margin: 8px 0;">
+        <div>
+          <div class="ds-showcase-title">Body Text (14px)</div>
+          <p style="font-size: 14px; color: var(--body); margin: 0; line-height: 1.6;">
+            A guarnição policial militar em patrulhamento tático realizou a abordagem a um veículo suspeito, logrando êxito na apreensão de entorpecentes e na qualificação dos envolvidos.
+          </p>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--hairline); margin: 8px 0;">
+        <div>
+          <div class="ds-showcase-title">Muted & Caption (12px)</div>
+          <span style="font-size: 12px; color: var(--mute);">Última sincronização realizada há 3 minutos • Extraído via Ollama</span>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--hairline); margin: 8px 0;">
+        <div>
+          <div class="ds-showcase-title">Monospace (Code / Timestamp / RG)</div>
+          <code style="font-family: var(--font-mono); font-size: 12px; background: var(--surface-deep); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--hairline); color: var(--accent-yellow);">
+            SHA256: 8f9b2c3d4e5f6a7b8c9d0e1f2a3b4c5d • RG: 12.345.678-9 SSP/SP
+          </code>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03. BOTÕES E AÇÕES -->
+    <section id="comp-buttons" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="mouse-pointer"></i> 03. Botões e Ações Interativas</h2>
+      <p class="ds-section-desc">Estilos de botões para operações normais, ações primárias, estados destrutivos e spinners.</p>
+
+      <div class="ds-showcase-box">
+        <div class="ds-showcase-title">Variantes Principais</div>
+        <div class="ds-row">
+          <button class="btn btn-primary" onclick="showToast('Ação Primária executada!')">
+            <i data-lucide="play"></i> Iniciar Monitoramento
+          </button>
+          
+          <button class="btn btn-secondary" onclick="showToast('Ação Secundária')">
+            <i data-lucide="folder"></i> Procurar Pasta
+          </button>
+
+          <button class="btn btn-ghost" onclick="showToast('Ghost Button')">
+            <i data-lucide="refresh-cw"></i> Recarregar
+          </button>
+
+          <button class="btn btn-danger" onclick="showToast('Ação Destrutiva/Pausa')">
+            <i data-lucide="pause"></i> Pausar Leitura
+          </button>
+        </div>
+
+        <div class="ds-showcase-title" style="margin-top: 16px;">Tamanhos e Estados</div>
+        <div class="ds-row">
+          <button class="btn btn-primary btn-sm">
+            <i data-lucide="plus"></i> Pequeno (sm)
+          </button>
+
+          <button class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">
+            <i data-lucide="lock"></i> Desabilitado
+          </button>
+
+          <button class="btn btn-secondary">
+            <span class="spinner" style="width: 14px; height: 14px; border: 2px solid var(--hairline); border-top-color: var(--ink); border-radius: 50%; display: inline-block; animation: spin 1s linear infinite;"></span>
+            Processando...
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04. INPUTS E FORMULÁRIOS -->
+    <section id="comp-inputs" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="edit-3"></i> 04. Formulários e Inputs</h2>
+      <p class="ds-section-desc">Campos de busca com ícones, selects, textareas e alternadores.</p>
+
+      <div class="ds-showcase-box">
+        <div class="ds-grid-2">
+          <!-- Campo de Busca -->
+          <div>
+            <label style="font-size: 12px; color: var(--mute); display: block; margin-bottom: 6px; font-weight: 500;">Busca Geral</label>
+            <div style="position: relative;">
+              <i data-lucide="search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--mute);"></i>
+              <input type="text" placeholder="Buscar por indivíduo, vulgo, RG ou CPF..." style="width: 100%; background: var(--surface-elevated); color: var(--ink); border: 1px solid var(--hairline-strong); padding: 9px 12px 9px 36px; border-radius: var(--r-md); font-size: 13px; box-sizing: border-box; outline: none;">
+            </div>
+          </div>
+
+          <!-- Select -->
+          <div>
+            <label style="font-size: 12px; color: var(--mute); display: block; margin-bottom: 6px; font-weight: 500;">Filtro de Especialidade</label>
+            <select style="width: 100%; background: var(--surface-elevated); color: var(--ink); border: 1px solid var(--hairline-strong); padding: 9px 12px; border-radius: var(--r-md); font-size: 13px; box-sizing: border-box; outline: none;">
+              <option>Todos os Tipos de Crime</option>
+              <option>Homicídio</option>
+              <option>Tráfico de Drogas</option>
+              <option>Roubo a Estabelecimento</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Textarea -->
+        <div>
+          <label style="font-size: 12px; color: var(--mute); display: block; margin-bottom: 6px; font-weight: 500;">Narrativa do Fato (Transcrição)</label>
+          <textarea rows="3" placeholder="Digite ou edite o histórico da ocorrência..." style="width: 100%; background: var(--surface-elevated); color: var(--ink); border: 1px solid var(--hairline-strong); padding: 10px 12px; border-radius: var(--r-md); font-size: 13px; box-sizing: border-box; outline: none; resize: vertical;"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05. BADGES, TAGS E PAPÉIS -->
+    <section id="comp-badges" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="tag"></i> 05. Badges, Papéis Oficiais & Métodos de Leitura</h2>
+      <p class="ds-section-desc">Padronização visual dos 3 papéis oficiais de participantes e métodos de extração.</p>
+
+      <div class="ds-showcase-box">
+        <div class="ds-showcase-title">Classificação Tripla Oficial de Participantes</div>
+        <div class="ds-row">
+          <span class="badge" style="background: rgba(59, 158, 255, 0.15); color: #3b9eff; border: 1px solid rgba(59, 158, 255, 0.3); padding: 4px 10px; border-radius: var(--r-full); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="shield" style="width: 13px; height: 13px;"></i> Vítima
+          </span>
+
+          <span class="badge" style="background: rgba(255, 255, 255, 0.08); color: #e4e4e7; border: 1px solid var(--hairline-strong); padding: 4px 10px; border-radius: var(--r-full); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Testemunha
+          </span>
+
+          <span class="badge" style="background: rgba(255, 32, 71, 0.15); color: #ff3b5c; border: 1px solid rgba(255, 32, 71, 0.3); padding: 4px 10px; border-radius: var(--r-full); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="user-x" style="width: 13px; height: 13px;"></i> Autor/Suspeito
+          </span>
+        </div>
+
+        <div class="ds-showcase-title" style="margin-top: 16px;">Método de Extração Cognitiva</div>
+        <div class="ds-row">
+          <span style="background: rgba(17, 255, 153, 0.12); color: var(--accent-green); border: 1px solid rgba(17, 255, 153, 0.3); padding: 4px 10px; border-radius: var(--r-full); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <span style="width: 6px; height: 6px; background: var(--accent-green); border-radius: 50%; display: inline-block;"></span>
+            Ollama (IA)
+          </span>
+
+          <span style="background: rgba(255, 197, 61, 0.12); color: var(--accent-yellow); border: 1px solid rgba(255, 197, 61, 0.3); padding: 4px 10px; border-radius: var(--r-full); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="zap" style="width: 12px; height: 12px;"></i>
+            Regex (Sem IA)
+          </span>
+
+          <span style="background: rgba(167, 139, 250, 0.12); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); padding: 4px 10px; border-radius: var(--r-full); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="user-check" style="width: 12px; height: 12px;"></i>
+            Editado pelo Usuário
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. CARDS E KPIS -->
+    <section id="comp-cards" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="layout"></i> 06. Cards & Painéis de Métricas</h2>
+      <p class="ds-section-desc">Containers modulares de métricas analíticas e cards de dossiês.</p>
+
+      <div class="ds-grid">
+        <!-- KPI 1 -->
+        <div style="background: var(--surface-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 20px; position: relative;">
+          <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            Total de RELINTs
+            <i data-lucide="file-text" style="width: 16px; height: 16px; color: var(--accent-orange);"></i>
+          </div>
+          <div style="font-size: 28px; font-weight: 700; color: var(--ink); letter-spacing: -0.03em;">222</div>
+          <div style="font-size: 12px; color: var(--accent-green); margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> +100% Processados
+          </div>
+        </div>
+
+        <!-- KPI 2 -->
+        <div style="background: var(--surface-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 20px;">
+          <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            Indivíduos Qualificados
+            <i data-lucide="users" style="width: 16px; height: 16px; color: var(--accent-blue);"></i>
+          </div>
+          <div style="font-size: 28px; font-weight: 700; color: var(--ink); letter-spacing: -0.03em;">652</div>
+          <div style="font-size: 12px; color: var(--charcoal); margin-top: 6px;">
+            Mapeados no SQLite
+          </div>
+        </div>
+
+        <!-- KPI 3 -->
+        <div style="background: var(--surface-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 20px;">
+          <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            Leitura Cognitiva (IA)
+            <i data-lucide="cpu" style="width: 16px; height: 16px; color: var(--accent-green);"></i>
+          </div>
+          <div style="font-size: 28px; font-weight: 700; color: var(--ink); letter-spacing: -0.03em;">98.4%</div>
+          <div style="font-size: 12px; color: var(--accent-green); margin-top: 6px;">
+            Ollama Llama-3 Local
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07. MEDIDORES CIRCULARES SVG -->
+    <section id="comp-gauges" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="pie-chart"></i> 07. Medidores Circulares SVG (Apple Watch Style)</h2>
+      <p class="ds-section-desc">Gauges vetoriais ultra-leves com animação de stroke-dashoffset em tempo real.</p>
+
+      <div class="ds-grid">
+        <!-- Gauge 1 -->
+        <div style="background: var(--surface-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div style="position: relative; width: 100px; height: 100px; margin-bottom: 12px;">
+            <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+              <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--hairline-strong)" stroke-width="8"></circle>
+              <circle id="gauge-demo-1" cx="50" cy="50" r="40" fill="transparent" stroke="var(--accent-orange)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-linecap="round" style="transition: stroke-dashoffset 0.8s ease;"></circle>
+            </svg>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--ink);">
+              75%
+            </div>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Arquivos Lidos</div>
+          <div style="font-size: 12px; color: var(--mute);">166 de 222 arquivos</div>
+        </div>
+
+        <!-- Gauge 2 -->
+        <div style="background: var(--surface-card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div style="position: relative; width: 100px; height: 100px; margin-bottom: 12px;">
+            <svg width="100" height="100" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+              <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--hairline-strong)" stroke-width="8"></circle>
+              <circle id="gauge-demo-2" cx="50" cy="50" r="40" fill="transparent" stroke="var(--accent-green)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="25.12" stroke-linecap="round" style="transition: stroke-dashoffset 0.8s ease;"></circle>
+            </svg>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--ink);">
+              90%
+            </div>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Lidos com IA</div>
+          <div style="font-size: 12px; color: var(--mute);">Ollama Engine</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08. ALERTAS E TOASTS -->
+    <section id="comp-alerts" class="ds-section">
+      <h2 class="ds-section-title"><i data-lucide="bell"></i> 08. Banners de Alerta & Notificações</h2>
+      <p class="ds-section-desc">Mensagens de feedback contextual para operações do sistema.</p>
+
+      <div class="ds-showcase-box">
+        <!-- Info Alert -->
+        <div style="background: rgba(59, 158, 255, 0.08); border-left: 3px solid var(--accent-blue); padding: 12px 16px; border-radius: 0 var(--r-sm) var(--r-sm) 0; display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="info" style="color: var(--accent-blue); width: 18px; height: 18px; flex-shrink: 0;"></i>
+          <span style="font-size: 13px; color: var(--body);">O processamento está operando em modo 100% offline. Nenhuma informação sai da máquina.</span>
+        </div>
+
+        <!-- Success Alert -->
+        <div style="background: rgba(17, 255, 153, 0.08); border-left: 3px solid var(--accent-green); padding: 12px 16px; border-radius: 0 var(--r-sm) var(--r-sm) 0; display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="check-circle-2" style="color: var(--accent-green); width: 18px; height: 18px; flex-shrink: 0;"></i>
+          <span style="font-size: 13px; color: var(--body);">Lote de 222 RELINTs sincronizado e indexado com sucesso no SQLite!</span>
+        </div>
+
+        <!-- Warning Alert -->
+        <div style="background: rgba(255, 197, 61, 0.08); border-left: 3px solid var(--accent-yellow); padding: 12px 16px; border-radius: 0 var(--r-sm) var(--r-sm) 0; display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="alert-triangle" style="color: var(--accent-yellow); width: 18px; height: 18px; flex-shrink: 0;"></i>
+          <span style="font-size: 13px; color: var(--body);">Ollama não respondeu no timeout de 25s. O sistema acionou o fallback determinístico sem IA.</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Camada Global de Efeitos/Background dos Temas -->
+  <div id="theme-background-layer"></div>
+
+  <!-- Toast Flutuante de Feedback -->
+  <div id="ds-toast">
+    <i data-lucide="check" style="width: 16px; height: 16px; color: var(--accent-green);"></i>
+    <span id="ds-toast-text">Variável copiada para a área de transferência!</span>
+  </div>
+
+  <!-- Vendor JS Libraries (Offline) -->
+  <script src="/static/assets/vendor/lucide.min.js"></script>
+
+  <!-- Temas Modulares (JS Effects) -->
+  <script src="/static/themes/resend-dark/effects.js?v=2.0.1"></script>
+  <script src="/static/themes/resend-light/effects.js?v=2.0.1"></script>
+
+  <!-- Application JS -->
+  <script src="/static/js/theme_manager.js?v=2.0.1"></script>
+
+  <script>
+    // Inicialização do Lucide Icons
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+
+      // Sincroniza o select do tema
+      const selector = document.getElementById('theme-selector');
+      if (selector && typeof ThemeManager !== 'undefined') {
+        selector.value = ThemeManager.getCurrentTheme();
+      }
+    });
+
+    // Função de copiar token
+    function copyToken(tokenVar) {
+      navigator.clipboard.writeText(`var(${tokenVar})`).then(() => {
+        showToast(`Copiado: var(${tokenVar})`);
+      });
+    }
+
+    // Função de Toast
+    function showToast(message) {
+      const toast = document.getElementById('ds-toast');
+      const text = document.getElementById('ds-toast-text');
+      text.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // IntersectionObserver para destacar link da sidebar ativa
+    const sections = document.querySelectorAll('.ds-section');
+    const navLinks = document.querySelectorAll('.ds-nav-link');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 100;
+        if (pageYOffset >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

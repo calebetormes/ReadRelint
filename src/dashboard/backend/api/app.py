@@ -38,7 +38,7 @@ app = FastAPI(
 @app.middleware("http")
 async def add_no_cache_headers(request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith("/static/") or request.url.path == "/":
+    if request.url.path.startswith("/static/") or request.url.path in ("/", "/design-system", "/ds"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
@@ -75,6 +75,12 @@ def health_check() -> dict:
 def serve_spa() -> FileResponse:
     """Serve o shell HTML do Single Page Application."""
     index_path = WEB_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    return FileResponse(str(index_path))  # FastAPI lida com 404 automaticamente
+    return FileResponse(str(index_path))
+
+
+@app.get("/design-system", include_in_schema=False)
+@app.get("/ds", include_in_schema=False)
+def serve_design_system() -> FileResponse:
+    """Serve a página independente do Design System & Theme Lab."""
+    ds_path = WEB_DIR / "design-system.html"
+    return FileResponse(str(ds_path))

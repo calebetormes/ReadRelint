@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock
 from pathlib import Path
-from src.engine.rules.homicide_rule import HomicideRule
+from src.engine.extractors.llm.rules.homicide_rule import HomicideRule
 from src.task_manager.etl.etl_service import EtlService
 from src.dashboard.backend.core.entities import IncidentReport
 

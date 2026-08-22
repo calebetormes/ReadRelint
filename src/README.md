@@ -1,12 +1,21 @@
 # Diretório `src/` (Código Fonte)
 
-Este diretório contém todo o código-fonte da aplicação **ReadRelint**, organizado rigorosamente segundo os princípios da **Arquitetura Limpa (Ports and Adapters / Hexagonal Architecture)**.
+Este diretório contém todo o código-fonte da aplicação **ReadRelint**, organizado modularmente segundo os princípios da **Arquitetura Limpa (Ports and Adapters)**:
 
-## 📂 Organização das Camadas:
+## 📂 Organização dos Módulos:
 
-* **[domain/](file:///d:/www/ReadRelint/src/domain):** O coração da aplicação. Contém as entidades e regras de negócio puras em Python sem dependências de infraestrutura ou frameworks.
-* **[ports/](file:///d:/www/ReadRelint/src/ports):** Define as interfaces abstratas (contratos) que o domínio exige do mundo externo (banco de dados, LLMs, leitores de arquivo, registros).
-* **[adapters/](file:///d:/www/ReadRelint/src/adapters):** As implementações concretas dos contratos definidos nas portas (PyMuPDF, Ollama local, TinyDB, Registro JSON).
-* **[application/](file:///d:/www/ReadRelint/src/application):** Camada de orquestração de caso de uso (Serviço de ETL e higienização de texto bruto).
-* **[infrastructure/](file:///d:/www/ReadRelint/src/infrastructure):** Serviços globais de infraestrutura (monitoramento de pastas via `watchdog`).
-* **[presentation/](file:///d:/www/ReadRelint/src/presentation):** Interfaces com o usuário (Painel Desktop em CustomTkinter e Dashboard Web em Streamlit).
+* **[dashboard/](file:///e:/www/ReadRelint/src/dashboard):** Camadas de apresentação e persistência do sistema:
+  * `backend/`: API REST FastAPI, banco de dados relacional SQLite (`SqliteRepo`, `SqlitePersonRepo`) e entidades de domínio (`IncidentReport`, `Person`, `Participant`).
+  * `desktop/`: Interface gráfica desktop em CustomTkinter (Service Launcher & Status Hub) e controle de serviços.
+  * `frontend/`: SPA Web moderna em Resend Dark System (HTML5, Vanilla CSS, JS views).
+* **[engine/](file:///e:/www/ReadRelint/src/engine):** Motores de processamento e extração de dados:
+  * `cleaners/`: Higienização e sanitização de texto bruto (`text_cleaner.py`) e classificadores de grupo BM (`bm_classifier.py`).
+  * `parsers/`: Leitura e extração de texto e imagens de documentos PDF (`PdfReader`).
+  * `extractors/`: Motores de extração e especialidades polimórficas:
+    * `llm/`: Motor cognitivo via Ollama local (`OllamaClient`) e regras de IA (`rules/`) com prompts e schemas Pydantic.
+    * `deterministic/`: Motor determinístico sem IA (`pipeline.py`), extrator de participantes em 5 camadas (`participants/`), endereços, síntese e regras de crimes determinísticas (`rules/`).
+    * `common/`: Dicionários de exclusão negativos e base estática de prenomes IBGE.
+* **[task_manager/](file:///e:/www/ReadRelint/src/task_manager):** Orquestração de tarefas assíncronas e monitoramento:
+  * `etl/`: Pipeline de ingestão, orquestração e sanitização (`EtlService`).
+  * `watcher/`: Monitoramento de diretório de arquivos no Windows via `watchdog` (`FolderWatcher`).
+  * `registry/`: Registro de histórico de processamento e proteção de curadoria humana (`JsonProcessedRegistry`).

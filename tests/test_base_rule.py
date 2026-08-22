@@ -1,5 +1,5 @@
 import pytest
-from src.engine.rules.base_rule import IncidentRule
+from src.engine.extractors.llm.rules.base_rule import IncidentRule
 from src.dashboard.backend.core.entities import IncidentReport
 
 class DummyRule(IncidentRule):

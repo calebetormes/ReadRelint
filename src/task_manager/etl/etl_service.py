@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any, List
 from src.engine.parsers.file_parser import IFileParser
-from src.engine.llm.llm_processor import ILlmProcessor
+from src.engine.extractors.llm.llm_processor import ILlmProcessor
 from src.dashboard.backend.database.database_repo import IDatabaseRepo
 from src.dashboard.backend.database.person_repo import IPersonRepo
 from src.dashboard.backend.core.entities import IncidentReport, Person, Participant
@@ -16,7 +16,7 @@ from src.engine.cleaners.text_cleaner import (
     extract_subject_fallback,
     extract_fallback_summary
 )
-from src.engine.rules.base_rule import IncidentRule
+from src.engine.extractors.llm.rules.base_rule import IncidentRule
 from src.task_manager.registry.processed_registry import IProcessedRegistry
 from src.engine.cleaners.bm_classifier import classify_bm_group
 
@@ -238,29 +238,53 @@ class EtlService:
                 summary_val = response_dict.get("main_fact") or extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
             response_dict["summary"] = summary_val
 
-            # 5. Filtragem de participantes: EXCLUIR Policiais Militares (PM / Guarnição)
+            # 5. Filtragem e Enriquecimento Híbrido de Participantes (Sanitização + Anti-PM + Enriquecimento)
+            from src.engine.cleaners.text_cleaner import clean_person_name
+            from src.engine.extractors.common.negative_filters import is_blacklisted_name
+            from src.engine.extractors.deterministic.participants.role_detector import (
+                detect_participation_role,
+                extract_document_near_name
+            )
+
             raw_participants = response_dict.get("participants", [])
             if not raw_participants:
-                from src.engine.cleaners.text_cleaner import extract_fallback_participants
-                raw_participants = extract_fallback_participants(final_content)
+                from src.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
+                extractor = ParticipantExtractor()
+                raw_participants, _ = extractor.extract_participants(final_content)
 
             filtered_participants = []
-            pm_keywords = ["SD PM", "SGT PM", "CB PM", "CAP PM", "MAJ PM", "TEN PM", "POLICIAL MILITAR", "GUARNICAO", "GUARNICÃO", "2° SGT", "1° SGT", "3° SGT", " VTR "]
+            seen_participant_names = set()
             
             for p in raw_participants:
                 p_name = (p.get("name") if isinstance(p, dict) else getattr(p, "name", "")) or ""
+                clean_name = clean_person_name(p_name)
+                if not clean_name or is_blacklisted_name(clean_name):
+                    continue
+
+                norm_key = clean_name.upper()
+                if norm_key in seen_participant_names:
+                    continue
+                seen_participant_names.add(norm_key)
+
                 p_type = (p.get("participation_type") if isinstance(p, dict) else getattr(p, "participation_type", "")) or ""
-                
-                is_pm = False
-                if str(p_type) in ["Parte da Guarnição", "GUARNICAO", "Parte da Guarnicao"]:
-                    is_pm = True
-                
-                upper_name = p_name.upper()
-                if any(kw in upper_name for kw in pm_keywords) or upper_name.startswith("SD ") or upper_name.startswith("SGT ") or upper_name.startswith("CB "):
-                    is_pm = True
-                    
-                if not is_pm and p_name.strip():
-                    filtered_participants.append(p)
+                if str(p_type) in ["Parte da Guarnição", "GUARNICAO", "Parte da Guarnicao"] or not p_type:
+                    p_type = detect_participation_role(final_content, clean_name)
+
+                p_doc = (p.get("document") if isinstance(p, dict) else getattr(p, "document", "")) or ""
+                if not p_doc:
+                    p_doc = extract_document_near_name(final_content, clean_name)
+
+                p_nick = (p.get("nickname") if isinstance(p, dict) else getattr(p, "nickname", "")) or ""
+                p_bg = (p.get("background") if isinstance(p, dict) else getattr(p, "background", "")) or ""
+
+                filtered_participants.append({
+                    "name": clean_name,
+                    "nickname": p_nick,
+                    "document": p_doc,
+                    "participation_type": p_type,
+                    "background": p_bg,
+                    "photo_path": None
+                })
 
             # 6. Extração de Imagens do PDF (Galeria do RELINT)
             import re
@@ -308,13 +332,13 @@ class EtlService:
                 report = schema_model.model_validate(report_data)
             except Exception as model_err:
                 if on_progress: on_progress(f"[{filename}] Aviso: IA não seguiu estritamente o Schema. Salvando com reconstrução segura.")
-                report = schema_model.model_construct(**report_data)
+                report = schema_model.model_construct(_fields_set=None, **report_data)
 
             # Salva o RELINT no banco central
             self.database_repo.save(report)
 
             # Upsert de Participantes no banco de Pessoas
-            for participant in report.participants:
+            for participant in (report.participants or []):
                 p_name = participant.name if isinstance(participant, Participant) else (participant.get("name") if isinstance(participant, dict) else "")
                 if not p_name:
                     continue

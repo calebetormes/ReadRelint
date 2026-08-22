@@ -37,7 +37,7 @@ def test_incident_report_with_full_fields():
         nickname="Zé",
         document="123.456.789-00",
         background="Furto",
-        participation_type=ParticipationType.ACUSADO
+        participation_type=ParticipationType.AUTOR_SUSPEITO
     )
     report = IncidentReport(
         source_file="relint_completo.pdf",
@@ -61,7 +61,7 @@ def test_incident_report_with_full_fields():
     assert report.relint_type == RelintType.OCORRENCIA
     assert report.bm_group == BmGroup.ROUBO_RESIDENCIA
     assert len(report.participants) == 1
-    assert report.participants[0].participation_type == ParticipationType.ACUSADO
+    assert report.participants[0].participation_type == ParticipationType.AUTOR_SUSPEITO
 
 def test_person_entity():
     person = Person(

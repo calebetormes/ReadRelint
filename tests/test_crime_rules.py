@@ -1,10 +1,10 @@
 import pytest
-from src.engine.rules.drug_trafficking_rule import DrugTraffickingRule
-from src.engine.rules.vehicle_robbery_rule import VehicleRobberyRule
-from src.engine.rules.vehicle_theft_rule import VehicleTheftRule
-from src.engine.rules.pedestrian_robbery_rule import PedestrianRobberyRule
-from src.engine.rules.residence_robbery_rule import ResidenceRobberyRule
-from src.engine.rules.establishment_robbery_rule import EstablishmentRobberyRule
+from src.engine.extractors.llm.rules.drug_trafficking_rule import DrugTraffickingRule
+from src.engine.extractors.llm.rules.vehicle_robbery_rule import VehicleRobberyRule
+from src.engine.extractors.llm.rules.vehicle_theft_rule import VehicleTheftRule
+from src.engine.extractors.llm.rules.pedestrian_robbery_rule import PedestrianRobberyRule
+from src.engine.extractors.llm.rules.residence_robbery_rule import ResidenceRobberyRule
+from src.engine.extractors.llm.rules.establishment_robbery_rule import EstablishmentRobberyRule
 
 def test_drug_trafficking_rule():
     rule = DrugTraffickingRule()

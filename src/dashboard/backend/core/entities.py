@@ -7,9 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class ParticipationType(str, Enum):
     VITIMA = "Vítima"
     TESTEMUNHA = "Testemunha"
-    ACUSADO = "Acusado"
-    SUSPEITO = "Suspeito"
-    GUARNICAO = "Parte da Guarnição"
+    AUTOR_SUSPEITO = "Autor/Suspeito"
 
 
 class BmGroup(str, Enum):
@@ -48,16 +46,24 @@ class Participant(BaseModel):
     nickname: Optional[str] = Field(default=None, description="Alcunha, apelido ou vulgo")
     document: Optional[str] = Field(default=None, description="Documento de identificação (CPF ou RG)")
     background: Optional[str] = Field(default=None, description="Antecedentes mencionados (se houver)")
-    participation_type: Optional[Union[ParticipationType, str]] = Field(default="Acusado", description="Opções: Vítima, Testemunha, Acusado, Suspeito, Parte da Guarnição")
+    participation_type: Optional[Union[ParticipationType, str]] = Field(default="Autor/Suspeito", description="Opções: Vítima, Testemunha, Autor/Suspeito")
     photo_path: Optional[str] = Field(default=None, description="Caminho do arquivo da foto do participante")
 
     @field_validator("participation_type", mode="before")
     @classmethod
     def normalize_participation_type(cls, v):
         if not v:
-            return "Acusado"
+            return "Autor/Suspeito"
         if hasattr(v, "value"):
-            return v.value
+            v = v.value
+        v_str = str(v).strip()
+        if v_str in ["Acusado", "Suspeito", "Autor", "Autor/Suspeito", "Investigado", "Preso", "Infrator", "Parte da Guarnição", "GUARNICAO"]:
+            return "Autor/Suspeito"
+        if v_str.lower() in ["vítima", "vitima"]:
+            return "Vítima"
+        if v_str.lower() in ["testemunha", "comunicante", "solicitante"]:
+            return "Testemunha"
+        return v_str
         val_str = str(v).strip()
         lower = val_str.lower()
         if "vitima" in lower or "vítima" in lower:

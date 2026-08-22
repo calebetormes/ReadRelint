@@ -314,111 +314,76 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
 
 def clean_person_name(name: str) -> str:
     """
-    Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas (ex: 'Posteriormente Identificado Como Johnny Schroeder' -> 'Johnny Schroeder').
+    Remove ruídos narrativos, prefixos relacionais e policiais, documentos grudados
+    e normaliza a capitalização e pontuação dos nomes de participantes.
     """
     if not name:
         return ""
 
-    clean = name.strip()
+    # 1. Normaliza quebras de linha internas e espaços múltiplos
+    clean = re.sub(r'[\r\n\t]+', ' ', name)
+    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
 
-    # Prefixo de frases narrativas policiais
-    prefixes = [
-        r'posteriormente\s+identificad[oa]\s+(?:apenas\s+)?como',
-        r'identificad[oa]\s+(?:apenas\s+)?como',
-        r'v[íi]tima\s+identificad[oa]\s+como',
-        r'conforme\s+relato\s+d[ao](?:\s+v[íi]tima)?',
-        r'momento\s+em\s+que\s+foi\s+feito\s+contato\s+com',
-        r'(?:foi\s+)?feito\s+contato\s+com',
-        r'em\s+contato\s+com',
-        r'contato\s+com',
-        r'estavam?\s+presentes?',
-        r'estavam?',
-        r'estava',
-        r'tratar-se\s+de',
-        r'trata-se\s+de',
-        r'v[íi]tima',
-        r'suspeito',
-        r'acusado',
-        r'comunicante',
-        r'testemunha',
-        r'envolvid[oa]',
-        r'sr[a]?\.',
-        r'sr[a]?'
+    # 2. Se contiver uma sequência pura em MAIÚSCULAS no meio ou final, extrai a parte em maiúsculas
+    upper_seq = re.findall(r'\b[A-ZÀ-Ú]{2,}(?:\s+(?:DA|DE|DO|DOS|DAS|E|[A-ZÀ-Ú]{2,}))+\b', clean)
+    if upper_seq:
+        longest = max(upper_seq, key=len)
+        if len(longest.split()) >= 2:
+            clean = longest
+
+    # 3. Remove sufixos de documentos e registros colados (RG, CPF, CNH, MATRÍCULA, etc.)
+    clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA|CNH|PROCESSO|BO|DP)[:\s\.\d\-/]+.*)$', '', clean)
+    clean = re.sub(r'(?i)\s+Rg$', '', clean)
+
+    # 4. Lista refinada de prefixos policiais, judiciais e relacionais a remover
+    prefix_patterns = [
+        r'.*?\bidentificad[oa]\s+(?:como\s+sendo|como|de\s+nome|por)?\s*',
+        r'.*?\bpres[oa]\s+(?:um\s+homem|uma\s+mulher|um\s+indiv[íi]duo|de\s+nome)?\s*',
+        r'.*?\b(?:padrasto|madrasta|irm[ãa][o]|filh[oa]|pai|m[ãa]e|espos[ao]|companheir[oa]|marido|mulher|patr[ãa]o|funcion[áa]ri[oa]|gerente|vizinh[oa]|caroneiro|condutor|motorista|propriet[áa]rio)\s+',
+        r'.*?\b(?:pm\s+|pme\s+|sd\s+|sgt\s+|cb\s+|ten\s+|cap\s+|maj\s+|cel\s+|policial(?:\s+militar|\s+civil|\s+penal)?\s+)',
+        r'.*?\b(?:momento\s+em\s+que\s+foi\s+feito\s+contato\s+com|feito\s+contato\s+com|em\s+contato\s+com|contato\s+com)\s*',
+        r'.*?\b(?:o\s+|a\s+)?(?:senhor[a]?|indiv[íi]duo|menor(?:\s+de\s+idade)?|crian[çc]a|v[íi]tima|suspeit[oa]|acusad[oa]|testemunha|comunicante|envolvid[oa]|autor[a]?)\s+',
+        r'^(?:estavam?|estava|havia|foram|foi|encontrava-se)\s+',
+        r'^(?:de\s+|da\s+|do\s+|dos\s+|das\s+|em\s+|no\s+|na\s+|a\s+|o\s+|e\s+|com\s+|pelo\s+|pela\s+)'
     ]
 
-    for p in prefixes:
-        clean = re.sub(r'(?i)^\s*' + p + r'\s+', '', clean)
+    for pat in prefix_patterns:
+        clean = re.sub(r'(?i)^' + pat, '', clean)
 
-    # Limpa sufixos com RG, CPF ou números de documentos grudados
-    clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA)[:\s\.\d\-]+.*)$', '', clean)
+    # 5. Limpa pontuações residuais nas pontas
+    clean = clean.strip(' ,.-–—:;"\'()[]{}*')
 
-    # Limpa pontuações isoladas nas pontas
-    clean = clean.strip(' ,.-–—:;')
+    # 6. Formata capitalização limpa (Title Case)
+    clean = clean.title() if clean.isupper() or clean.islower() else clean
 
-    return clean.title() if clean.isupper() or clean.islower() else clean
+    # 7. Formata preposições da língua portuguesa em minúsculas (de, da, do, dos, das, e)
+    tokens = clean.split()
+    if len(tokens) >= 2:
+        formatted_tokens = [tokens[0]]
+        for t in tokens[1:-1]:
+            if t.lower() in ["da", "de", "do", "dos", "das", "e"]:
+                formatted_tokens.append(t.lower())
+            else:
+                formatted_tokens.append(t)
+        formatted_tokens.append(tokens[-1])
+        clean = " ".join(formatted_tokens)
+
+    return clean
 
 
 def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     """
-    Extrai deterministicamente participantes citados no texto do RELINT via expressões regulares
-    quando a LLM local estiver indisponível ou retornar lista vazia de participantes.
+    Extrai deterministicamente participantes citados no texto do RELINT delegando ao ParticipantExtractor.
     """
     if not text:
         return []
-
-    participants = []
-    seen_names = set()
-
-    # 1. Busca por blocos estruturados (ex: NOME: ..., RG: ..., ALCUNHA: ...)
-    block_pattern = re.compile(
-        r'(?i)NOME:\s*([A-Z\u00C0-\u00FF\s\.]{3,60})\s*\n\s*(?:RG:\s*([\d\.\-]+))?\s*(?:CPF:\s*([\d\.\-]+))?\s*(?:ALCUNHA:\s*([^\n]+))?',
-        re.MULTILINE
-    )
-    for m in block_pattern.finditer(text):
-        name = clean_person_name(m.group(1))
-        rg = (m.group(2) or "").strip()
-        cpf = (m.group(3) or "").strip()
-        nick = (m.group(4) or "").strip()
-        if nick in ["-", "-.", "Não possui", "Nao possui", "N/I", "None"]:
-            nick = ""
-        doc = cpf if cpf else rg
-        
-        upper_name = name.upper()
-        if any(bad in upper_name for bad in ["RELATÓRIO", "BRIGADA", "POLÍCIA", "SD ", "SGT ", "CB ", "CAP "]):
-            continue
-            
-        if name and upper_name not in seen_names:
-            seen_names.add(upper_name)
-            participants.append({
-                "name": name,
-                "nickname": nick,
-                "document": doc,
-                "participation_type": "Suspeito"
-            })
-
-    # 2. Busca inline por "NOME COMPLETO, RG: 123456" ou "NOME - RG 123456"
-    inline_pattern = re.compile(
-        r'(?i)\b([A-Z\u00C0-\u00FF]{2,}(?:\s+[A-Z\u00C0-\u00FF]{2,})+)\s*(?:[,\-\–\s]+)(?:RG|CPF)(?:\s*n[º°]|\s*:\s*|\s+)\s*([\d\.\-]+)',
-        re.MULTILINE
-    )
-    for m in inline_pattern.finditer(text):
-        name = clean_person_name(m.group(1))
-        doc = m.group(2).strip()
-        upper_name = name.upper()
-        
-        if any(bad in upper_name for bad in ["RELATÓRIO", "BRIGADA", "POLÍCIA"]) and "SANTOS SILVA" not in upper_name:
-            continue
-
-        if name and len(name) > 3 and upper_name not in seen_names:
-            seen_names.add(upper_name)
-            participants.append({
-                "name": name,
-                "nickname": "",
-                "document": doc,
-                "participation_type": "Acusado"
-            })
-
-    return participants
+    try:
+        from src.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
+        extractor = ParticipantExtractor()
+        participants, _ = extractor.extract_participants(text)
+        return participants
+    except Exception:
+        return []
 
 
 
