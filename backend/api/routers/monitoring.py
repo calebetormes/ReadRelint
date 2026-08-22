@@ -77,43 +77,59 @@ def get_monitoring_status(controller=Depends(get_main_controller)) -> Dict[str, 
 
 @router.post("/browse")
 def browse_folder_dialog(controller=Depends(get_main_controller)) -> Dict[str, Any]:
-    """Abre a janela nativa do Windows (FolderBrowserDialog) via PowerShell para selecionar pasta com foco garantido."""
-    import subprocess
+    """
+    Solicita ao painel.py que abra o filedialog nativo via IPC por arquivos.
+    O painel.py detecta o arquivo de sinalização, abre a janela e escreve o resultado.
+    """
+    import time as _time
 
-    try:
-        # Executa código PowerShell nativo (.NET) com formulário TopMost
-        # Isso garante foco absoluto e evita que a janela abra em segundo plano.
-        ps_code = (
-            "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
-            "$fn = New-Object System.Windows.Forms.FolderBrowserDialog; "
-            "$fn.Description = 'Selecione a Pasta dos RELINTs'; "
-            "$form = New-Object System.Windows.Forms.Form; "
-            "$form.TopMost = $true; "
-            "$result = $fn.ShowDialog($form); "
-            "if ($result -eq [System.Windows.Forms.DialogResult]::OK) { Write-Host $fn.SelectedPath }"
-        )
-        
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_code],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-        
-        selected_path = result.stdout.strip()
+    # Caminhos dos arquivos IPC
+    project_root = Path(__file__).resolve().parents[3]
+    data_dir = project_root / "data"
+    data_dir.mkdir(exist_ok=True)
+    request_flag = data_dir / "browse_request.flag"
+    response_file = data_dir / "browse_response.txt"
 
-        if selected_path:
-            controller.set_monitoring_path(selected_path)
-            return {
-                "status": "success",
-                "path": selected_path,
-                "total_files": controller.total_files_in_folder,
-                "skipped_count": controller.skipped_count,
-            }
-        return {"status": "cancelled", "path": ""}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Erro ao abrir seletor de pasta: {exc}")
+    # Remove resposta antiga se existir
+    response_file.unlink(missing_ok=True)
+
+    # Sinaliza ao painel.py para abrir o dialog
+    request_flag.touch()
+
+    # Aguarda resposta do painel.py (timeout de 120 segundos)
+    timeout = 120
+    interval = 0.3
+    elapsed = 0.0
+
+    # Verifica primeiro se o painel está em execução (flag some em até 2s se ele estiver rodando)
+    _time.sleep(2.0)
+    if request_flag.exists():
+        request_flag.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=503,
+            detail="Painel de controle não está em execução. Abra o Iniciar-Painel.bat primeiro."
+        )
+
+    while elapsed < timeout:
+        if response_file.exists():
+            selected_path = response_file.read_text(encoding="utf-8").strip()
+            response_file.unlink(missing_ok=True)
+
+            if selected_path:
+                controller.set_monitoring_path(selected_path)
+                return {
+                    "status": "success",
+                    "path": selected_path,
+                    "total_files": controller.total_files_in_folder,
+                    "skipped_count": controller.skipped_count,
+                }
+            return {"status": "cancelled", "path": ""}
+
+        _time.sleep(interval)
+        elapsed += interval
+
+    request_flag.unlink(missing_ok=True)
+    raise HTTPException(status_code=408, detail="Timeout: nenhuma pasta foi selecionada em 120 segundos.")
 
 
 @router.post("/path")
