@@ -77,27 +77,24 @@ def get_monitoring_status(controller=Depends(get_main_controller)) -> Dict[str, 
 
 @router.post("/browse")
 def browse_folder_dialog(controller=Depends(get_main_controller)) -> Dict[str, Any]:
-    """Abre a janela nativa do Windows (filedialog) no servidor local para selecionar pasta."""
-    import sys
+    """Abre a janela nativa do Windows (FolderBrowserDialog) via PowerShell para selecionar pasta com foco garantido."""
     import subprocess
 
     try:
-        # Executa um script Python em outro processo para abrir o seletor.
-        # Isso evita conflitos de threads no Tkinter e problemas de COM no Windows.
-        python_exe = sys.executable
-        code = (
-            "import tkinter as tk; "
-            "from tkinter import filedialog; "
-            "root = tk.Tk(); "
-            "root.withdraw(); "
-            "root.attributes('-topmost', True); "
-            "folder = filedialog.askdirectory(title='Selecione a Pasta dos RELINTs'); "
-            "print(folder)"
+        # Executa código PowerShell nativo (.NET) com formulário TopMost
+        # Isso garante foco absoluto e evita que a janela abra em segundo plano.
+        ps_code = (
+            "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
+            "$fn = New-Object System.Windows.Forms.FolderBrowserDialog; "
+            "$fn.Description = 'Selecione a Pasta dos RELINTs'; "
+            "$form = New-Object System.Windows.Forms.Form; "
+            "$form.TopMost = $true; "
+            "$result = $fn.ShowDialog($form); "
+            "if ($result -eq [System.Windows.Forms.DialogResult]::OK) { Write-Host $fn.SelectedPath }"
         )
         
-        # Roda o script de forma síncrona bloqueando esta thread do pool do FastAPI
         result = subprocess.run(
-            [python_exe, "-c", code],
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_code],
             capture_output=True,
             text=True,
             encoding="utf-8",
