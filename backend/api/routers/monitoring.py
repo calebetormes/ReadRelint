@@ -78,22 +78,33 @@ def get_monitoring_status(controller=Depends(get_main_controller)) -> Dict[str, 
 @router.post("/browse")
 def browse_folder_dialog(controller=Depends(get_main_controller)) -> Dict[str, Any]:
     """Abre a janela nativa do Windows (filedialog) no servidor local para selecionar pasta."""
-    import tkinter as tk
-    from tkinter import filedialog
-    import concurrent.futures
-
-    def _open_dialog():
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        folder = filedialog.askdirectory(title="Selecione a Pasta dos RELINTs")
-        root.destroy()
-        return folder
+    import sys
+    import subprocess
 
     try:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(_open_dialog)
-            selected_path = future.result(timeout=120)
+        # Executa um script Python em outro processo para abrir o seletor.
+        # Isso evita conflitos de threads no Tkinter e problemas de COM no Windows.
+        python_exe = sys.executable
+        code = (
+            "import tkinter as tk; "
+            "from tkinter import filedialog; "
+            "root = tk.Tk(); "
+            "root.withdraw(); "
+            "root.attributes('-topmost', True); "
+            "folder = filedialog.askdirectory(title='Selecione a Pasta dos RELINTs'); "
+            "print(folder)"
+        )
+        
+        # Roda o script de forma síncrona bloqueando esta thread do pool do FastAPI
+        result = subprocess.run(
+            [python_exe, "-c", code],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        
+        selected_path = result.stdout.strip()
 
         if selected_path:
             controller.set_monitoring_path(selected_path)

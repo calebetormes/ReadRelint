@@ -13,16 +13,7 @@ class ILlmProcessor(ABC):
     """
 
     @abstractmethod
-<<<<<<< HEAD:src/engine/extractors/llm/llm_processor.py
-    def process_text(
-        self,
-        text: str,
-        questions: Optional[dict[str, Any]] = None,
-        schema_model: Optional[type] = None
-    ) -> dict:
-=======
     def process_text(self, text: str, questions: dict = None, schema_model: type = None, pre_extracted_entities: list = None) -> dict:
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1:src/engine/llm/llm_processor.py
         """
         Processa o texto de um boletim de ocorrência respondendo a perguntas estruturadas.
 

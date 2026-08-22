@@ -41,11 +41,7 @@ class OllamaClient(ILlmProcessor):
         except Exception:
             return False, f"Serviço Ollama indisponível ou desativado em {self.base_url}"
 
-<<<<<<< HEAD:src/engine/extractors/llm/ollama_client.py
-    def process_text(self, text: str, questions: Optional[Dict[str, Any]] = None, schema_model: Optional[type] = None) -> dict:
-=======
     def process_text(self, text: str, questions: Optional[Dict[str, str]] = None, schema_model: type = None, pre_extracted_entities: list = None) -> dict:
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1:src/engine/llm/ollama_client.py
         """
         Envia o texto limpo ao Ollama solicitando a estruturação em formato JSON
         baseado no JSON Schema do modelo IncidentReport (ou do schema_model se fornecido).
@@ -71,24 +67,6 @@ O documento a seguir é um RELINT em Português (pt-BR). Analise o texto integra
 
 {system_prompt}
 
-<<<<<<< HEAD:src/engine/extractors/llm/ollama_client.py
-INSTRUÇÕES ESTRITAS DE EXTRAÇÃO:
-1. Retorne EXATAMENTE UM objeto JSON válido em conformidade com o JSON Schema fornecido.
-2. Não inclua texto, comentários ou formatações Markdown adicionais fora do JSON.
-3. PARTICIPANTES (participants):
-   - Extraia o NOME LIMPO de cada pessoa civil citada (sem prefixos narrativos como "Posteriormente identificado como", "a vítima", "o menor", "caroneiro da moto", "pelo senhor").
-   - CLASSIFICAÇÃO DE PAPEL (participation_type): Você só pode classificar em UMA destas 3 opções:
-     * "Vítima": Pessoa que sofreu a violência, teve bens subtraídos/furtados, foi alvejada, lesionada ou veio a óbito. Menores de idade vítimas de abuso/violência.
-     * "Testemunha": Pessoas que presenciaram os fatos, comunicantes da ocorrência e familiares (ex: pai, mãe, cônjuge) que relataram o ocorrido.
-     * "Autor/Suspeito": Autor do fato, indivíduo preso em flagrante, apreendido (inclusive menor infrator), formalmente indiciado, investigado, foragido ou abordado em atitude suspeita.
-   - DOCUMENTOS (document): Extraia o RG ou CPF completo se citado no texto.
-   - ALCUNHA (nickname): Extraia apelidos ou vulgos se mencionados (ex: "Caveirinha", "Gordinho").
-   - ANTECEDENTES (background): Resuma antecedentes criminais mencionados no texto para a pessoa (se houver).
-   - REGRA ANTI-PM: NUNCA inclua Policiais Militares (SD, SGT, CB, TEN, CAP, etc.) da guarnição ou delegados que atenderam a ocorrência como participantes.
-4. RESUMO (summary): Escreva um resumo narrativo claro e conciso em 1 parágrafo contendo data, local, dinâmica dos fatos, prisões e apreensões.
-5. LOCALIZAÇÃO: Extraia município (municipality), bairro (neighborhood), endereço completo (address) e unidade PM (police_unit).
-6. REGISTRO POLICIAL: Extraia o número de registro (registry_number), órgão (registry_agency) e ano (registry_year).
-=======
 ENTIDADES PRÉ-EXTRAÍDAS (ZERO-SHOT NER):
 Utilize a lista de entidades abaixo (Nomes, CPFs, RGs, Locais) identificadas no texto como base de consulta.
 ATENÇÃO: As entidades pré-extraídas podem conter trechos narrativos longos misturados aos nomes. Sua tarefa é higienizá-las e extrair ESTRITAMENTE o Nome e Sobrenome civil (ex: 'Elemar Soares da Silva'), removendo qualquer verbo, ação ou contexto narrativo (como 'uma mordida efetuada pelo condutor da motocicleta') que tenha vindo junto.
@@ -108,8 +86,6 @@ INSTRUÇÕES DE SAÍDA:
 5. RESUMO (summary): Escreva um resumo narrativo explicativo em 1 parágrafo com os fatos principais.
 6. LOCALIZAÇÃO: Extraia município (municipality), bairro (neighborhood), endereço completo (address) e unidade policial (police_unit) quando citados.
 7. REGISTRO POLICIAL: Extraia o número de registro (registry_number), órgão (registry_agency) e ano (registry_year) se identificados no texto.
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1:src/engine/llm/ollama_client.py
-
 JSON SCHEMA:
 {schema_str}
 

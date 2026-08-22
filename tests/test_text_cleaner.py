@@ -190,9 +190,6 @@ def test_clean_person_name():
 
     assert clean_person_name("Posteriormente Identificado Como Johnny Schroeder") == "Johnny Schroeder"
     assert clean_person_name("Estavam João Witor Fagundes Garmatz") == "João Witor Fagundes Garmatz"
-<<<<<<< HEAD
-=======
     assert clean_person_name("momento em que foi feito contato com Mariane") == "Mariane"
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
     assert clean_person_name("Vítima identificada como LUANA MARIA DE LIMA - RG: 8127846916") == "Luana Maria de Lima"
 

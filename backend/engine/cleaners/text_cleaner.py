@@ -378,72 +378,13 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
 
 def clean_person_name(name: str) -> str:
     """
-<<<<<<< HEAD
-    Remove ruídos narrativos, prefixos relacionais e policiais, documentos grudados
-    e normaliza a capitalização e pontuação dos nomes de participantes.
-=======
     Remove ruídos narrativos e prefixos policiais comuns de nomes de pessoas
-    utilizando o parser sintático nativo BrazilianNameParser.
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
-    """
+    utilizando o parser sintático nativo BrazilianNameParser.    """
     if not name:
         return ""
 
-<<<<<<< HEAD
-    # 1. Normaliza quebras de linha internas e espaços múltiplos
-    clean = re.sub(r'[\r\n\t]+', ' ', name)
-    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
-
-    # 2. Se contiver uma sequência pura em MAIÚSCULAS no meio ou final, extrai a parte em maiúsculas
-    upper_seq = re.findall(r'\b[A-ZÀ-Ú]{2,}(?:\s+(?:DA|DE|DO|DOS|DAS|E|[A-ZÀ-Ú]{2,}))+\b', clean)
-    if upper_seq:
-        longest = max(upper_seq, key=len)
-        if len(longest.split()) >= 2:
-            clean = longest
-
-    # 3. Remove sufixos de documentos e registros colados (RG, CPF, CNH, MATRÍCULA, etc.)
-    clean = re.sub(r'(?i)\s*(?:[-–—\s]*\s*(?:RG|CPF|ID\s*FUNC|MATR[ÍI]CULA|CNH|PROCESSO|BO|DP)[:\s\.\d\-/]+.*)$', '', clean)
-    clean = re.sub(r'(?i)\s+Rg$', '', clean)
-
-    # 4. Lista refinada de prefixos policiais, judiciais e relacionais a remover
-    prefix_patterns = [
-        r'.*?\bidentificad[oa]\s+(?:como\s+sendo|como|de\s+nome|por)?\s*',
-        r'.*?\bpres[oa]\s+(?:um\s+homem|uma\s+mulher|um\s+indiv[íi]duo|de\s+nome)?\s*',
-        r'.*?\b(?:padrasto|madrasta|irm[ãa][o]|filh[oa]|pai|m[ãa]e|espos[ao]|companheir[oa]|marido|mulher|patr[ãa]o|funcion[áa]ri[oa]|gerente|vizinh[oa]|caroneiro|condutor|motorista|propriet[áa]rio)\s+',
-        r'.*?\b(?:pm\s+|pme\s+|sd\s+|sgt\s+|cb\s+|ten\s+|cap\s+|maj\s+|cel\s+|policial(?:\s+militar|\s+civil|\s+penal)?\s+)',
-        r'.*?\b(?:momento\s+em\s+que\s+foi\s+feito\s+contato\s+com|feito\s+contato\s+com|em\s+contato\s+com|contato\s+com)\s*',
-        r'.*?\b(?:o\s+|a\s+)?(?:senhor[a]?|indiv[íi]duo|menor(?:\s+de\s+idade)?|crian[çc]a|v[íi]tima|suspeit[oa]|acusad[oa]|testemunha|comunicante|envolvid[oa]|autor[a]?)\s+',
-        r'^(?:estavam?|estava|havia|foram|foi|encontrava-se)\s+',
-        r'^(?:de\s+|da\s+|do\s+|dos\s+|das\s+|em\s+|no\s+|na\s+|a\s+|o\s+|e\s+|com\s+|pelo\s+|pela\s+)'
-    ]
-
-    for pat in prefix_patterns:
-        clean = re.sub(r'(?i)^' + pat, '', clean)
-
-    # 5. Limpa pontuações residuais nas pontas
-    clean = clean.strip(' ,.-–—:;"\'()[]{}*')
-
-    # 6. Formata capitalização limpa (Title Case)
-    clean = clean.title() if clean.isupper() or clean.islower() else clean
-
-    # 7. Formata preposições da língua portuguesa em minúsculas (de, da, do, dos, das, e)
-    tokens = clean.split()
-    if len(tokens) >= 2:
-        formatted_tokens = [tokens[0]]
-        for t in tokens[1:-1]:
-            if t.lower() in ["da", "de", "do", "dos", "das", "e"]:
-                formatted_tokens.append(t.lower())
-            else:
-                formatted_tokens.append(t)
-        formatted_tokens.append(tokens[-1])
-        clean = " ".join(formatted_tokens)
-
-    return clean
-=======
     from backend.engine.cleaners.name_parser import BrazilianNameParser
     return BrazilianNameParser.clean_name(name)
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
-
 
 def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     """
@@ -451,15 +392,6 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
     """
     if not text:
         return []
-<<<<<<< HEAD
-    try:
-        from backend.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
-        extractor = ParticipantExtractor()
-        participants, _ = extractor.extract_participants(text)
-        return participants
-    except Exception:
-        return []
-=======
 
     from backend.engine.cleaners.name_parser import BrazilianNameParser
 
@@ -522,5 +454,3 @@ def extract_fallback_participants(text: str) -> List[Dict[str, Any]]:
             })
 
     return participants
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
-

@@ -5,13 +5,13 @@ from pathlib import Path
 from queue import Queue, Empty
 from typing import Callable, Optional, Set
 
-from backend.engine.parsers.docling_reader import DoclingPdfReader
-from backend.engine.llm.ollama_client import OllamaClient
+from backend.engine.parsers.pdf_reader import PdfReader
+from backend.engine.extractors.llm.ollama_client import OllamaClient
 from backend.database.sqlite_repo import SqliteRepo
 from backend.database.sqlite_person_repo import SqlitePersonRepo
 from backend.task_manager.watcher.folder_watcher import FolderWatcher
 from backend.task_manager.etl.etl_service import EtlService
-from backend.engine.rules.relint_rule import RelintRule
+from backend.engine.extractors.llm.rules.relint_rule import RelintRule
 from backend.task_manager.registry.json_processed_registry import JsonProcessedRegistry
 from backend.desktop.controllers.web_app_manager import WebAppManager
 
@@ -48,7 +48,7 @@ class MainController:
         self.session_skipped_files: Set[str] = set()
 
         # Injeção de Dependências do Domínio e Aplicação (SQLite)
-        self.pdf_reader = DoclingPdfReader()
+        self.pdf_reader = PdfReader()
         self.use_llm: bool = True
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()

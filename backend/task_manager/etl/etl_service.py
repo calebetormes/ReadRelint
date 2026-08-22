@@ -272,53 +272,15 @@ class EtlService:
 
             raw_participants = response_dict.get("participants", [])
             if not raw_participants:
-<<<<<<< HEAD
-                from backend.engine.extractors.deterministic.participants.participant_extractor import ParticipantExtractor
-                extractor = ParticipantExtractor()
-                raw_participants, _ = extractor.extract_participants(final_content)
-=======
                 from backend.engine.cleaners.text_cleaner import extract_fallback_participants
                 # Regex fallback de último recurso caso GLiNER e LLM falhem
                 raw_participants = extract_fallback_participants(final_content)
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
-
             from backend.engine.cleaners.name_parser import BrazilianNameParser
 
             filtered_participants = []
             seen_participant_names = set()
             
             for p in raw_participants:
-<<<<<<< HEAD
-                p_name = (p.get("name") if isinstance(p, dict) else getattr(p, "name", "")) or ""
-                clean_name = clean_person_name(p_name)
-                if not clean_name or is_blacklisted_name(clean_name):
-                    continue
-
-                norm_key = clean_name.upper()
-                if norm_key in seen_participant_names:
-                    continue
-                seen_participant_names.add(norm_key)
-
-                p_type = (p.get("participation_type") if isinstance(p, dict) else getattr(p, "participation_type", "")) or ""
-                if str(p_type) in ["Parte da Guarnição", "GUARNICAO", "Parte da Guarnicao"] or not p_type:
-                    p_type = detect_participation_role(final_content, clean_name)
-
-                p_doc = (p.get("document") if isinstance(p, dict) else getattr(p, "document", "")) or ""
-                if not p_doc:
-                    p_doc = extract_document_near_name(final_content, clean_name)
-
-                p_nick = (p.get("nickname") if isinstance(p, dict) else getattr(p, "nickname", "")) or ""
-                p_bg = (p.get("background") if isinstance(p, dict) else getattr(p, "background", "")) or ""
-
-                filtered_participants.append({
-                    "name": clean_name,
-                    "nickname": p_nick,
-                    "document": p_doc,
-                    "participation_type": p_type,
-                    "background": p_bg,
-                    "photo_path": None
-                })
-=======
                 p_dict = p if isinstance(p, dict) else p.model_dump()
                 raw_p_name = p_dict.get("name", "") or ""
                 p_type = p_dict.get("participation_type", "") or ""
@@ -343,8 +305,6 @@ class EtlService:
                     
                 if not is_pm and clean_p_name.strip():
                     filtered_participants.append(p_dict)
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
-
             # 6. Extração de Imagens do PDF (Galeria do RELINT)
             import re
             import hashlib
