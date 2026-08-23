@@ -13,7 +13,7 @@ from backend.task_manager.watcher.folder_watcher import FolderWatcher
 from backend.task_manager.etl.etl_service import EtlService
 from backend.engine.extractors.llm.rules.relint_rule import RelintRule
 from backend.task_manager.registry.json_processed_registry import JsonProcessedRegistry
-from backend.desktop.controllers.web_app_manager import WebAppManager
+from desktop.controllers.web_app_manager import WebAppManager
 
 class MainController:
     """
@@ -53,7 +53,7 @@ class MainController:
         self.llm_processor = OllamaClient()
         self.active_rule = RelintRule()
         
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = Path(__file__).resolve().parents[2]
         db_path = project_root / "data" / "relints.db"
         self.db_repo = SqliteRepo(db_path)
         self.person_repo = SqlitePersonRepo(db_path)
@@ -156,7 +156,7 @@ class MainController:
         # 3. Limpa arquivos de mídia salvos
         try:
             import shutil
-            project_root = Path(__file__).resolve().parents[4]
+            project_root = Path(__file__).resolve().parents[2]
             media_dir = project_root / "data" / "media"
             if media_dir.exists():
                 shutil.rmtree(media_dir)

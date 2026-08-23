@@ -5,6 +5,7 @@ Responsabilidade única: iniciar, monitorar e encerrar o servidor Uvicorn
 em-processo (na mesma memória e thread pool que a UI Desktop),
 garantindo sincronização 100% bidirecional em tempo real entre Tkinter e Web.
 """
+# Comentários em pt-BR e código em inglês, de acordo com as regras de idioma do usuário.
 import os
 import sys
 import time

@@ -14,7 +14,7 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - **Seletor Nativo do Windows (`📁 Procurar Pasta no PC`):** Aciona a janela `filedialog.askdirectory()` do Windows via API local (`POST /api/v1/monitoring/browse`).
   - **Pausa Imediata de Leitura:** Limpeza instantânea da fila de processamento (`processing_queue.queue.clear()`).
   - **Relatório em 2 Colunas:** Gauges SVG verticais na coluna esquerda e lista de RELINTs com scroll adaptativo na coluna direita.
-- [x] **Redesign Compacto do App Desktop (`painel.py` - CustomTkinter Tray Launcher):** Interface unificada em CustomTkinter para iniciar/parar serviços em background de forma silenciosa e controle de bandeja (System Tray) via `pystray`.
+- [x] **Painel de Controle Desktop Nativo em PyQt6 (`painel.py` / `desktop/ui/pyqt_app.py`):** Painel desktop construído em **PyQt6 (Qt6 nativo)** com tema escuro moderno (QSS), alta estabilidade e sem quebras de API. Implementa seleção nativa de pastas (`QFileDialog`), barras de progresso gerais e de sessão, controle de ciclo de vida de serviços (FastAPI Backend e SvelteKit Frontend via subprocess), alternância do motor Ollama/LLM, terminal de Logs em tempo real com auto-scroll thread-safe, e aba de Relatórios com histórico e reprocessamento direto.
 - [x] **Arquitetura de Especialidades Polimórficas:** Modelo `HomicideReport` estendendo `IncidentReport` com extração especializada (motivação, registro policial, unidade BPM) persistida no SQLite.
 - [x] **Classificador Determinístico (`bm_classifier.py`):** Classificação regex por especificidade pós-LLM e fallback para processamento sem IA.
 - [x] **Dashboard Web Completo (Resend Design System):**

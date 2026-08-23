@@ -18,7 +18,7 @@ def set_main_controller(controller):
 def get_main_controller():
     global _main_controller_instance
     if _main_controller_instance is None:
-        from backend.desktop.controllers.main_controller import MainController
+        from desktop.controllers.main_controller import MainController
         _main_controller_instance = MainController()
     return _main_controller_instance
 
