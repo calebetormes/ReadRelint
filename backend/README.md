@@ -19,3 +19,4 @@ Este diretório contém todo o código-fonte da aplicação **ReadRelint**, orga
   * `etl/`: Pipeline de ingestão, orquestração e sanitização (`EtlService`).
   * `watcher/`: Monitoramento de diretório de arquivos no Windows via `watchdog` (`FolderWatcher`).
   * `registry/`: Registro de histórico de processamento e proteção de curadoria humana (`JsonProcessedRegistry`).
+  .
