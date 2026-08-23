@@ -83,6 +83,8 @@ Sempre que concluir grandes blocos de tarefas:
 - **[ADR-070] Desacoplamento Total de UI a 60 FPS com ServiceWatcher e Fila de Logs Typewriter:** Eliminação de qualquer chamada síncrona a processos (`netstat`) na thread principal através de um `ServiceWatcher` rodando em background. Implementação de fila de logs em buffer (`collections.deque`) descarregada via `QTimer` e efeito *Typewriter* inteligente (auto-speed conforme carga) para manter a responsividade da UI, evitar travamentos de QTextEdit e impedir crashes de timeout na aplicação (`QTextCursor.MoveOperation`). Janela livremente redimensionável com a coluna esquerda estritamente fixada em 410px.
 - **[ADR-072] Unificação do Ciclo de Vida do Servidor Web (FastAPI + SvelteKit):** Controle conjunto do FastAPI (:8000) e SvelteKit (:5173) acionado sob demanda no botão da Aba 1 ("Iniciar & Abrir Dashboard" / "Parar Dashboard Web").
 - **[ADR-073] Otimização de Encerramento Assíncrono de Serviços (Zero Lag UI):** Reformulação da Aba 2 no PyQt6 (`desktop/ui/pyqt_app.py`) mantendo cartões estritamente informativos de status (sem botões redundantes). Ocultamento instantâneo da janela (`self.hide()`) e migração do desligamento de subprocessos (`npm/vite`) e servidores para thread secundária em `_force_quit_app()`, eliminando congelamentos de interface na saída do app.
+- **[ADR-074] Encapsulamento dos Temas no Frontend SvelteKit (`frontend/src/lib/themes`):** Realocação da pasta de temas `themes/` da raiz do repositório para `frontend/src/lib/themes/`. Os temas CSS (`resend-dark`, `resend-light`) passam a ser importados via `@import` no `variables.css` dentro do fluxo do SvelteKit ($lib), isolando os ativos visuais no escopo da aplicação frontend.
+
 
 
 

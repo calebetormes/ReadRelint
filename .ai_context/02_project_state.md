@@ -3,7 +3,7 @@
 Este documento documenta o que já foi construído, o que está sendo finalizado no momento e o backlog de tarefas futuras do **ReadRelint**.
 
 ## 1. O que já foi implementado (Checklist Final)
-- [x] **Estrutura de Pastas Simplificada:** Organização limpa na raiz do projeto: `backend/` (contendo api, core, database, engine, task_manager e desktop controllers), `frontend/` (SvelteKit SPA integrado), `tests/` (suíte de testes) e `themes/` (camada de temas desacoplada).
+- [x] **Estrutura de Pastas Simplificada:** Organização limpa na raiz do projeto: `backend/` (contendo api, core, database, engine, task_manager e desktop controllers), `frontend/` (SvelteKit SPA integrado com temas em `src/lib/themes`), `tests/` e `data/`.
 - [x] **Banco de Dados Relacional SQLite (WAL):** SQLite nativo (`relints.db`) com tabelas em Português (`relints`, `pessoas`, `relint_participantes`, `homicidio_detalhes`, `relint_imagens`) e auto-migração de schema.
 - [x] **Processamento Híbrido (Ollama Local / Pipeline Determinístico):** Suporte a modo com IA e 100% sem IA via chave/switch no app Desktop e na Web, com monitor de saúde do Ollama em tempo real (heartbeat) e fallback gracioso.
 - [x] **Rastreabilidade de Método de Leitura (`extraction_method`):** Gravação explícita de `"Ollama (IA)"` vs `"Regex (Sem IA)"` no banco relacional e exibição de badges coloridos na interface.

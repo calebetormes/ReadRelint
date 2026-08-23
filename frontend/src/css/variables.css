@@ -9,8 +9,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Camada de Temas Desacoplada (Nova Estrutura Modular) */
-@import url('../themes/resend-dark/theme.css');
-@import url('../themes/resend-light/theme.css');
+@import url('../lib/themes/resend-dark/theme.css');
+@import url('../lib/themes/resend-light/theme.css');
 @import url('./themes/theme-emerald-dark.css');
 @import url('./themes/theme-nord-dark.css');
 
