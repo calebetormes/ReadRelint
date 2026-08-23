@@ -77,59 +77,35 @@ def get_monitoring_status(controller=Depends(get_main_controller)) -> Dict[str, 
 
 @router.post("/browse")
 def browse_folder_dialog(controller=Depends(get_main_controller)) -> Dict[str, Any]:
-    """
-    Solicita ao painel.py que abra o filedialog nativo via IPC por arquivos.
-    O painel.py detecta o arquivo de sinalização, abre a janela e escreve o resultado.
-    """
-    import time as _time
+    """Abre a janela nativa do Windows (filedialog) no servidor local para selecionar pasta."""
+    import tkinter as tk
+    from tkinter import filedialog
+    import concurrent.futures
 
-    # Caminhos dos arquivos IPC
-    project_root = Path(__file__).resolve().parents[3]
-    data_dir = project_root / "data"
-    data_dir.mkdir(exist_ok=True)
-    request_flag = data_dir / "browse_request.flag"
-    response_file = data_dir / "browse_response.txt"
+    def _open_dialog():
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        folder = filedialog.askdirectory(title="Selecione a Pasta dos RELINTs")
+        root.destroy()
+        return folder
 
-    # Remove resposta antiga se existir
-    response_file.unlink(missing_ok=True)
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_open_dialog)
+            selected_path = future.result(timeout=120)
 
-    # Sinaliza ao painel.py para abrir o dialog
-    request_flag.touch()
-
-    # Aguarda resposta do painel.py (timeout de 120 segundos)
-    timeout = 120
-    interval = 0.3
-    elapsed = 0.0
-
-    # Verifica primeiro se o painel está em execução (flag some em até 2s se ele estiver rodando)
-    _time.sleep(2.0)
-    if request_flag.exists():
-        request_flag.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=503,
-            detail="Painel de controle não está em execução. Abra o Iniciar-Painel.bat primeiro."
-        )
-
-    while elapsed < timeout:
-        if response_file.exists():
-            selected_path = response_file.read_text(encoding="utf-8").strip()
-            response_file.unlink(missing_ok=True)
-
-            if selected_path:
-                controller.set_monitoring_path(selected_path)
-                return {
-                    "status": "success",
-                    "path": selected_path,
-                    "total_files": controller.total_files_in_folder,
-                    "skipped_count": controller.skipped_count,
-                }
-            return {"status": "cancelled", "path": ""}
-
-        _time.sleep(interval)
-        elapsed += interval
-
-    request_flag.unlink(missing_ok=True)
-    raise HTTPException(status_code=408, detail="Timeout: nenhuma pasta foi selecionada em 120 segundos.")
+        if selected_path:
+            controller.set_monitoring_path(selected_path)
+            return {
+                "status": "success",
+                "path": selected_path,
+                "total_files": controller.total_files_in_folder,
+                "skipped_count": controller.skipped_count,
+            }
+        return {"status": "cancelled", "path": ""}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao abrir seletor de pasta: {exc}")
 
 
 @router.post("/path")
