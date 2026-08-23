@@ -836,30 +836,20 @@ class MainWindow(QMainWindow):
         serv_grid = QHBoxLayout()
         serv_grid.setSpacing(12)
 
-        # Card Backend
+        # Card 1: Backend FastAPI (Apenas Status)
         vbox_b = QVBoxLayout()
         vbox_b.addWidget(QLabel("Servidor FastAPI (API)"))
         self._lbl_backend_status = QLabel("● Parado")
         self._lbl_backend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
-        self._btn_backend = QPushButton("Iniciar API")
-        self._btn_backend.setFixedHeight(28)
-        self._btn_backend.setStyleSheet(BTN_SERVICE_START_STYLE)
-        self._btn_backend.clicked.connect(self._toggle_backend)
         vbox_b.addWidget(self._lbl_backend_status)
-        vbox_b.addWidget(self._btn_backend)
         serv_grid.addWidget(make_card(vbox_b))
 
-        # Card Frontend
+        # Card 2: Frontend SvelteKit (Apenas Status)
         vbox_f = QVBoxLayout()
         vbox_f.addWidget(QLabel("Frontend (SvelteKit)"))
         self._lbl_frontend_status = QLabel("● Parado")
         self._lbl_frontend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
-        self._btn_frontend = QPushButton("Iniciar Frontend")
-        self._btn_frontend.setFixedHeight(28)
-        self._btn_frontend.setStyleSheet(BTN_SERVICE_START_STYLE)
-        self._btn_frontend.clicked.connect(self._toggle_frontend)
         vbox_f.addWidget(self._lbl_frontend_status)
-        vbox_f.addWidget(self._btn_frontend)
         serv_grid.addWidget(make_card(vbox_f))
 
         # Card Monitor / Pasta
@@ -916,7 +906,7 @@ class MainWindow(QMainWindow):
         return self._cached_backend_running or self._cached_frontend_running
 
     def _stop_frontend_process(self):
-        """Encerra o processo do frontend e garante que nenhum processo permaneça na porta 5173."""
+        """Encerra o processo do frontend e garante que nenhum processo permaneça na porta 5173 sem travar a UI."""
         if self.frontend_process:
             try:
                 subprocess.call(
@@ -927,7 +917,8 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
             self.frontend_process = None
-        kill_port_process(5173)
+        else:
+            kill_port_process(5173)
         self._cached_frontend_running = False
 
     def _toggle_dashboard_unified(self):
@@ -989,80 +980,9 @@ class MainWindow(QMainWindow):
 
             threading.Thread(target=_async_start, daemon=True).start()
 
-    def _toggle_backend(self):
-        if self.controller.web_app_manager.is_running:
-            self._btn_backend.setText("⏳ Parando...")
-            self._btn_backend.setEnabled(False)
-            QApplication.processEvents()
-
-            def _async_stop_be():
-                try:
-                    self.controller.close_web_dashboard()
-                    self._cached_backend_running = False
-                    self._queue_log("⛔ Servidor FastAPI parado.")
-                finally:
-                    self._stats_emitter.stats_updated.emit()
-                    self._service_watcher.check_once()
-
-            threading.Thread(target=_async_stop_be, daemon=True).start()
-        else:
-            self._btn_backend.setText("⏳ Iniciando...")
-            self._btn_backend.setEnabled(False)
-            QApplication.processEvents()
-
-            def _async_start_be():
-                try:
-                    self.controller.open_web_dashboard()
-                    self._cached_backend_running = True
-                    self._queue_log("🌐 Servidor FastAPI iniciado.")
-                finally:
-                    self._stats_emitter.stats_updated.emit()
-                    self._service_watcher.check_once()
-
-            threading.Thread(target=_async_start_be, daemon=True).start()
-
-    def _toggle_frontend(self):
-        if self._cached_frontend_running:
-            self._btn_frontend.setText("⏳ Parando...")
-            self._btn_frontend.setEnabled(False)
-            QApplication.processEvents()
-
-            def _async_stop_fe():
-                try:
-                    self._stop_frontend_process()
-                    self._queue_log("⛔ Servidor Frontend SvelteKit parado.")
-                finally:
-                    self._stats_emitter.stats_updated.emit()
-                    self._service_watcher.check_once()
-
-            threading.Thread(target=_async_stop_fe, daemon=True).start()
-        else:
-            self._btn_frontend.setText("⏳ Iniciando...")
-            self._btn_frontend.setEnabled(False)
-            QApplication.processEvents()
-
-            def _async_start_fe():
-                try:
-                    kill_port_process(5173)
-                    frontend_dir = str(project_root / "frontend")
-                    self._queue_log("🚀 Iniciando dev server do SvelteKit...")
-                    self.frontend_process = subprocess.Popen(
-                        "npm run dev",
-                        cwd=frontend_dir,
-                        shell=True,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        creationflags=subprocess.CREATE_NO_WINDOW,
-                    )
-                    self._cached_frontend_running = True
-                    self._queue_log("🟢 Servidor Frontend SvelteKit ativo em http://localhost:5173")
-                except Exception as exc:
-                    self._queue_log(f"⚠️ Falha ao iniciar Frontend: {exc}")
-                finally:
-                    self._stats_emitter.stats_updated.emit()
-                    self._service_watcher.check_once()
-
-            threading.Thread(target=_async_start_fe, daemon=True).start()
+    def _toggle_web_service(self):
+        """Alterna a inicialização e encerramento unificados do FastAPI + SvelteKit."""
+        self._toggle_dashboard_unified()
 
     def _initial_llm_check(self):
         """Verifica na inicialização se a LLM/Ollama está operacional. Se não estiver, desliga o botão."""
@@ -1162,39 +1082,42 @@ class MainWindow(QMainWindow):
         self._stats_emitter.stats_updated.emit()
 
     def _force_quit_app(self):
-        """Encerra de fato todos os serviços, threads e finaliza a aplicação completamente."""
+        """Encerra de fato todos os serviços, threads e finaliza a aplicação completamente com resposta visual instantânea."""
         if self._is_quitting:
             return
         self._is_quitting = True
+
+        # Oculta a janela e o ícone do tray instantaneamente (resposta de UI de 0ms)
+        self.hide()
+        if hasattr(self, "_tray_icon") and self._tray_icon:
+            self._tray_icon.hide()
 
         self._service_watcher.stop()
         self._typing_timer.stop()
         self._spinner_timer.stop()
 
-        self._queue_log("⛔ Encerrando todos os serviços e finalizando aplicação...")
-
-        # Para monitoramento
-        if hasattr(self.controller, "is_monitoring") and self.controller.is_monitoring:
+        def _async_shutdown():
             try:
-                self.controller.stop_monitoring()
-            except Exception:
-                pass
+                # Para monitoramento
+                if hasattr(self.controller, "is_monitoring") and self.controller.is_monitoring:
+                    try:
+                        self.controller.stop_monitoring()
+                    except Exception:
+                        pass
 
-        # Para FastAPI backend
-        if self.controller.web_app_manager.is_running:
-            try:
-                self.controller.close_web_dashboard()
-            except Exception:
-                pass
+                # Para FastAPI backend
+                if self.controller.web_app_manager.is_running:
+                    try:
+                        self.controller.close_web_dashboard()
+                    except Exception:
+                        pass
 
-        # Para Frontend SvelteKit
-        self._stop_frontend_process()
+                # Para Frontend SvelteKit
+                self._stop_frontend_process()
+            finally:
+                QApplication.quit()
 
-        # Oculta ícone do tray
-        if hasattr(self, "_tray_icon"):
-            self._tray_icon.hide()
-
-        QApplication.quit()
+        threading.Thread(target=_async_shutdown, daemon=True).start()
 
     # =========================================================================
     # Atualização de Estados Visuais & Thread-Safety (60 FPS)
@@ -1218,37 +1141,21 @@ class MainWindow(QMainWindow):
                 self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_START_STYLE)
             self._btn_open_dashboard.setEnabled(True)
 
-        # Backend Status na Aba 2
+        # Backend Status na Aba 2 (Apenas Status)
         if self._cached_backend_running:
-            self._lbl_backend_status.setText("● Rodando (:8000)")
+            self._lbl_backend_status.setText("🟢 Rodando (:8000)")
             self._lbl_backend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
-            if not self._btn_backend.isEnabled() or "⏳" not in self._btn_backend.text():
-                self._btn_backend.setText("Parar API")
-                self._btn_backend.setStyleSheet(BTN_SERVICE_STOP_STYLE)
-                self._btn_backend.setEnabled(True)
         else:
             self._lbl_backend_status.setText("● Parado")
             self._lbl_backend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
-            if not self._btn_backend.isEnabled() or "⏳" not in self._btn_backend.text():
-                self._btn_backend.setText("Iniciar API")
-                self._btn_backend.setStyleSheet(BTN_SERVICE_START_STYLE)
-                self._btn_backend.setEnabled(True)
 
-        # Frontend Status na Aba 2
+        # Frontend Status na Aba 2 (Apenas Status)
         if self._cached_frontend_running:
-            self._lbl_frontend_status.setText("● Rodando (:5173)")
+            self._lbl_frontend_status.setText("🟢 Rodando (:5173)")
             self._lbl_frontend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
-            if not self._btn_frontend.isEnabled() or "⏳" not in self._btn_frontend.text():
-                self._btn_frontend.setText("Parar Frontend")
-                self._btn_frontend.setStyleSheet(BTN_SERVICE_STOP_STYLE)
-                self._btn_frontend.setEnabled(True)
         else:
             self._lbl_frontend_status.setText("● Parado")
             self._lbl_frontend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
-            if not self._btn_frontend.isEnabled() or "⏳" not in self._btn_frontend.text():
-                self._btn_frontend.setText("Iniciar Frontend")
-                self._btn_frontend.setStyleSheet(BTN_SERVICE_START_STYLE)
-                self._btn_frontend.setEnabled(True)
 
     def _animate_reading_spinner(self):
         """Atualiza a animação inline de spinner enquanto um arquivo estiver sendo lido."""
