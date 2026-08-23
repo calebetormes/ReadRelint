@@ -148,7 +148,7 @@ class EtlService:
             # Extração segura do histórico usando regra 11 (pós ANEXOS)
             history_from_annex = extract_history_from_annex(raw_text)
             
-            questions = rule.questions if rule else None
+            questions = rule.questions if rule and rule.questions is not None else {}
             schema_model = None
             if rule and hasattr(rule, 'get_schema_model'):
                 schema_model = rule.get_schema_model()
@@ -279,6 +279,7 @@ class EtlService:
 
             filtered_participants = []
             seen_participant_names = set()
+            pm_keywords = ["PM", "POLICIAL", "POLICIA", "TENENTE", "CAPITAO", "MAJOR", "CORONEL", "SUBTENENTE"]
             
             for p in raw_participants:
                 p_dict = p if isinstance(p, dict) else p.model_dump()
@@ -416,6 +417,8 @@ class EtlService:
 
         except Exception as e:
             error_msg = f"Erro ao processar {filename}: {str(e)}"
+            if rule:
+                self.processed_registry.register_processed(filename, rule.name, f"error: {str(e)}")
             if on_error:
                 on_error(error_msg)
             return None

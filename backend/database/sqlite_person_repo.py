@@ -154,9 +154,6 @@ class SqlitePersonRepo(IPersonRepo):
             cursor.execute("SELECT * FROM pessoas WHERE chave_pessoa = ? LIMIT 1;", (person_id,))
             row = cursor.fetchone()
             if not row:
-                cursor.execute("SELECT * FROM pessoas WHERE person_key = ? LIMIT 1;", (person_id,))
-                row = cursor.fetchone()
-            if not row:
                 return None
             return self._build_person_from_row(conn, row)
 

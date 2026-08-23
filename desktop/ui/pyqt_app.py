@@ -19,7 +19,10 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QTextCursor, QCloseEvent, QPainter, QPen, QColor, QFont, QIcon, QPixmap
+from PyQt6.QtGui import (
+    QTextCursor, QCloseEvent, QPainter, QPen, QColor,
+    QFont, QIcon, QPixmap, QTextCharFormat, QAction
+)
 
 from desktop.controllers.main_controller import MainController
 from backend.api.dependencies import get_main_controller
@@ -547,22 +550,27 @@ class MainWindow(QMainWindow):
         # Inicializa estado visual inicial
         self._update_etl_stats()
         self._queue_log("Painel de controle iniciado com sucesso.")
+        self._initial_llm_check()
 
     def _setup_system_tray(self):
         """Configura o ícone e menu de contexto na bandeja do sistema."""
         self._tray_icon = QSystemTrayIcon(create_app_icon(), self)
         tray_menu = QMenu()
 
-        action_open = tray_menu.addAction("📂  Abrir Painel")
+        # Instancia ações QAction explicitamente para evitar NoneType no PyQt6
+        action_open = QAction("📂  Abrir Painel", self)
         action_open.triggered.connect(self.show_and_raise)
+        tray_menu.addAction(action_open)
 
-        action_dashboard = tray_menu.addAction("🌐  Abrir Dashboard Web")
+        action_dashboard = QAction("🌐  Abrir Dashboard Web", self)
         action_dashboard.triggered.connect(self._toggle_dashboard_unified)
+        tray_menu.addAction(action_dashboard)
 
         tray_menu.addSeparator()
 
-        action_quit = tray_menu.addAction("⛔  Encerrar Todos os Serviços & Sair")
+        action_quit = QAction("⛔  Encerrar Todos os Serviços & Sair", self)
         action_quit.triggered.connect(self._force_quit_app)
+        tray_menu.addAction(action_quit)
 
         self._tray_icon.setContextMenu(tray_menu)
         self._tray_icon.activated.connect(self._on_tray_activated)
@@ -697,6 +705,12 @@ class MainWindow(QMainWindow):
         self._bar_reading_active.setFixedHeight(4)
         self._bar_reading_active.setTextVisible(False)
         self._bar_reading_active.setRange(0, 0)
+        
+        # Preserva o espaço de 4px no layout mesmo quando oculta, evitando pulos na tela
+        sp = self._bar_reading_active.sizePolicy()
+        sp.setRetainSizeWhenHidden(True)
+        self._bar_reading_active.setSizePolicy(sp)
+
         self._bar_reading_active.setStyleSheet("""
         QProgressBar {
             background-color: #18181b;
@@ -1050,6 +1064,21 @@ class MainWindow(QMainWindow):
 
             threading.Thread(target=_async_start_fe, daemon=True).start()
 
+    def _initial_llm_check(self):
+        """Verifica na inicialização se a LLM/Ollama está operacional. Se não estiver, desliga o botão."""
+        self._btn_llm_toggle.setText("🧠  Verificando IA...")
+        self._btn_llm_toggle.setEnabled(False)
+
+        def _async_check():
+            try:
+                # Se use_llm estiver True por padrão, testa a conexão e se falhar desliga
+                if self.controller.use_llm:
+                    self.controller.set_use_llm(True)
+            finally:
+                self._stats_emitter.stats_updated.emit()
+
+        threading.Thread(target=_async_check, daemon=True).start()
+
     def _toggle_llm_mode(self):
         self._btn_llm_toggle.setText("⏳  Alternando IA...")
         self._btn_llm_toggle.setEnabled(False)
@@ -1123,9 +1152,14 @@ class MainWindow(QMainWindow):
                 try:
                     self.controller.reset_and_reprocess_all()
                 finally:
-                    self._stats_emitter.stats_updated.emit()
+                    QTimer.singleShot(0, self._finish_reset_btn)
 
             threading.Thread(target=_async_reset_data, daemon=True).start()
+
+    def _finish_reset_btn(self):
+        self._btn_reset.setText("🧹  Limpar Base & Re-processar Tudo")
+        self._btn_reset.setEnabled(True)
+        self._stats_emitter.stats_updated.emit()
 
     def _force_quit_app(self):
         """Encerra de fato todos os serviços, threads e finaliza a aplicação completamente."""
@@ -1284,6 +1318,7 @@ class MainWindow(QMainWindow):
             self._lbl_monitor_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
 
         if self.controller.monitoring_path:
+            self._txt_path.setText(self.controller.monitoring_path)
             self._lbl_folder_info.setText(f"Pasta: {Path(self.controller.monitoring_path).name}")
 
         # Atualiza labels estáticas caso não haja arquivo ativo
@@ -1310,21 +1345,56 @@ class MainWindow(QMainWindow):
 
         try:
             reports = self.controller.db_repo.get_all()
-            for rpt in reports:
-                is_llm = (
-                    "Ollama" in getattr(rpt, "extraction_method", "")
-                    or "IA" in getattr(rpt, "extraction_method", "")
-                )
-                method_text = "⚡ IA (Ollama)" if is_llm else "⚙️ Sem IA (Regex)"
-                method_style = (
-                    "background-color: #142e23; color: #6ee7b7; border: 1px solid #047857; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
-                    if is_llm
-                    else "background-color: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
-                )
+            all_registry = self.controller.processed_registry.get_all_records()
+            active_rule = getattr(self.controller.active_rule, "name", "Homicídio")
 
-                # Badge de status de sucesso da leitura
-                status_text = "🟢 Lido com Sucesso"
-                status_style = "background-color: #064e3b; color: #a7f3d0; border: 1px solid #059669; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+            processed_db_files = {rpt.source_file for rpt in reports}
+            items_to_render = []
+
+            # Sucessos e relatórios salvos no banco de dados
+            for rpt in reports:
+                ext_method = getattr(rpt, "extraction_method", "") or ""
+                is_llm = "Sem IA" not in ext_method and ("Ollama" in ext_method or "IA" in ext_method)
+                items_to_render.append({
+                    "filename": rpt.source_file,
+                    "is_llm": is_llm,
+                    "is_error": False,
+                    "error_msg": None,
+                })
+
+            # Relatórios que falharam na leitura (registrados no histórico com erro)
+            for fn, rule_dict in all_registry.items():
+                if isinstance(rule_dict, dict) and active_rule in rule_dict:
+                    status_str = str(rule_dict[active_rule]).lower()
+                    if ("error" in status_str or "falha" in status_str) and fn not in processed_db_files:
+                        items_to_render.append({
+                            "filename": fn,
+                            "is_llm": False,
+                            "is_error": True,
+                            "error_msg": rule_dict[active_rule],
+                        })
+
+            for item_data in items_to_render:
+                fn = item_data["filename"]
+                is_llm = item_data["is_llm"]
+                is_error = item_data["is_error"]
+
+                if is_error:
+                    method_text = "⚙️ Processamento"
+                    method_style = "background-color: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+                    status_text = "🔴 Falha na Leitura"
+                    status_style = "background-color: #451a1a; color: #fca5a5; border: 1px solid #dc2626; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+                    file_style = "font-weight: 600; font-size: 11px; color: #fca5a5;"
+                else:
+                    method_text = "⚡ IA (Ollama)" if is_llm else "⚙️ Sem IA (Regex)"
+                    method_style = (
+                        "background-color: #142e23; color: #6ee7b7; border: 1px solid #047857; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+                        if is_llm
+                        else "background-color: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+                    )
+                    status_text = "🟢 Lido com Sucesso"
+                    status_style = "background-color: #064e3b; color: #a7f3d0; border: 1px solid #059669; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;"
+                    file_style = "font-weight: 600; font-size: 11px; color: #ffffff;"
 
                 btn_reprocess_style = """
                 QPushButton {
@@ -1350,8 +1420,10 @@ class MainWindow(QMainWindow):
                 card_layout.setContentsMargins(12, 8, 12, 8)
                 card_layout.setSpacing(12)
 
-                lbl_file = QLabel(rpt.source_file)
-                lbl_file.setStyleSheet("font-weight: 700; font-size: 13px; color: #ffffff;")
+                lbl_file = QLabel(fn)
+                lbl_file.setStyleSheet(file_style)
+                lbl_file.setWordWrap(True)
+                lbl_file.setToolTip(fn)
 
                 badge_method = QLabel(method_text)
                 badge_method.setStyleSheet(method_style)
@@ -1366,7 +1438,7 @@ class MainWindow(QMainWindow):
                 btn_reprocess.setFixedHeight(32)
                 btn_reprocess.setMinimumWidth(115)
                 btn_reprocess.setStyleSheet(btn_reprocess_style)
-                filename = rpt.source_file
+                filename = fn
                 btn_reprocess.clicked.connect(
                     lambda _, f=filename: self.controller.reprocess_file_history(
                         f, self.controller.active_rule.name
@@ -1380,6 +1452,8 @@ class MainWindow(QMainWindow):
 
                 card = QFrame()
                 card.setProperty("card", True)
+                if is_error:
+                    card.setStyleSheet("QFrame[card='true'] { background-color: #1c1010; border: 1px solid #7f1d1d; border-radius: 8px; }")
                 card.setLayout(card_layout)
                 self._reports_layout.insertWidget(self._reports_layout.count() - 1, card)
 
@@ -1412,16 +1486,20 @@ class MainWindow(QMainWindow):
             else:
                 return
 
-        # Auto-speed inteligente para nunca atrasar logs
+        # Auto-speed ultra-rápido para concluir o log sincronizado com a leitura
         q_len = len(self._log_queue)
-        if q_len > 20:
+        is_reading = bool(getattr(self.controller, "current_filename", None))
+
+        if not is_reading and q_len > 0:
+            chunk_size = 300  # Conclui os logs instantaneamente ao encerrar a leitura
+        elif q_len > 10:
+            chunk_size = 150
+        elif q_len > 3:
+            chunk_size = 80
+        elif q_len > 1:
             chunk_size = 40
-        elif q_len > 8:
-            chunk_size = 14
-        elif q_len > 2:
-            chunk_size = 6
         else:
-            chunk_size = 2
+            chunk_size = 25
 
         remaining = len(self._typing_current_line) - self._typing_char_idx
         step = min(chunk_size, remaining)
@@ -1431,6 +1509,23 @@ class MainWindow(QMainWindow):
 
         cursor = self._log_view.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
+
+        # Destaca em vermelho vívido (#ef4444) qualquer mensagem de erro no console
+        char_format = QTextCharFormat()
+        lower_line = self._typing_current_line.lower()
+        if any(kw in lower_line for kw in ["erro", "error", "falha", "failed", "exception", "traceback", "⛔"]):
+            char_format.setForeground(QColor("#ef4444"))
+            char_format.setFontWeight(700)
+        elif any(kw in lower_line for kw in ["aviso", "warning", "alert", "⏳"]):
+            char_format.setForeground(QColor("#f59e0b"))
+            char_format.setFontWeight(600)
+        elif any(kw in lower_line for kw in ["sucesso", "concluí", "conclui", "🟢"]):
+            char_format.setForeground(QColor("#10b981"))
+            char_format.setFontWeight(600)
+        else:
+            char_format.setForeground(QColor("#a1a1aa"))
+
+        cursor.setCharFormat(char_format)
         cursor.insertText(chunk)
         self._log_view.setTextCursor(cursor)
         self._log_view.ensureCursorVisible()

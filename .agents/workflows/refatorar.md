@@ -1,80 +1,38 @@
-<<<<<<< HEAD
-# Workflow de Refatoração
-
-Este workflow foca em ações práticas e diretas, otimizado para equipes com domínio em Clean Code.
-
-## 1. Remoção de Código Morto
-- [ ] Identificar e deletar arquivos órfãos e dependências não utilizadas.
-- [ ] Remover classes, métodos e funções inalcançáveis (dead code).
-- [ ] Limpar variáveis, parâmetros e atributos declarados mas sem leitura/uso.
-- [ ] *Check de segurança:* Verificar injeções de dependência, reflexões ou rotinas de inicialização antes de deletar.
-
-## 2. Nomenclatura
-- [ ] **Arquivos/Módulos:** Ajustar nomes para o padrão do projeto (ex: kebab-case) refletindo sua responsabilidade.
-- [ ] **Classes/Interfaces:** Substantivos ou sintagmas nominais claros e específicos.
-- [ ] **Funções/Métodos:** `Verbo + Substantivo` indicando a ação exata.
-- [ ] **Variáveis:** Evitar abreviações; o nome deve carregar a intenção e o contexto.
-
-## 3. Comentários
-- [ ] Eliminar todo código comentado (confiar no Git).
-- [ ] Remover comentários que explicam o "como" ou descrevem o que está óbvio no código.
-- [ ] Escrever ou reescrever comentários exclusivamente para explicar o "porquê" (regras de negócio peculiares, limitações técnicas ou integrações específicas).
-
-## 4. Garantia de Estabilidade (Zero Regressão)
-- [ ] Manter 100% das interfaces públicas, payloads de entrada/saída e comportamentos intactos.
-- [ ] Executar a validação da rotina (ou rodar a suíte de testes) garantindo que nenhum comportamento paralelo foi afetado.
-=======
 ---
-description: Refatoração e Limpeza de Código 
+description: 
 ---
 
-# Workflow de Refatoração e Limpeza de Código (Clean Code)
-
-Este workflow define as diretrizes e os passos necessários para realizar uma refatoração completa no repositório, garantindo a remoção de código morto, otimização da estrutura e alinhamento com os princípios de **Clean Code**, sem alterar o comportamento funcional do sistema.
-
+---
+description: Workflow focado em ações práticas de refatoração, priorizando estabilidade e zero regressão.
 ---
 
-## 🎯 Premissas de Execução
+# Workflow de Refatoração e Limpeza de Código
 
-1. **Zero Alteração Comportamental:** O sistema deve comportar-se exatamente da mesma forma antes e depois do processo. Nenhuma regra de negócio, contrato de API ou fluxo de interface deve ser modificado.
-2. **Eliminação de Código Morto:** Arquivos, funções, métodos, variáveis, importações e dependências sem uso/referência devem ser totalmente removidos.
-3. **Clean Code:** Manter código expressivo, modular, com alta coesão, baixo acoplamento e responsabilidade única.
+**🎯 PREMISSA MÁXIMA (Zero Regressão):** O código pode e deve ser modificado para melhorar sua estrutura, legibilidade e manutenibilidade. Porém, o **comportamento** do sistema deve continuar exatamente o mesmo. Nenhuma regra de negócio, contrato de API, payload de entrada/saída ou fluxo de usuário deve ter seu funcionamento final alterado.
 
----
+## 1. Mapeamento e Rede de Segurança
+- [ ] **Testes Iniciais:** Executar a suíte de testes e assegurar que estão 100% passando. Adicionar testes de regressão básicos se áreas críticas estiverem descobertas antes de tocá-las.
+- [ ] **Análise Estática:** Executar linters e ferramentas de análise para identificar código inacessível (*unreachable code*), arquivos isolados e importações órfãs.
 
-## 📋 Passos do Workflow
+## 2. Remoção de Código Morto (Dead Code)
+- [ ] Deletar arquivos, pastas e dependências obsoletas sem referências no projeto.
+- [ ] Remover classes, funções, métodos, parâmetros e variáveis declarados mas sem leitura/uso.
+- [ ] Eliminar todo código comentado (o histórico fica salvo no Git).
+- [ ] *Check de segurança:* Verificar injeções de dependência, reflexões ou rotinas de inicialização antes de deletar arquivos.
 
-### Passo 1: Mapeamento de Código Morto e Análise Estática
-* Executar linters e ferramentas de análise estática para identificar código inacessível (*unreachable code*), arquivos isolados e importações órfãs.
-* Mapear rotas, funções, classes e métodos que não possuem nenhuma chamada ativa no projeto.
-* Listar trechos de código comentados antigos para remoção.
+## 3. Nomenclatura e Comentários
+- [ ] **Expressividade:** Renomear variáveis, classes e funções (usando `Verbo + Substantivo` para funções) para que o nome carregue a intenção real, sem abreviações confusas.
+- [ ] **Comentários:** Remover descrições óbvias de "como" o código funciona. Manter ou reescrever apenas comentários focados no "porquê" (regras de negócio peculiares, restrições técnicas ou integrações).
 
----
+## 4. Estrutura Direta, Granularidade e Escopo
+- [ ] **Um Arquivo, Uma Responsabilidade:** Cada arquivo deve exportar preferencialmente apenas uma função ou classe principal. Evite arquivos "utilitários" gigantes; divida-os por contexto.
+- [ ] **Regra da Tela (Tamanho):** Arquivos devem ser curtos. O ideal é que o código inteiro de um arquivo caiba em uma única tela do monitor, dispensando rolagens longas, isso nao deve ser uma regra rígida e sim uma preferencia.
+- [ ] **Responsabilidade Única (SRP):** Extrair métodos muito longos para funções menores e coesas.
+- [ ] **Simplificação de Condicionais:** Aplicar *Early Returns* (Guard Clauses) para reduzir o aninhamento profundo de blocos `if/else`.
 
-### Passo 2: Validação da Rede de Segurança (Testes)
-* Executar a suíte de testes existente e assegurar que **100% dos testes estão passando** antes de iniciar as modificações.
-* Se trechos que sofrerão grandes refatorações não possuírem cobertura, adicionar testes de regressão prévios para garantir a paridade de comportamento.
-
----
-
-### Passo 3: Limpeza de Código Morto (Dead Code Deletion)
-* Excluir arquivos e pastas obsoletos que não possuem referências no sistema.
-* Excluir funções, classes, métodos, parâmetros e variáveis não utilizados.
-* Limpar importações/dependências não utilizadas no topo dos arquivos.
-
----
-
-### Passo 4: Refatoração Clean Code
-* **Nomes Expressivos:** Renomear variáveis, parâmetros, funções e classes para torná-los autoexplicativos em relação ao seu propósito.
-* **Princípio da Responsabilidade Única (SRP):** Extrair funções/métodos longos ou com múltiplas responsabilidades em métodos menores e coesos.
-* **Simplificação de Condicionais:** 
-  * Aplicar *Early Returns* (Guards) para reduzir o aninhamento de `if/else`.
-  * Substituir condicionais complexas por variáveis descritivas ou funções auxiliares.
-
----
-
-### Passo 5: Validação Final e Regressão
-* Executar a suíte completa de testes automatizados e verificar se todos continuam passando.
-* Executar a verificação de tipos e a compilação/build do projeto.
-* Garantir que a aplicação inicializa e roda sem nenhum erro ou aviso (*warning*) novo.
->>>>>>> 328b89d9a852f43fe0d039462459fdd6a4b5f9e1
+## 5. Validação Final (Zero Regressão)
+- [ ] Manter 100% das interfaces públicas, assinaturas e contratos de payloads de entrada/saída intactos.
+- [ ] Executar a suíte completa de testes automatizados para checar regressões (tudo deve continuar passando).
+- [ ] Executar a verificação de tipos e o build/compilação do projeto.
+- [ ] Garantir que a aplicação inicializa perfeitamente, sem erros no console ou novos *warnings*.
+- [ ] criar um relatório completo de todas a melhorias que foram realizadas, com uma % de quanto do sistema foi alterado*.

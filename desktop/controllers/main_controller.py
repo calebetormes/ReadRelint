@@ -1,3 +1,4 @@
+import json
 import collections
 from datetime import datetime
 import threading
@@ -28,16 +29,16 @@ class MainController:
         self.watcher: Optional[FolderWatcher] = None
         self.worker_thread: Optional[threading.Thread] = None
 
-        # Fila de processamento e Contadores Globais
+        # Desempenho e Estatísticas
         self.processing_queue: Queue = Queue()
-        self.processed_count: int = 0
-        self.total_discovered: int = 0
         self.total_bytes: int = 0
         self.processed_bytes: int = 0
+        self.processed_count: int = 0
         self.skipped_count: int = 0
-        self.llm_sent_count: int = 0
-        self.rule_filtered_count: int = 0
+        self.total_discovered: int = 0
         self.confirmed_homicides_count: int = 0
+        self.rule_filtered_count: int = 0
+        self.llm_sent_count: int = 0
         self.total_files_in_folder: int = 0
         self.current_filename: str = ""
 
@@ -55,6 +56,7 @@ class MainController:
         
         project_root = Path(__file__).resolve().parents[2]
         db_path = project_root / "data" / "relints.db"
+        self.settings_path = project_root / "data" / "app_settings.json"
         self.db_repo = SqliteRepo(db_path)
         self.person_repo = SqlitePersonRepo(db_path)
         self.processed_registry = JsonProcessedRegistry(project_root / "data" / "processed_registry.json")
@@ -80,6 +82,28 @@ class MainController:
         # Registra a instância para acesso pelos endpoints da API REST
         from backend.api.dependencies import set_main_controller
         set_main_controller(self)
+
+        # Carrega as configurações (inclusive a última pasta monitorada)
+        self._load_settings()
+
+    def _load_settings(self):
+        try:
+            if self.settings_path.exists():
+                with open(self.settings_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    last_path = data.get("last_monitoring_path", "")
+                    if last_path and Path(last_path).exists() and Path(last_path).is_dir():
+                        self.inspect_folder(last_path)
+        except Exception as exc:
+            self.log(f"Aviso ao carregar configurações: {exc}")
+
+    def _save_settings(self):
+        try:
+            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.settings_path, "w", encoding="utf-8") as f:
+                json.dump({"last_monitoring_path": self.monitoring_path}, f, indent=2)
+        except Exception as exc:
+            self.log(f"Aviso ao salvar configurações: {exc}")
 
     def set_use_llm(self, use_llm: bool) -> bool:
         """
@@ -171,6 +195,8 @@ class MainController:
         self.total_bytes = 0
         self.processed_bytes = 0
         self.skipped_count = 0
+        self.rule_filtered_count = 0
+        self.llm_sent_count = 0
         self.total_files_in_folder = 0
         self.current_filename = ""
         self.update_ui()
@@ -205,6 +231,7 @@ class MainController:
                 already_in_db = [f for f in existing_pdfs if f.name in db_files_set]
                 self.skipped_count = len(already_in_db)
                 self.total_discovered = max(0, self.total_files_in_folder - self.skipped_count)
+                self._save_settings()
         except Exception as exc:
             self.log(f"Aviso ao inspecionar pasta: {exc}")
         
@@ -232,6 +259,9 @@ class MainController:
         """Tarefa executada em thread secundária para varredura e inicialização do monitor."""
         self.skipped_count = 0
         self.total_files_in_folder = 0
+        self.rule_filtered_count = 0
+        self.llm_sent_count = 0
+        self.processed_bytes = 0
         
         self.session_confirmed_count = 0
         self.session_pre_filtered_count = 0
