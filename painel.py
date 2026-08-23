@@ -13,6 +13,7 @@ from backend.api.dependencies import get_main_controller
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    app.setQuitOnLastWindowClosed(False)
     controller = get_main_controller()
     window = MainWindow(controller)
     window.show()
