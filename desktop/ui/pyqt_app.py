@@ -150,6 +150,11 @@ class LogEmitter(QObject):
     message_received = pyqtSignal(str)
 
 
+class StatsEmitter(QObject):
+    """Emissor para transmissão thread-safe de atualizações de estatísticas para a UI."""
+    stats_updated = pyqtSignal()
+
+
 def make_card(layout: QVBoxLayout | QHBoxLayout) -> QFrame:
     """Cria um QFrame estilizado como card de dashboard."""
     card = QFrame()
@@ -166,9 +171,12 @@ class MainWindow(QMainWindow):
         self.controller = controller
         self.frontend_process = None
 
-        # Configuração de Logs Thread-Safe
+        # Configuração de Logs e Estatísticas Thread-Safe
         self._log_emitter = LogEmitter()
         self._log_emitter.message_received.connect(self._append_log)
+
+        self._stats_emitter = StatsEmitter()
+        self._stats_emitter.stats_updated.connect(self._update_etl_stats)
 
         self.setWindowTitle("ReadRelint • Painel de Controle")
         self.setMinimumSize(860, 680)
@@ -176,7 +184,7 @@ class MainWindow(QMainWindow):
 
         # Injeta callbacks no controller compartilhado
         self.controller.on_log_message = self._emit_log
-        self.controller.on_stats_updated = self._on_stats_updated
+        self.controller.on_stats_updated = self._emit_stats
 
         # Constrói UI e aplica estilo
         self._build_ui()
@@ -301,15 +309,28 @@ class MainWindow(QMainWindow):
         title = QLabel("Motor Cognitivo & LLM")
         title.setStyleSheet(f"font-weight: 700; color: {WHITE};")
 
+        is_llm_active = self.controller.use_llm
+        self._lbl_ollama_status = QLabel("Ativo" if is_llm_active else "Desativado")
+        self._lbl_ollama_status.setStyleSheet(
+            f"color: {GREEN if is_llm_active else GREY}; font-weight: 700;"
+        )
         self._icon_ollama = QLabel("●")
-        self._icon_ollama.setStyleSheet(f"color: {GREY}; font-size: 14px;")
-        self._lbl_ollama_status = QLabel("Testando...")
-        self._lbl_ollama_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
+        self._icon_ollama.setStyleSheet(
+            f"color: {GREEN if is_llm_active else GREY}; font-size: 14px;"
+        )
+
+        btn_test = QPushButton("Testar Conexão")
+        btn_test.setFixedHeight(28)
+        btn_test.setStyleSheet(
+            f"background-color: transparent; color: {GREY}; border: 1px solid {BORDER}; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 600;"
+        )
+        btn_test.clicked.connect(self._test_ollama_connection)
 
         status_row = QHBoxLayout()
         status_row.addWidget(QLabel("Serviço Ollama Local:"))
         status_row.addWidget(self._icon_ollama)
         status_row.addWidget(self._lbl_ollama_status)
+        status_row.addWidget(btn_test)
         status_row.addStretch()
 
         self._chk_llm = QCheckBox("Modo IA (Ollama)")
@@ -559,9 +580,46 @@ class MainWindow(QMainWindow):
         self._update_services_status()
 
     def _toggle_llm(self, value: bool):
+        self._lbl_ollama_status.setText("Testando...")
+        self._lbl_ollama_status.setStyleSheet(f"color: {ORANGE}; font-weight: 700;")
+        self._icon_ollama.setStyleSheet(f"color: {ORANGE}; font-size: 14px;")
+        QApplication.processEvents()
+
         success = self.controller.set_use_llm(value)
         if not success:
             self._chk_llm.setChecked(False)
+            self._icon_ollama.setStyleSheet(f"color: {RED}; font-size: 14px;")
+            self._lbl_ollama_status.setText("Offline")
+            self._lbl_ollama_status.setStyleSheet(f"color: {RED}; font-weight: 700;")
+        else:
+            if value:
+                self._icon_ollama.setStyleSheet(f"color: {GREEN}; font-size: 14px;")
+                self._lbl_ollama_status.setText("Online")
+                self._lbl_ollama_status.setStyleSheet(f"color: {GREEN}; font-weight: 700;")
+            else:
+                self._icon_ollama.setStyleSheet(f"color: {GREY}; font-size: 14px;")
+                self._lbl_ollama_status.setText("Desativado")
+                self._lbl_ollama_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
+
+    def _test_ollama_connection(self):
+        """Testa sob demanda a conexão com o Ollama sem travar o timer contínuo."""
+        self._lbl_ollama_status.setText("Testando...")
+        self._lbl_ollama_status.setStyleSheet(f"color: {ORANGE}; font-weight: 700;")
+        self._icon_ollama.setStyleSheet(f"color: {ORANGE}; font-size: 14px;")
+        QApplication.processEvents()
+
+        if hasattr(self.controller.llm_processor, "check_connection"):
+            is_ok, msg = self.controller.llm_processor.check_connection()
+            if is_ok:
+                self._icon_ollama.setStyleSheet(f"color: {GREEN}; font-size: 14px;")
+                self._lbl_ollama_status.setText("Online")
+                self._lbl_ollama_status.setStyleSheet(f"color: {GREEN}; font-weight: 700;")
+                self._emit_log(f"🟢 {msg}")
+            else:
+                self._icon_ollama.setStyleSheet(f"color: {RED}; font-size: 14px;")
+                self._lbl_ollama_status.setText("Offline")
+                self._lbl_ollama_status.setStyleSheet(f"color: {RED}; font-weight: 700;")
+                self._emit_log(f"⚠️ {msg}")
 
     def _pick_directory(self):
         path = QFileDialog.getExistingDirectory(
@@ -634,20 +692,7 @@ class MainWindow(QMainWindow):
             self._btn_frontend.setText("Iniciar Frontend")
             self._btn_frontend.setStyleSheet(btn_style_green)
 
-        # Ollama Status
-        if hasattr(self.controller.llm_processor, "check_connection"):
-            try:
-                is_ok, _ = self.controller.llm_processor.check_connection()
-                if is_ok:
-                    self._icon_ollama.setStyleSheet(f"color: {GREEN}; font-size: 14px;")
-                    self._lbl_ollama_status.setText("Online")
-                    self._lbl_ollama_status.setStyleSheet(f"color: {GREEN}; font-weight: 700;")
-                else:
-                    self._icon_ollama.setStyleSheet(f"color: {RED}; font-size: 14px;")
-                    self._lbl_ollama_status.setText("Offline")
-                    self._lbl_ollama_status.setStyleSheet(f"color: {RED}; font-weight: 700;")
-            except Exception:
-                pass
+        # O status do Ollama não é consultado no loop contínuo para evitar latência de rede/timeout na UI Thread
 
     def _update_etl_stats(self):
         total_folder = getattr(self.controller, "total_files_in_folder", 0)
@@ -770,6 +815,10 @@ class MainWindow(QMainWindow):
         self._log_view.clear()
 
     # --- Callbacks do Controller ---
+
+    def _emit_stats(self):
+        """Emite o sinal de atualização de estatísticas de forma thread-safe."""
+        self._stats_emitter.stats_updated.emit()
 
     def _on_stats_updated(self):
         self._update_etl_stats()

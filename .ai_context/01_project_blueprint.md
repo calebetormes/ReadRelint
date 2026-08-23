@@ -4,7 +4,7 @@ Este documento unifica a visão geral, as regras de ouro, a arquitetura e a estr
 
 ## 1. Visão Geral e Regras de Ouro
 - **Objetivo:** Software local para Windows que monitora uma pasta de documentos de inteligência (RELINTs) em formato PDF. Ele extrai e limpa o texto, utiliza uma LLM local (Ollama) ou pipeline determinístico ultra-rápido (spaCy + IBGE + Regex) para estruturar dados, e armazena-os em um banco de dados relacional embutido (SQLite).
-- **Painel de Controle Desktop:** Interface moderna em Tkinter/CustomTkinter atuando como *Service Launcher & Status Hub* ultraleve (480x580) para ligar/desligar serviços (Monitor de Pastas, Servidor Web e IA) com suporte a System Tray (Bandeja do Windows).
+- **Painel de Controle Desktop:** Interface moderna em PyQt6 (Qt6 nativo) atuando como *Service Launcher & Status Hub* ultraleve para gerenciar serviços (Monitor de Pastas, Servidor Web FastAPI, Frontend SvelteKit e IA Ollama) com interface thread-safe e QSS moderno.
 - **Dashboard Web de Curadoria:** Oferece um dashboard interativo (FastAPI backend + HTML/JS SPA frontend em tema escuro baseado no Resend Design System) para buscar, cruzar vínculos de participantes, exibir dossiês por especialidade, fotos/anexos com visualizador lightbox, métricas de inteligência e curadoria humana dos dados.
 
 ### Regras de Ouro (Core Principles)
@@ -31,7 +31,7 @@ Este documento unifica a visão geral, as regras de ouro, a arquitetura e a estr
   5. Filtros negativos estritos contra patentes militares, órgãos públicos e termos veiculares.
 - **Persistência:** `SQLite` em modo WAL (`relints.db`).
 - **Interfaces:**
-  - `Desktop Hub`: Python Tkinter/CustomTkinter (Status Hub compacto).
+  - `Desktop Hub`: Python PyQt6 (Qt6 nativo em `desktop/ui/pyqt_app.py` com `painel.py`).
   - `Web Dashboard`: SvelteKit SPA (adapter-static) + Svelte 5 Runes (Resend Dark/Light Theme com ApexCharts e Lucide Icons).
 
 ### Pipeline ETL
@@ -62,20 +62,16 @@ Este documento unifica a visão geral, as regras de ouro, a arquitetura e a estr
 
 ---
 
-## 4. Estrutura Física do Código-Fonte (`/src`)
-* `data/`: Banco relacional `relints.db`, `processed_registry.json`, `erros.md` e diretório `media/` contendo fotos recortadas dos PDFs.
-* `src/engine/`:
-  * `/parsers/`: Leitor PyMuPDF e extrator de imagens (`pdf_reader.py`).
-  * `/cleaners/`: Higienização textual e sanitização de nomes (`text_cleaner.py`).
-  * `/extractors/deterministic/`: Motor especialista sem IA (`pipeline.py`, `structured_parser.py`, `role_detector.py`, `spacy_ner.py`, `ibge_validator.py`).
-  * `/extractors/llm/`: Cliente Ollama e schemas (`ollama_client.py`).
-  * `/extractors/common/`: Filtros negativos e listas negras (`negative_filters.py`).
-* `src/task_manager/`:
-  * `/etl/`: Orquestrador de extração e guardrails (`etl_service.py`).
-  * `/watcher/`: Monitor de pastas e eventos de arquivo (`folder_watcher.py`).
-  * `/registry/`: Controle atômico de arquivos processados (`json_processed_registry.py`).
-* `src/dashboard/`:
-  * `/backend/`: Servidor FastAPI, routers REST, repositórios SQLite e entidades Pydantic.
-  * `/frontend/`: SPA Web (HTML, CSS, views JavaScript em Resend Dark System).
-  * `/desktop/`: Aplicativo de inicialização de serviços Tkinter (`desktop_app.py`, `status_tab.py`).
+## 4. Estrutura Física do Código-Fonte
+* `data/`: Banco relacional `relints.db`, `processed_registry.json` e diretório `media/` contendo fotos recortadas dos PDFs.
+* `backend/`:
+  * `/api/`: Servidor FastAPI, routers REST, endpoints e dependencies.
+  * `/core/`: Configurações e utilitários centrais.
+  * `/database/`: Repositórios SQLite (`sqlite_repo.py`, `sqlite_person_repo.py`) e migrações.
+  * `/engine/`: Parsers de PDF (`PyMuPDF`), higienizadores de texto e extratores (LLM Ollama e determinísticos).
+  * `/task_manager/`: Orquestrador de ETL (`etl_service.py`), monitor de pastas (`folder_watcher.py`) e registros.
+* `desktop/`:
+  * `/controllers/`: `MainController` compartilhado e gerenciador de servidores (`web_app_manager.py`).
+  * `/ui/`: Interface gráfica PyQt6 (`pyqt_app.py`).
+* `frontend/`: SvelteKit SPA (adapter-static) + temas Resend Dark/Light.
 * `tests/`: Suíte completa de testes automatizados com `pytest`.
