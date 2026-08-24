@@ -1,0 +1,191 @@
+/* ==========================================================================
+   Design Tokens - Dark Theme (Apple Design & Resend Inspired)
+   Strict 4px Baseline Grid, Translucency, Glows & Fluid Motion
+   ========================================================================== */
+
+:root,
+[data-theme="dark"],
+.theme-dark {
+  /* --------------------------------------------------------------------------
+     1. Typography Scale (4px Baseline Grid Congruent)
+     -------------------------------------------------------------------------- */
+  --font-family-main: 'Elms Sans', 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* Font Sizes */
+  --font-size-xs: 0.6875rem;   /* 11px */
+  --font-size-sm: 0.75rem;     /* 12px */
+  --font-size-ui: 0.8125rem;   /* 13px */
+  --font-size-base: 0.875rem;  /* 14px */
+  --font-size-md: 1rem;        /* 16px */
+  --font-size-lg: 1.125rem;    /* 18px */
+  --font-size-xl: 1.5rem;      /* 24px */
+  --font-size-2xl: 2rem;       /* 32px */
+  --font-size-3xl: 2.25rem;    /* 36px */
+
+  /* Line Heights (Strict 4px Multiples) */
+  --line-height-16: 1rem;      /* 16px - for 11px, 12px, 13px mono */
+  --line-height-20: 1.25rem;   /* 20px - for 13px ui, 14px base */
+  --line-height-24: 1.5rem;    /* 24px - for 16px body, 18px title */
+  --line-height-32: 2rem;      /* 32px - for 24px display-md */
+  --line-height-40: 2.5rem;    /* 40px - for 32px display-lg */
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Optical Letter Spacing (Apple WWDC Tracking Tuning) */
+  --letter-spacing-tight: -0.02em;  /* Headings > 24px */
+  --letter-spacing-snug: -0.01em;   /* Titles 18-20px */
+  --letter-spacing-normal: 0em;     /* Body 14-16px */
+  --letter-spacing-wide: 0.03em;    /* UI Buttons 13px */
+  --letter-spacing-wider: 0.05em;   /* Badges, Caps 11px */
+
+  /* --------------------------------------------------------------------------
+     2. Color Palette (Dark Theme with Amber Core)
+     -------------------------------------------------------------------------- */
+  /* Backgrounds & Hierarchical Surfaces */
+  --color-bg-primary: #0D0D0D;             /* Base canvas */
+  --color-bg-secondary: #141416;           /* Sidebar, panel container */
+  --color-bg-tertiary: #1D1E22;            /* Inset wells, table rows */
+  --color-bg-surface-card: #222429;        /* Default card surface */
+  --color-bg-surface-elevated: #2A2D35;    /* Hovered card, modal body */
+  --color-bg-surface-overlay: rgba(13, 13, 13, 0.75); /* Dimming backdrop */
+  --color-bg-surface-glass: rgba(34, 36, 41, 0.70);   /* Translucent chrome */
+
+  /* Surface Interactive States */
+  --color-surface-hover: rgba(255, 255, 255, 0.04);
+  --color-surface-active: rgba(255, 255, 255, 0.08);
+  --color-surface-selected: rgba(224, 159, 62, 0.12);
+
+  /* Typography / Content Colors */
+  --color-text-main: #F3F4F6;              /* Primary text (High contrast) */
+  --color-text-muted: #9CA3AF;             /* Secondary descriptions */
+  --color-text-disabled: #4B5563;          /* Inactive labels */
+  --color-text-inverse: #0D0D0D;           /* Text on light / amber solid buttons */
+
+  /* Amber Identity (Brand Accent & Dynamic Glows) */
+  --color-amber-50: #FFFBEB;
+  --color-amber-100: #FEF3C7;
+  --color-amber-300: #FCD34D;
+  --color-amber-500: #F59E0B;
+  --color-amber-primary: #E09F3E;          /* Primary actionable color */
+  --color-amber-glow: #F7B84F;             /* Luminous highlight */
+  --color-amber-dark: #B45309;             /* Pressed / dark border */
+
+  /* Borders & Hairlines */
+  --color-border-subtle: #2E313A;          /* Discrete dividers */
+  --color-border-medium: rgba(255, 255, 255, 0.12); /* Card edges */
+  --color-border-highlight: #524531;       /* Warm amber tinted border */
+  --color-border-focus: #E09F3E;           /* Active outline */
+
+  /* Functional Status Colors */
+  --color-functional-success: #10B981;
+  --color-functional-success-bg: #064E3B;
+  --color-functional-warning: #F59E0B;
+  --color-functional-warning-bg: #451A03;
+  --color-functional-error: #EF4444;
+  --color-functional-error-bg: #7F1D1D;
+  --color-functional-info: #3B82F6;
+  --color-functional-info-bg: #1E3A8A;
+
+  /* --------------------------------------------------------------------------
+     3. Light Effects & Volumetric Glows
+     -------------------------------------------------------------------------- */
+  --glow-amber-subtle: 0 0 16px rgba(224, 159, 62, 0.18);
+  --glow-amber-medium: 0 0 24px rgba(247, 184, 79, 0.28), 0 0 4px rgba(224, 159, 62, 0.50);
+  --glow-amber-intense: 0 0 36px rgba(247, 184, 79, 0.45), 0 0 8px rgba(224, 159, 62, 0.70);
+  --glow-success-subtle: 0 0 16px rgba(16, 185, 129, 0.20);
+  --glow-error-subtle: 0 0 16px rgba(239, 68, 68, 0.20);
+
+  /* --------------------------------------------------------------------------
+     4. Elevation Shadows & Materials
+     -------------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.40);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.80), 0 0 0 1px var(--color-border-subtle);
+
+  /* Apple Translucent Materials (Backdrop Filter) */
+  --backdrop-blur-sm: blur(8px) saturate(160%);
+  --backdrop-blur-md: blur(16px) saturate(180%);
+  --backdrop-blur-lg: blur(24px) saturate(200%);
+
+  /* --------------------------------------------------------------------------
+     5. Spacing Scale (4px Base Grid)
+     -------------------------------------------------------------------------- */
+  --space-0: 0px;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* --------------------------------------------------------------------------
+     6. Border Radii (Discreet & Modern Proportion)
+     -------------------------------------------------------------------------- */
+  --radius-xs: 4px;     /* Badges, micro tags */
+  --radius-sm: 8px;     /* Buttons, inputs, small cards */
+  --radius-default: 8px;/* Standard interactive controls */
+  --radius-md: 12px;    /* Cards, dashboard widgets */
+  --radius-lg: 16px;    /* Modals, large panels, drawer containers */
+  --radius-xl: 20px;    /* Floating sheets */
+  --radius-full: 9999px;/* Switches, pills */
+
+  /* --------------------------------------------------------------------------
+     7. Fluid Motion, Springs & Transition Tokens (Apple WWDC Physics)
+     -------------------------------------------------------------------------- */
+  /* Durations */
+  --duration-instant: 100ms;  /* Pointer-down tap feedback */
+  --duration-fast: 150ms;     /* Hover, toggle switch */
+  --duration-normal: 250ms;   /* Dropdowns, card hover */
+  --duration-smooth: 350ms;   /* Modals, drawers, tab switches */
+  --duration-slow: 500ms;     /* Layout reflow, large page sheets */
+
+  /* Timing Curves (Cubic-Bézier Springs) */
+  --ease-spring-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);    /* Snappy tap response */
+  --ease-spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);     /* Smooth modal/sheet entry */
+  --ease-spring-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);   /* Micro-bounce for success/action */
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);           /* Momentum slow down */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);             /* Standard reversible */
+
+  /* Interactive Press Micro-Interactions */
+  --active-press-scale: scale(0.975);
+  --active-press-transition: transform var(--duration-instant) var(--ease-spring-snappy);
+
+  /* --------------------------------------------------------------------------
+     8. Layering & Z-Index Scale
+     -------------------------------------------------------------------------- */
+  --z-base: 0;
+  --z-surface: 10;
+  --z-sticky: 100;      /* Fixed top header */
+  --z-popover: 500;     /* Tooltips, context menus */
+  --z-drawer: 800;      /* Side sheet drawer */
+  --z-modal: 1000;      /* Modal dialogs */
+  --z-toast: 1500;      /* Notifications, snackbars */
+}
+
+/* Reduced Motion Accessibility Adaptation */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme="dark"],
+  .theme-dark {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 150ms;
+    --duration-smooth: 150ms;
+    --duration-slow: 200ms;
+    --ease-spring-snappy: ease;
+    --ease-spring-smooth: ease;
+    --ease-spring-bounce: ease;
+    --active-press-scale: none;
+  }
+}

@@ -4,5 +4,6 @@
     "${workspaceFolder}",
     "${workspaceFolder}/src"
   ],
-  "git.decorations.enabled": false
+  "git.decorations.enabled": false,
+  "explorer.compactFolders": false
 }

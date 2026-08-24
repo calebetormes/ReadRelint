@@ -44,9 +44,14 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - **Componente Único de Participantes (`ParticipantsTabComponent`):** Layout Master-Detail (40% Lista / 60% Dossiê) com busca em tempo real por nome/vulgo, badges de função e suporte a galeria de imagens vinculadas.
   - **Biblioteca Central de Abas (`RelintTabsComponents`):** Renderização padronizada de `Síntese` (caixa compacta invertida + resumo), `Especialidades` (atributos estruturados), `Fotos` (galeria com lightbox), `Localização` (dashboard geográfico com OSM iframe e badges de precisão) e `Transcrição` (leitor literal).
   - Eliminação de duplicação de código entre os painéis `relints_view.js` e `homicides_view.js`.
-- [x] **Migração para SvelteKit:**
-  - Inicializado projeto SvelteKit limpo na pasta `frontend/`.
-  - Configurado modo SPA (`adapter-static`) e Vite proxy para o backend FastAPI.
+- [x] **Migração para SvelteKit & Sistema de Design Tokens do Penpot:**
+  - Construção da biblioteca oficial de 10 componentes de UI em Svelte 5 (`Button`, `Badge`, `Card`, `StatCard`, `Input`, `Switch`, `Alert`, `Table`, `Modal`, `Tabs`) consumindo estritamente variáveis de tokens (`style.css`) e respeitando a grade base de 4px e interações táteis do Apple Design.
+  - Ajustado o alinhamento vertical *Pixel-Perfect* de ícones e tipografia em todos os componentes (`Button`, `Badge`, `Input`, `Tabs`, `Alert`), isolando os nós SVG em `inline-flex` e fixando a linha base ótica com `line-height: 1`.
+  - Criação da página visual e editável **`🎨 Design System - Componentes`** no Penpot com 6 pranchetas estruturadas (`01. Buttons`, `02. Badges & Chips`, `03. StatCards`, `04. Forms & Tabs`, `05. Table & DataGrid`, `06. Alerts`), permitindo edição direta de todas as variantes no canvas com tokens amarrados.
+  - Preservados todos os documentos de contexto e workflows na pasta `.agents/` e `.ai_context/`:
+    - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);
+    - `.agents/workflows/sync-penpot.md` (`/sync-penpot`: Workflow de auditoria 1:1 e sincronização Penpot -> Código);
+    - `.agents/workflows/export-to-penpot.md` (`/export-to-penpot`: Workflow de geração de componentes Código -> Penpot).
 
 
 ## 2. Próximas Etapas (Prioridade)
