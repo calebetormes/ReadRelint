@@ -2,7 +2,17 @@
   import Tabs from '$lib/components/ui/Tabs.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
-  import { CheckCircle, FloppyDisk, FileText } from 'phosphor-svelte';
+  import { 
+    CheckCircle, 
+    FloppyDisk, 
+    PencilSimple, 
+    FileText, 
+    Info, 
+    MapPin, 
+    Shield, 
+    UserList, 
+    Article 
+  } from 'phosphor-svelte';
 
   import TabGeneral from './tabs/TabGeneral.svelte';
   import TabLocation from './tabs/TabLocation.svelte';
@@ -14,23 +24,44 @@
   let { relint, onSave } = $props();
 
   let activeTab = $state('geral');
+  let isEditing = $state(false);
   let isSaving = $state(false);
 
-  const tabsItems = [
-    { id: 'geral', label: '1. Geral' },
-    { id: 'localizacao', label: '2. Localização' },
-    { id: 'especialidade', label: '3. Especialidade' },
-    { id: 'participantes', label: '4. Participantes' },
-    { id: 'transcricao', label: '5. Transcrição' }
-  ];
+  // Quando trocar de relint, voltar para modo leitura por padrão
+  $effect(() => {
+    if (relint?.id) {
+      isEditing = false;
+    }
+  });
 
-  function handleSave() {
-    isSaving = true;
-    relint.user_edited = true;
-    if (onSave) onSave(relint);
-    setTimeout(() => isSaving = false, 600);
+  function handleButtonClick() {
+    if (!isEditing) {
+      isEditing = true;
+    } else {
+      isSaving = true;
+      relint.user_edited = true;
+      if (onSave) onSave(relint);
+      setTimeout(() => {
+        isSaving = false;
+        isEditing = false;
+      }, 400);
+    }
   }
+
+  const tabsItems = [
+    { id: 'geral', label: 'Geral', icon: iconInfo },
+    { id: 'localizacao', label: 'Localização', icon: iconMapPin },
+    { id: 'especialidade', label: 'Especialidade', icon: iconShield },
+    { id: 'participantes', label: 'Participantes', icon: iconUserList },
+    { id: 'transcricao', label: 'Transcrição', icon: iconArticle }
+  ];
 </script>
+
+{#snippet iconInfo()} <Info size={16} weight="fill" /> {/snippet}
+{#snippet iconMapPin()} <MapPin size={16} weight="fill" /> {/snippet}
+{#snippet iconShield()} <Shield size={16} weight="fill" /> {/snippet}
+{#snippet iconUserList()} <UserList size={16} weight="fill" /> {/snippet}
+{#snippet iconArticle()} <Article size={16} weight="fill" /> {/snippet}
 
 <div class="detail-pane">
   {#if relint}
@@ -49,16 +80,28 @@
           {:else}
             <Badge variant="neutral" size="sm">Pendente Revisão</Badge>
           {/if}
+
+          {#if isEditing}
+            <Badge variant="amber" size="sm" dot>Modo Edição Ativo</Badge>
+          {/if}
         </div>
         <h2 class="relint-subject">{relint.subject || 'Sem assunto definido'}</h2>
       </div>
 
       <div class="header-actions">
-        <Button variant="primary" size="md" onclick={handleSave}>
+        <Button variant={isEditing ? "primary" : "secondary"} size="md" onclick={handleButtonClick}>
           {#snippet icon()}
-            <FloppyDisk size={18} weight="bold" />
+            {#if isEditing}
+              <FloppyDisk size={18} weight="bold" />
+            {:else}
+              <PencilSimple size={18} weight="bold" />
+            {/if}
           {/snippet}
-          {isSaving ? 'SALVANDO...' : 'SALVAR E MARCAR REVISADO'}
+          {#if isEditing}
+            {isSaving ? 'SALVANDO...' : 'SALVAR E MARCAR REVISADO'}
+          {:else}
+            EDITAR DADOS
+          {/if}
         </Button>
       </div>
     </div>
@@ -69,15 +112,15 @@
     </div>
 
     <!-- Conteúdo Dinâmico por Aba -->
-    <div class="tab-content-area">
+    <div class="tab-content-area" class:is-disabled-read-only={!isEditing}>
       {#if activeTab === 'geral'}
-        <TabGeneral {relint} />
+        <TabGeneral {relint} disabled={!isEditing} />
       {:else if activeTab === 'localizacao'}
-        <TabLocation {relint} />
+        <TabLocation {relint} disabled={!isEditing} />
       {:else if activeTab === 'especialidade'}
-        <TabSpecialty {relint} />
+        <TabSpecialty {relint} disabled={!isEditing} />
       {:else if activeTab === 'participantes'}
-        <TabParticipants {relint} />
+        <TabParticipants {relint} disabled={!isEditing} />
       {:else if activeTab === 'transcricao'}
         <TabTranscription {relint} />
       {/if}

@@ -3,8 +3,8 @@
   import Badge from '$lib/components/ui/Badge.svelte';
   import { Crosshair, Info } from 'phosphor-svelte';
 
-  /** @type {{ relint: any, onUpdate?: (relint: any) => void }} */
-  let { relint, onUpdate } = $props();
+  /** @type {{ relint: any, disabled?: boolean, onUpdate?: (relint: any) => void }} */
+  let { relint, disabled = false, onUpdate } = $props();
 
   let isHomicide = $derived(relint.bm_group === 'Homicídio');
 </script>
@@ -22,6 +22,7 @@
         <Input 
           label="TIPO DE FATO" 
           bind:value={relint.homicide_details.fact_type}
+          {disabled}
         />
       </div>
 
@@ -29,6 +30,7 @@
         <Input 
           label="MOTIVAÇÃO PRESUMIDA" 
           bind:value={relint.homicide_details.motivation}
+          {disabled}
         />
       </div>
 
@@ -36,6 +38,7 @@
         <Input 
           label="MEIO EMPREGADO" 
           bind:value={relint.homicide_details.means_used}
+          {disabled}
         />
       </div>
 
@@ -43,6 +46,7 @@
         <Input 
           label="DELEGACIA RESPONSÁVEL" 
           bind:value={relint.homicide_details.police_dept}
+          {disabled}
         />
       </div>
     </div>

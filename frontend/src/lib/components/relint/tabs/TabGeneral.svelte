@@ -2,8 +2,8 @@
   import Input from '$lib/components/ui/Input.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
 
-  /** @type {{ relint: any, onUpdate?: (relint: any) => void }} */
-  let { relint, onUpdate } = $props();
+  /** @type {{ relint: any, disabled?: boolean, onUpdate?: (relint: any) => void }} */
+  let { relint, disabled = false, onUpdate } = $props();
 </script>
 
 <div class="tab-general">
@@ -12,6 +12,7 @@
       <Input 
         label="ASSUNTO DO RELINT" 
         bind:value={relint.subject}
+        {disabled}
       />
     </div>
 
@@ -20,6 +21,7 @@
         label="DATA DO FATO" 
         type="date"
         bind:value={relint.date_of_fact}
+        {disabled}
       />
     </div>
 
@@ -28,6 +30,7 @@
         label="NÚMERO DE REGISTRO POLICIAL" 
         bind:value={relint.registry_number}
         placeholder="ex: 10293/2026"
+        {disabled}
       />
     </div>
 
@@ -36,6 +39,7 @@
         label="ÓRGÃO REGISTRADOR" 
         bind:value={relint.police_unit}
         placeholder="ex: 1ª DP de Homicídios"
+        {disabled}
       />
     </div>
 
@@ -44,6 +48,7 @@
         label="ANO DO REGISTRO" 
         type="number"
         bind:value={relint.registry_year}
+        {disabled}
       />
     </div>
 
@@ -54,6 +59,7 @@
         class="custom-textarea" 
         rows="5" 
         bind:value={relint.summary}
+        {disabled}
       ></textarea>
     </div>
   </div>

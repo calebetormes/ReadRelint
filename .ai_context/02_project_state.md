@@ -49,8 +49,9 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - Ajustado o alinhamento vertical *Pixel-Perfect* de ícones e tipografia em todos os componentes (`Button`, `Badge`, `Input`, `Tabs`, `Alert`), isolando os nós SVG em `inline-flex` e fixando a linha base ótica com `line-height: 1`.
   - Implementado o **App Shell do Dashboard** modular em `src/lib/components/layout/` contendo `Sidebar.svelte` (retrátil com ícones Phosphor), `Header.svelte` (fixo) e `AppShell.svelte`.
   - Criada a nova rota dedicada **`/relints` ("Boletins RELINT")** no layout **Master-Detail (30% / 70%)**:
-    - **Lista Master (30%)**: Busca em tempo real, filtros por especialidade e indicador `<Badge variant="success"><CheckCircle /> Revisado</Badge>`.
-    - **Workspace (70%)**: 5 sub-abas modulares (`Geral`, `Localização`, `Especialidade`, `Participantes`, `Transcrição`) com CRUD de participantes e visualização em cards.
+    - **Lista Master (30%)**: Cards ultracompactos exibindo a especialidade e o status (*revisado ou pendente*) estritamente com **mini-ícones Phosphor** com tooltip.
+    - **Workspace (70%)**: Modo **Somente Leitura por padrão**. Alternância para o modo edição com botão dinâmico **`EDITAR DADOS`** (`PencilSimple`) -> **`SALVAR E MARCAR REVISADO`** (`FloppyDisk`).
+    - **Abas Internas com Ícones**: Ícones dedicados em cada sub-aba (`Info`, `MapPin`, `Shield`, `UserList`, `Article`).
   - Reorganizada a estrutura de rotas: `/` tornou-se a "Visão Geral" do Dashboard (Estatísticas e KPIs) usando o novo App Shell, enquanto a biblioteca visual foi preservada na rota exclusiva `/design-system`.
   - Preservados todos os documentos de contexto e workflows na pasta `.agents/` e `.ai_context/`:
     - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);

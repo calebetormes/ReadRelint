@@ -5,8 +5,8 @@
   import Modal from '$lib/components/ui/Modal.svelte';
   import { User, Plus, Trash, Image, UserList } from 'phosphor-svelte';
 
-  /** @type {{ relint: any, onUpdate?: (relint: any) => void }} */
-  let { relint, onUpdate } = $props();
+  /** @type {{ relint: any, disabled?: boolean, onUpdate?: (relint: any) => void }} */
+  let { relint, disabled = false, onUpdate } = $props();
 
   let showAddModal = $state(false);
   let newName = $state('');
@@ -59,12 +59,14 @@
       <span class="info-title">Indivíduos Qualificados e Envolvidos no RELINT ({relint.participants?.length || 0})</span>
     </div>
     
-    <Button variant="secondary" size="sm" onclick={() => showAddModal = true}>
-      {#snippet icon()}
-        <Plus size={16} weight="bold" />
-      {/snippet}
-      ADICIONAR PARTICIPANTE
-    </Button>
+    {#if !disabled}
+      <Button variant="secondary" size="sm" onclick={() => showAddModal = true}>
+        {#snippet icon()}
+          <Plus size={16} weight="bold" />
+        {/snippet}
+        ADICIONAR PARTICIPANTE
+      </Button>
+    {/if}
   </div>
 
   <div class="participants-grid">
@@ -92,18 +94,20 @@
               <span class="person-alias text-muted">Sem alcunha cadastrada</span>
             {/if}
 
-            <div class="card-actions">
-              <button class="icon-action-btn" title="Vincular foto do PDF">
-                <Image size={16} weight="bold" />
-              </button>
-              <button 
-                class="icon-action-btn danger" 
-                title="Remover do RELINT"
-                onclick={() => handleRemoveParticipant(p.id)}
-              >
-                <Trash size={16} weight="bold" />
-              </button>
-            </div>
+            {#if !disabled}
+              <div class="card-actions">
+                <button class="icon-action-btn" title="Vincular foto do PDF">
+                  <Image size={16} weight="bold" />
+                </button>
+                <button 
+                  class="icon-action-btn danger" 
+                  title="Remover do RELINT"
+                  onclick={() => handleRemoveParticipant(p.id)}
+                >
+                  <Trash size={16} weight="bold" />
+                </button>
+              </div>
+            {/if}
           </div>
         </div>
       {/each}

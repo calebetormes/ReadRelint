@@ -3,8 +3,8 @@
   import Badge from '$lib/components/ui/Badge.svelte';
   import { MapPin } from 'phosphor-svelte';
 
-  /** @type {{ relint: any, onUpdate?: (relint: any) => void }} */
-  let { relint, onUpdate } = $props();
+  /** @type {{ relint: any, disabled?: boolean, onUpdate?: (relint: any) => void }} */
+  let { relint, disabled = false, onUpdate } = $props();
 </script>
 
 <div class="tab-location">
@@ -22,6 +22,7 @@
         label="ENDEREÇO DO FATO / LOGRADOURO" 
         bind:value={relint.address} 
         placeholder="ex: Av. Borges de Medeiros, 1500"
+        {disabled}
       />
     </div>
 
@@ -30,6 +31,7 @@
         label="BAIRRO" 
         bind:value={relint.neighborhood} 
         placeholder="ex: Praia de Belas"
+        {disabled}
       />
     </div>
 
@@ -38,6 +40,7 @@
         label="MUNICÍPIO / CIDADE" 
         bind:value={relint.municipality} 
         placeholder="ex: Porto Alegre"
+        {disabled}
       />
     </div>
   </div>

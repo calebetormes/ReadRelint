@@ -1,7 +1,15 @@
 <script>
   import Input from '$lib/components/ui/Input.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
-  import { MagnifyingGlass, CheckCircle, Funnel } from 'phosphor-svelte';
+  import { 
+    MagnifyingGlass, 
+    CheckCircle, 
+    Clock, 
+    Funnel, 
+    Crosshair, 
+    Pill, 
+    ShieldWarning, 
+    FileText 
+  } from 'phosphor-svelte';
 
   /** @type {{ relints: any[], selectedId: any, onSelect: (relint: any) => void }} */
   let { relints = [], selectedId, onSelect } = $props();
@@ -23,16 +31,6 @@
       return matchSearch && matchSpecialty;
     });
   });
-
-  /**
-   * @param {string} bm_group
-   */
-  function getGroupBadgeVariant(bm_group) {
-    if (bm_group === 'Homicídio') return 'error';
-    if (bm_group === 'Tráfico de Drogas') return 'warning';
-    if (bm_group === 'Roubos e Furtos') return 'info';
-    return 'neutral';
-  }
 </script>
 
 <div class="list-pane">
@@ -42,12 +40,12 @@
       bind:value={searchQuery}
     >
       {#snippet prefixIcon()}
-        <MagnifyingGlass size={18} weight="bold" color="var(--color-text-muted)" />
+        <MagnifyingGlass size={16} weight="bold" color="var(--color-text-muted)" />
       {/snippet}
     </Input>
 
     <div class="filter-bar">
-      <Funnel size={16} weight="fill" color="var(--color-text-muted)" />
+      <Funnel size={14} weight="fill" color="var(--color-text-muted)" />
       <select 
         class="filter-select"
         value={filterSpecialty}
@@ -71,26 +69,44 @@
         onclick={() => onSelect(relint)}
       >
         <div class="item-header">
-          <span class="relint-code font-mono">{relint.code}</span>
-          <!-- @ts-ignore -->
-          <Badge variant={getGroupBadgeVariant(relint.bm_group)} size="sm">
-            {relint.bm_group || 'Geral'}
-          </Badge>
+          <div class="code-and-specialty">
+            {#if relint.bm_group === 'Homicídio'}
+              <span title="Especialidade: Homicídio" class="icon-inline">
+                <Crosshair size={14} weight="fill" color="var(--color-functional-error)" />
+              </span>
+            {:else if relint.bm_group === 'Tráfico de Drogas'}
+              <span title="Especialidade: Tráfico de Drogas" class="icon-inline">
+                <Pill size={14} weight="fill" color="var(--color-functional-warning)" />
+              </span>
+            {:else if relint.bm_group === 'Roubos e Furtos'}
+              <span title="Especialidade: Roubos e Furtos" class="icon-inline">
+                <ShieldWarning size={14} weight="fill" color="var(--color-functional-info)" />
+              </span>
+            {:else}
+              <span title="Especialidade: Geral" class="icon-inline">
+                <FileText size={14} weight="fill" color="var(--color-text-muted)" />
+              </span>
+            {/if}
+            <span class="relint-code font-mono">{relint.code}</span>
+          </div>
+
+          <div class="status-icon-box">
+            {#if relint.user_edited}
+              <span title="Revisado por Humano" class="icon-inline">
+                <CheckCircle size={14} weight="fill" color="var(--color-functional-success)" />
+              </span>
+            {:else}
+              <span title="Pendente Revisão" class="icon-inline">
+                <Clock size={14} weight="fill" color="var(--color-text-disabled)" />
+              </span>
+            {/if}
+          </div>
         </div>
 
         <h4 class="item-subject">{relint.subject || 'Sem assunto especificado'}</h4>
 
         <div class="item-footer">
           <span class="item-date">{relint.date_of_fact || 'Data N/I'}</span>
-          
-          {#if relint.user_edited}
-            <Badge variant="success" size="sm">
-              {#snippet icon()}
-                <CheckCircle size={12} weight="fill" />
-              {/snippet}
-              Revisado
-            </Badge>
-          {/if}
         </div>
       </button>
     {:else}
@@ -149,8 +165,8 @@
   .relint-card-item {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
     background-color: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
@@ -176,6 +192,19 @@
     justify-content: space-between;
   }
 
+  .code-and-specialty {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
   .relint-code {
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
@@ -199,7 +228,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: var(--space-1);
   }
 
   .item-date {
