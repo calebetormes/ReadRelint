@@ -84,6 +84,8 @@ Sempre que concluir grandes blocos de tarefas:
 - **[ADR-072] Unificação do Ciclo de Vida do Servidor Web (FastAPI + SvelteKit):** Controle conjunto do FastAPI (:8000) e SvelteKit (:5173) acionado sob demanda no botão da Aba 1 ("Iniciar & Abrir Dashboard" / "Parar Dashboard Web").
 - **[ADR-073] Otimização de Encerramento Assíncrono de Serviços (Zero Lag UI):** Reformulação da Aba 2 no PyQt6 (`desktop/ui/pyqt_app.py`) mantendo cartões estritamente informativos de status (sem botões redundantes). Ocultamento instantâneo da janela (`self.hide()`) e migração do desligamento de subprocessos (`npm/vite`) e servidores para thread secundária em `_force_quit_app()`, eliminando congelamentos de interface na saída do app.
 - **[ADR-074] Encapsulamento dos Temas no Frontend SvelteKit (`frontend/src/lib/themes`):** Realocação da pasta de temas `themes/` da raiz do repositório para `frontend/src/lib/themes/`. Os temas CSS (`resend-dark`, `resend-light`) passam a ser importados via `@import` no `variables.css` dentro do fluxo do SvelteKit ($lib), isolando os ativos visuais no escopo da aplicação frontend.
+- **[ADR-075] Adoção Exclusiva de Estilos Nativos no SvelteKit (Limpeza de Temas Customizados Legados):** Remoção completa das pastas de temas customizadas não-nativas (`src/lib/themes/` e `src/css/themes/`). O sistema de estilização passa a ser 100% nativo do SvelteKit utilizando tokens globais em `app.css` / `variables.css` e CSS escopado de componentes Svelte, garantindo performance e manutenção simples sem dependências de arquivos externos.
+
 
 
 

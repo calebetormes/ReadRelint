@@ -21,7 +21,7 @@ ReadRelint/
 │   ├── controllers/            # Controladores de serviço e MainController
 │   └── ui/                     # Interface PyQt6 (painel, console de logs, gauges)
 ├── frontend/                   # Frontend SPA construído em SvelteKit
-│   ├── src/                    # Componentes Svelte, views e temas ($lib/themes)
+│   ├── src/                    # Componentes Svelte, views e estilos nativos SvelteKit (app.css / variables.css)
 │   ├── static/                 # Ativos estáticos e ApexCharts offline
 │   └── vite.config.js          # Configurações do empacotador Vite
 ├── tests/                      # Suíte de testes automatizados (pytest)

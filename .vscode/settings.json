@@ -3,5 +3,6 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}",
     "${workspaceFolder}/src"
-  ]
+  ],
+  "git.decorations.enabled": false
 }
