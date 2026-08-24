@@ -47,7 +47,11 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 - [x] **Migração para SvelteKit & Sistema de Design Tokens do Penpot:**
   - Construção da biblioteca oficial de 10 componentes de UI em Svelte 5 (`Button`, `Badge`, `Card`, `StatCard`, `Input`, `Switch`, `Alert`, `Table`, `Modal`, `Tabs`) consumindo estritamente variáveis de tokens (`style.css`) e respeitando a grade base de 4px e interações táteis do Apple Design.
   - Ajustado o alinhamento vertical *Pixel-Perfect* de ícones e tipografia em todos os componentes (`Button`, `Badge`, `Input`, `Tabs`, `Alert`), isolando os nós SVG em `inline-flex` e fixando a linha base ótica com `line-height: 1`.
-  - Criação da página visual e editável **`🎨 Design System - Componentes`** no Penpot com 6 pranchetas estruturadas (`01. Buttons`, `02. Badges & Chips`, `03. StatCards`, `04. Forms & Tabs`, `05. Table & DataGrid`, `06. Alerts`), permitindo edição direta de todas as variantes no canvas com tokens amarrados.
+  - Implementado o **App Shell do Dashboard** modular em `src/lib/components/layout/` contendo `Sidebar.svelte` (retrátil com ícones Phosphor), `Header.svelte` (fixo) e `AppShell.svelte`.
+  - Criada a nova rota dedicada **`/relints` ("Boletins RELINT")** no layout **Master-Detail (30% / 70%)**:
+    - **Lista Master (30%)**: Busca em tempo real, filtros por especialidade e indicador `<Badge variant="success"><CheckCircle /> Revisado</Badge>`.
+    - **Workspace (70%)**: 5 sub-abas modulares (`Geral`, `Localização`, `Especialidade`, `Participantes`, `Transcrição`) com CRUD de participantes e visualização em cards.
+  - Reorganizada a estrutura de rotas: `/` tornou-se a "Visão Geral" do Dashboard (Estatísticas e KPIs) usando o novo App Shell, enquanto a biblioteca visual foi preservada na rota exclusiva `/design-system`.
   - Preservados todos os documentos de contexto e workflows na pasta `.agents/` e `.ai_context/`:
     - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);
     - `.agents/workflows/sync-penpot.md` (`/sync-penpot`: Workflow de auditoria 1:1 e sincronização Penpot -> Código);
