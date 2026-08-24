@@ -19,3 +19,4 @@ Construir componentes de UI para Svelte com separação estrita de temas, alta r
 **Verification:**
 1. O componente busca dados ativamente? Falhe a validação e refatore para receber dados apenas via propriedades.
 2. Existe algum `#hex` fixo no estilo gerado? Falhe e exija a substituição pela variável correspondente do tema.
+
