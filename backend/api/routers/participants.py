@@ -230,14 +230,41 @@ def get_participant_dossier(
                 municipality=r["municipio"] or ""
             ))
 
-        return PersonDossierDTO(
-            person_id=p_key,
-            name=name,
-            nickname=nick,
-            document=doc,
-            background=bg,
-            photo_path=main_photo,
-            photos=photos,
-            linked_relints_count=len(linked_relints),
-            linked_relints=linked_relints
-        )
+class PersonUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    document: Optional[str] = None
+    background: Optional[str] = None
+
+
+@router.put("/{person_id}", response_model=PersonDossierDTO)
+def update_participant(
+    person_id: str,
+    payload: PersonUpdateRequest,
+    person_repo: IPersonRepo = Depends(get_person_repo)
+) -> PersonDossierDTO:
+    """
+    Atualiza os dados de identificação e antecedentes de uma pessoa no SQLite.
+    """
+    with person_repo._get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM pessoas WHERE chave_pessoa = ? OR id = ? LIMIT 1;", (person_id, person_id))
+        p = cursor.fetchone()
+        if not p:
+            raise HTTPException(status_code=404, detail="Participante não encontrado.")
+
+        db_id = p["id"]
+        new_name = payload.name if payload.name is not None else p["nome"]
+        new_nick = payload.nickname if payload.nickname is not None else p["alcunha"]
+        new_doc = payload.document if payload.document is not None else p["documento"]
+        new_bg = payload.background if payload.background is not None else p["antecedentes"]
+
+        cursor.execute("""
+            UPDATE pessoas
+            SET nome = ?, alcunha = ?, documento = ?, antecedentes = ?
+            WHERE id = ?;
+        """, (new_name, new_nick, new_doc, new_bg, db_id))
+        conn.commit()
+
+    return get_participant_dossier(person_id=person_id, person_repo=person_repo)
+
