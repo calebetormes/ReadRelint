@@ -1728,11 +1728,16 @@ class MainWindow(QMainWindow):
 
     def _emit_stats(self):
         """Emite o sinal de atualização de estatísticas de forma thread-safe."""
-        self._stats_emitter.stats_updated.emit()
+        try:
+            if hasattr(self, "_stats_emitter") and self._stats_emitter:
+                self._stats_emitter.stats_updated.emit()
+        except Exception:
+            pass
 
     def _on_tab_changed(self, index: int):
         if index == 1:
             self._update_reports_list()
+
 
     def closeEvent(self, a0: QCloseEvent | None):
         """Minimiza para a bandeja do sistema ao fechar a janela, a menos que esteja encerrando tudo."""
@@ -1753,7 +1758,7 @@ class MainWindow(QMainWindow):
             )
 
 
-def run():
+def run(auto_start: bool = False):
     """Ponto de entrada para execução da aplicação PyQt6."""
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -1761,9 +1766,15 @@ def run():
 
     controller = get_main_controller()
     window = MainWindow(controller)
-    window.show()
+    window.show_and_raise()
+
+    if auto_start or "--autostart" in sys.argv:
+        # Inicia automaticamente o Dashboard Web (FastAPI + SvelteKit) e abre no navegador
+        QTimer.singleShot(400, window._toggle_dashboard_unified)
+
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     run()
+

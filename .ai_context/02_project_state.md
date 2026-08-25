@@ -72,6 +72,11 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
     - A primeira aba do dossiê foi renomeada para **Síntese** com ícone `Sparkle`.
     - **Síntese do Fato em Destaque:** Card amplo posicionado no topo com tipografia confortável de 15px e linha de destaque âmbar.
     - **Campos de Metadados em Modo Leitura:** Os campos *Assunto*, *Data do Fato*, *Número de Registro*, *Órgão Registrador* e *Ano* são exibidos como texto puro limpo (sem caixas de input). Os inputs só são renderizados quando o usuário clica no botão **EDITAR**.
+- [x] **Workflow `/run` e Inicialização Rápida (`--autostart`):**
+  - Implementado o workflow enxuto `.agents/workflows/run.md` (`/run`) para inicialização imediata do ecossistema.
+  - Adicionado suporte ao argumento `--autostart` em `painel.py` e `desktop/ui/pyqt_app.py`, garantindo que o painel abra em primeiro plano (não minimizado) e acione automaticamente o Backend FastAPI (:8000), Frontend SvelteKit (:5173) e o navegador no Dashboard.
+  - Atualizado o script executável `Iniciar-Painel.bat` com `--autostart`.
+
 
 
 ## 2. Próximas Etapas (Prioridade)
