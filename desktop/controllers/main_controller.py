@@ -211,31 +211,36 @@ class MainController:
         self.monitoring_path = path
         self.inspect_folder(path)
 
-    def inspect_folder(self, path: str):
+    def inspect_folder(self, path: str, async_exec: bool = True):
         """
         Inspeciona a pasta selecionada imediatamente ao escolher o diretório,
-        calculando o total de PDFs e quantos já constam no banco de dados.
+        calculando o total de PDFs e quantos já constam no banco de dados de forma assíncrona.
         """
         self.monitoring_path = path
-        self.skipped_count = 0
-        self.total_files_in_folder = 0
-        self.processed_count = 0
-        self.total_discovered = 0
-        
-        try:
-            folder = Path(path)
-            if folder.exists() and folder.is_dir():
-                existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
-                self.total_files_in_folder = len(existing_pdfs)
-                db_files_set = self.db_repo.get_all_source_filenames() if hasattr(self.db_repo, "get_all_source_filenames") else {r.source_file for r in self.db_repo.get_all()}
-                already_in_db = [f for f in existing_pdfs if f.name in db_files_set]
-                self.skipped_count = len(already_in_db)
-                self.total_discovered = max(0, self.total_files_in_folder - self.skipped_count)
-                self._save_settings()
-        except Exception as exc:
-            self.log(f"Aviso ao inspecionar pasta: {exc}")
-        
-        self.update_ui()
+        self._save_settings()
+
+        def _do_inspect():
+            try:
+                folder = Path(path)
+                if folder.exists() and folder.is_dir():
+                    existing_pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == ".pdf"]
+                    total_files = len(existing_pdfs)
+                    db_files_set = self.db_repo.get_all_source_filenames() if hasattr(self.db_repo, "get_all_source_filenames") else {r.source_file for r in self.db_repo.get_all()}
+                    already_in_db = [f for f in existing_pdfs if f.name in db_files_set]
+                    skipped = len(already_in_db)
+                    
+                    self.total_files_in_folder = total_files
+                    self.skipped_count = skipped
+                    self.total_discovered = max(0, total_files - skipped)
+            except Exception as exc:
+                self.log(f"Aviso ao inspecionar pasta: {exc}")
+            finally:
+                self.update_ui()
+
+        if async_exec:
+            threading.Thread(target=_do_inspect, daemon=True).start()
+        else:
+            _do_inspect()
 
     def toggle_monitoring(self):
         """Inicia ou para o monitoramento de diretório."""

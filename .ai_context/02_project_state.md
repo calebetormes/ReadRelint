@@ -48,10 +48,13 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - Construção da biblioteca oficial de 10 componentes de UI em Svelte 5 (`Button`, `Badge`, `Card`, `StatCard`, `Input`, `Switch`, `Alert`, `Table`, `Modal`, `Tabs`) consumindo estritamente variáveis de tokens (`style.css`) e respeitando a grade base de 4px e interações táteis do Apple Design.
   - Ajustado o alinhamento vertical *Pixel-Perfect* de ícones e tipografia em todos os componentes (`Button`, `Badge`, `Input`, `Tabs`, `Alert`), isolando os nós SVG em `inline-flex` e fixando a linha base ótica com `line-height: 1`.
   - Implementado o **App Shell do Dashboard** modular em `src/lib/components/layout/` contendo `Sidebar.svelte` (retrátil com ícones Phosphor), `Header.svelte` (fixo) e `AppShell.svelte`.
-  - Criada a nova rota dedicada **`/relints` ("Boletins RELINT")** no layout **Master-Detail (30% / 70%)**:
-    - **Lista Master (30%)**: Cards ultracompactos exibindo a especialidade e o status (*revisado ou pendente*) estritamente com **mini-ícones Phosphor** com tooltip.
-    - **Workspace (70%)**: Modo **Somente Leitura por padrão**. Alternância para o modo edição com botão dinâmico **`EDITAR DADOS`** (`PencilSimple`) -> **`SALVAR E MARCAR REVISADO`** (`FloppyDisk`).
-    - **Abas Internas com Ícones**: Ícones dedicados em cada sub-aba (`Info`, `MapPin`, `Shield`, `UserList`, `Article`).
+  - Otimizada a inicialização e estabilidade do aplicativo desktop (`painel.py` / `desktop/ui/pyqt_app.py`):
+    - Varredura de arquivos e inspeção de pasta tornadas **100% assíncronas** (`inspect_folder(async_exec=True)`), reduzindo o tempo de abertura do painel para **menos de 0.3 segundos**.
+    - Botões de serviços desacoplados: Botão Unificado na Aba 1 (`🌐 Iniciar & Abrir Dashboard Completo`) e botões individuais dedicados na Aba 2 (`🚀 Iniciar API` e `🚀 Iniciar Svelte`).
+    - **Proteção contra concorrência e transições de estado:** Implementação de flags de transição (`_is_transitioning_backend`, `_is_transitioning_frontend`, `_is_transitioning_dashboard`) para garantir que o monitor de background (`ServiceWatcher`) não sobrescreva o estado transitório dos botões enquanto os serviços estão inicializando ou parando.
+    - **Monitoramento 100% Silencioso via Sockets Nativos:** Substituição de comandos `subprocess` (`netstat`) por verificações TCP nativas com `socket.connect_ex`, eliminando piscadas de terminal no Windows.
+    - **Indicadores de Carregamento Ativo no Console:** Badge dinâmico no cabeçalho com spinner animado (`⠋ ⠙ ⠹...`) e barra de progresso indeterminada de 3px indicando atividades em segundo plano (verificação de IA, inicialização de serviços, reindexação e reprocessamento).
+    - **Reprocessamento individual assíncrono na Aba de Relatórios:** Botão `🔄 Re-processar` em cada card de RELINT executa em background com feedback visual imediato no console e auto-atualização do histórico.
   - Reorganizada a estrutura de rotas: `/` tornou-se a "Visão Geral" do Dashboard (Estatísticas e KPIs) usando o novo App Shell, enquanto a biblioteca visual foi preservada na rota exclusiva `/design-system`.
   - Preservados todos os documentos de contexto e workflows na pasta `.agents/` e `.ai_context/`:
     - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);

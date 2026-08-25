@@ -4,6 +4,7 @@ import collections
 import threading
 import subprocess
 import webbrowser
+import socket
 from pathlib import Path
 
 # Adiciona o diretório raiz ao sys.path para garantir imports absolutos corretos
@@ -409,18 +410,12 @@ def create_app_icon() -> QIcon:
 
 
 def is_port_in_use(port: int) -> bool:
-    """Verifica de forma segura se há algum processo ouvindo na porta informada."""
+    """Verifica de forma segura se há algum processo ouvindo na porta informada via socket, sem usar processos externos."""
     try:
-        output = subprocess.check_output(
-            f"netstat -ano | findstr :{port}",
-            shell=True,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        )
-        for line in output.strip().splitlines():
-            if "LISTENING" in line:
-                return True
-        return False
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            # Retorna 0 se a conexão for bem sucedida (porta em uso)
+            return s.connect_ex(('127.0.0.1', port)) == 0
     except Exception:
         return False
 
@@ -428,11 +423,17 @@ def is_port_in_use(port: int) -> bool:
 def kill_port_process(port: int):
     """Encerra com segurança e de forma forçada qualquer processo escutando na porta informada."""
     try:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
         output = subprocess.check_output(
             f"netstat -ano | findstr :{port}",
             shell=True,
             text=True,
             stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            startupinfo=startupinfo,
         )
         pids_to_kill = set()
         for line in output.strip().splitlines():
@@ -446,14 +447,17 @@ def kill_port_process(port: int):
                 ["taskkill", "/F", "/T", "/PID", pid],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                startupinfo=startupinfo,
             )
     except Exception:
         pass
 
 
 class StatsEmitter(QObject):
-    """Emissor para transmissão thread-safe de atualizações de estatísticas para a UI."""
+    """Emissor para transmissão thread-safe de atualizações de estatísticas e estados de carregamento para a UI."""
     stats_updated = pyqtSignal()
+    busy_changed = pyqtSignal(str, bool)
 
 
 class ServiceWatcher(QObject):
@@ -466,7 +470,7 @@ class ServiceWatcher(QObject):
         self._running = True
 
     def check_once(self):
-        is_be = self.controller.web_app_manager.is_running
+        is_be = self.controller.web_app_manager.is_running or is_port_in_use(8000)
         is_fe = is_port_in_use(5173)
         self.status_checked.emit(is_be, is_fe)
 
@@ -508,9 +512,16 @@ class MainWindow(QMainWindow):
         # Fila de Logs desacoplada para evitar bloqueios no QTextEdit (Batching a 12.5 FPS)
         self._log_queue = collections.deque(maxlen=2000)
 
+        # Rastreamento de ações em background (loading e verificações no console)
+        self._active_busy_reasons = {}
+        self._is_transitioning_backend = False
+        self._is_transitioning_frontend = False
+        self._is_transitioning_dashboard = False
+
         # Configuração de Sinais Thread-Safe
         self._stats_emitter = StatsEmitter()
         self._stats_emitter.stats_updated.connect(self._update_etl_stats)
+        self._stats_emitter.busy_changed.connect(self._on_busy_changed)
 
         self.setWindowTitle("ReadRelint • Painel de Controle")
         self.setWindowIcon(create_app_icon())
@@ -548,6 +559,7 @@ class MainWindow(QMainWindow):
         self._service_watcher.start_polling()
 
         # Inicializa estado visual inicial
+        self._set_busy("Iniciando ambiente & verificando serviços...", True)
         self._update_etl_stats()
         self._queue_log("Painel de controle iniciado com sucesso.")
         self._initial_llm_check()
@@ -746,11 +758,12 @@ class MainWindow(QMainWindow):
         actions_card_layout.setContentsMargins(14, 12, 14, 12)
         actions_card_layout.setSpacing(10)
 
-        lbl_actions_title = QLabel("Ações Rápidas do Sistema")
+        lbl_actions_title = QLabel("Ações Rápidas & Serviços")
         lbl_actions_title.setStyleSheet("font-weight: 700; color: #ffffff;")
 
-        actions_row = QHBoxLayout()
-        actions_row.setSpacing(10)
+        # Linha 1: Modo IA & Backend FastAPI Dedicado
+        actions_row_1 = QHBoxLayout()
+        actions_row_1.setSpacing(10)
 
         # Botão Modo IA
         self._btn_llm_toggle = QPushButton("⚡ IA (Ollama): Ativa")
@@ -758,14 +771,13 @@ class MainWindow(QMainWindow):
         self._btn_llm_toggle.setStyleSheet(BTN_LLM_ACTIVE_STYLE)
         self._btn_llm_toggle.clicked.connect(self._toggle_llm_mode)
 
-        # Botão Dashboard Web Unificado
-        self._btn_open_dashboard = QPushButton("🌐  Iniciar & Abrir Dashboard")
+        actions_row_1.addWidget(self._btn_llm_toggle)
+
+        # Linha 2: Dashboard Web Unificado
+        self._btn_open_dashboard = QPushButton("🌐  Iniciar & Abrir Dashboard Completo")
         self._btn_open_dashboard.setFixedHeight(36)
         self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_START_STYLE)
         self._btn_open_dashboard.clicked.connect(self._toggle_dashboard_unified)
-
-        actions_row.addWidget(self._btn_llm_toggle)
-        actions_row.addWidget(self._btn_open_dashboard)
 
         # Botão de Encerramento Total posicionado logo abaixo do botão do Dashboard
         btn_quit_all = QPushButton("⛔  Encerrar Todos os Serviços & Sair")
@@ -775,7 +787,8 @@ class MainWindow(QMainWindow):
         btn_quit_all.clicked.connect(self._force_quit_app)
 
         actions_card_layout.addWidget(lbl_actions_title)
-        actions_card_layout.addLayout(actions_row)
+        actions_card_layout.addLayout(actions_row_1)
+        actions_card_layout.addWidget(self._btn_open_dashboard)
         actions_card_layout.addWidget(btn_quit_all)
         left_layout.addWidget(make_card(actions_card_layout))
 
@@ -788,8 +801,18 @@ class MainWindow(QMainWindow):
         right_layout.setSpacing(10)
 
         logs_header = QHBoxLayout()
+        logs_header.setSpacing(10)
+
         lbl_logs_title = QLabel("🖥  Console de Leitura em Tempo Real")
         lbl_logs_title.setStyleSheet("font-weight: 700; font-size: 14px; color: #ffffff;")
+
+        # Badge com spinner de status no cabeçalho do console
+        self._lbl_console_status = QLabel("")
+        self._lbl_console_status.setStyleSheet(
+            "font-size: 11px; color: #38bdf8; font-weight: 700; background: #0c4a6e; "
+            "border: 1px solid #0284c7; padding: 2px 8px; border-radius: 4px;"
+        )
+        self._lbl_console_status.hide()
 
         btn_clear_logs = QPushButton("Limpar")
         btn_clear_logs.setFixedSize(68, 28)
@@ -797,13 +820,33 @@ class MainWindow(QMainWindow):
         btn_clear_logs.clicked.connect(self._clear_logs)
 
         logs_header.addWidget(lbl_logs_title)
+        logs_header.addWidget(self._lbl_console_status)
         logs_header.addStretch()
         logs_header.addWidget(btn_clear_logs)
+
+        # Barra de progresso indeterminada fina no topo do console de logs
+        self._bar_console_loading = QProgressBar()
+        self._bar_console_loading.setFixedHeight(3)
+        self._bar_console_loading.setTextVisible(False)
+        self._bar_console_loading.setRange(0, 0)
+        self._bar_console_loading.setStyleSheet("""
+        QProgressBar {
+            background-color: #18181b;
+            border: none;
+            border-radius: 1px;
+        }
+        QProgressBar::chunk {
+            background-color: #38bdf8;
+            border-radius: 1px;
+        }
+        """)
+        self._bar_console_loading.hide()
 
         self._log_view = QTextEdit()
         self._log_view.setReadOnly(True)
 
         right_layout.addLayout(logs_header)
+        right_layout.addWidget(self._bar_console_loading)
         right_layout.addWidget(self._log_view)
 
         splitter.addWidget(left_pane)
@@ -836,20 +879,34 @@ class MainWindow(QMainWindow):
         serv_grid = QHBoxLayout()
         serv_grid.setSpacing(12)
 
-        # Card 1: Backend FastAPI (Apenas Status)
+        # Card 1: Backend FastAPI
         vbox_b = QVBoxLayout()
         vbox_b.addWidget(QLabel("Servidor FastAPI (API)"))
         self._lbl_backend_status = QLabel("● Parado")
         self._lbl_backend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
         vbox_b.addWidget(self._lbl_backend_status)
+        
+        self._btn_fastapi_toggle_tab2 = QPushButton("🚀 Iniciar API")
+        self._btn_fastapi_toggle_tab2.setFixedHeight(28)
+        self._btn_fastapi_toggle_tab2.setStyleSheet(BTN_SERVICE_START_STYLE)
+        self._btn_fastapi_toggle_tab2.clicked.connect(self._toggle_fastapi_service)
+        vbox_b.addWidget(self._btn_fastapi_toggle_tab2)
+        
         serv_grid.addWidget(make_card(vbox_b))
 
-        # Card 2: Frontend SvelteKit (Apenas Status)
+        # Card 2: Frontend SvelteKit
         vbox_f = QVBoxLayout()
         vbox_f.addWidget(QLabel("Frontend (SvelteKit)"))
         self._lbl_frontend_status = QLabel("● Parado")
         self._lbl_frontend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
         vbox_f.addWidget(self._lbl_frontend_status)
+        
+        self._btn_svelte_toggle_tab2 = QPushButton("🚀 Iniciar Svelte")
+        self._btn_svelte_toggle_tab2.setFixedHeight(28)
+        self._btn_svelte_toggle_tab2.setStyleSheet(BTN_SERVICE_START_STYLE)
+        self._btn_svelte_toggle_tab2.clicked.connect(self._toggle_sveltekit_service)
+        vbox_f.addWidget(self._btn_svelte_toggle_tab2)
+        
         serv_grid.addWidget(make_card(vbox_f))
 
         # Card Monitor / Pasta
@@ -874,7 +931,7 @@ class MainWindow(QMainWindow):
         btn_refresh_reports = QPushButton("🔄  Atualizar Lista")
         btn_refresh_reports.setFixedSize(120, 28)
         btn_refresh_reports.setStyleSheet(BTN_SECONDARY_STYLE)
-        btn_refresh_reports.clicked.connect(self._update_reports_list)
+        btn_refresh_reports.clicked.connect(self._refresh_reports_clicked)
 
         reports_header.addWidget(lbl_rep_title)
         reports_header.addStretch()
@@ -909,10 +966,16 @@ class MainWindow(QMainWindow):
         """Encerra o processo do frontend e garante que nenhum processo permaneça na porta 5173 sem travar a UI."""
         if self.frontend_process:
             try:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                
                 subprocess.call(
                     ["taskkill", "/F", "/T", "/PID", str(self.frontend_process.pid)],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                    startupinfo=startupinfo,
                 )
             except Exception:
                 pass
@@ -926,6 +989,7 @@ class MainWindow(QMainWindow):
         if self._is_dashboard_running():
             self._btn_open_dashboard.setText("⏳  Encerrando Dashboard...")
             self._btn_open_dashboard.setEnabled(False)
+            self._set_busy("Encerrando Dashboard Web...", True)
             QApplication.processEvents()
 
             def _async_stop():
@@ -937,6 +1001,7 @@ class MainWindow(QMainWindow):
                     self._cached_backend_running = False
                     self._cached_frontend_running = False
                     self._queue_log("⛔ Servidor Dashboard Web (API & SvelteKit) parado.")
+                    self._set_busy("Encerrando Dashboard Web...", False)
                     self._stats_emitter.stats_updated.emit()
                     self._service_watcher.check_once()
 
@@ -944,6 +1009,7 @@ class MainWindow(QMainWindow):
         else:
             self._btn_open_dashboard.setText("⏳  Iniciando Dashboard...")
             self._btn_open_dashboard.setEnabled(False)
+            self._set_busy("Iniciando Dashboard Web (FastAPI + SvelteKit)...", True)
             QApplication.processEvents()
 
             def _async_start():
@@ -975,9 +1041,132 @@ class MainWindow(QMainWindow):
                     webbrowser.open("http://localhost:5173")
                     self._queue_log("🌐 Abrindo Dashboard no navegador: http://localhost:5173")
                 finally:
+                    self._set_busy("Iniciando Dashboard Web (FastAPI + SvelteKit)...", False)
                     self._stats_emitter.stats_updated.emit()
                     self._service_watcher.check_once()
 
+            threading.Thread(target=_async_start, daemon=True).start()
+
+    def _toggle_fastapi_service(self):
+        """Inicia ou para exclusivamente o servidor backend FastAPI (:8000)."""
+        is_running = self.controller.web_app_manager.is_running or is_port_in_use(8000) or self._cached_backend_running
+        self._is_transitioning_backend = True
+        
+        if is_running:
+            if hasattr(self, "_btn_fastapi_toggle_tab2"):
+                self._btn_fastapi_toggle_tab2.setText("⏳ Parando...")
+                self._btn_fastapi_toggle_tab2.setEnabled(False)
+            self._set_busy("Parando servidor FastAPI (:8000)...", True)
+
+            def _async_stop():
+                try:
+                    if self.controller.web_app_manager.is_running:
+                        self.controller.close_web_dashboard()
+                    kill_port_process(8000)
+                finally:
+                    self._cached_backend_running = False
+                    self._is_transitioning_backend = False
+                    self._queue_log("⛔ Servidor Backend FastAPI (:8000) encerrado.")
+                    self._set_busy("Parando servidor FastAPI (:8000)...", False)
+                    self._service_watcher.check_once()
+
+            threading.Thread(target=_async_stop, daemon=True).start()
+        else:
+            if hasattr(self, "_btn_fastapi_toggle_tab2"):
+                self._btn_fastapi_toggle_tab2.setText("⏳ Iniciando...")
+                self._btn_fastapi_toggle_tab2.setEnabled(False)
+            self._set_busy("Iniciando servidor FastAPI (:8000)...", True)
+
+            def _async_start():
+                try:
+                    kill_port_process(8000)
+                    self.controller.web_app_manager.start_background_silent()
+
+                    # Aguarda o servidor estar de fato ouvindo na porta 8000 (máx 10 segundos)
+                    for _ in range(40):
+                        time.sleep(0.25)
+                        if is_port_in_use(8000):
+                            break
+
+                    self._cached_backend_running = is_port_in_use(8000)
+                    if self._cached_backend_running:
+                        self._queue_log("🟢 Servidor Backend FastAPI ativo em http://localhost:8000")
+                    else:
+                        self._queue_log("⚠️ Timeout: servidor FastAPI não respondeu em 10s")
+                except Exception as exc:
+                    self._queue_log(f"❌ Erro ao iniciar FastAPI: {exc}")
+                finally:
+                    self._is_transitioning_backend = False
+                    self._set_busy("Iniciando servidor FastAPI (:8000)...", False)
+                    self._service_watcher.check_once()
+
+            threading.Thread(target=_async_start, daemon=True).start()
+
+    def _toggle_sveltekit_service(self):
+        """Inicia ou para exclusivamente o servidor frontend SvelteKit (:5173)."""
+        is_running = self._cached_frontend_running or is_port_in_use(5173)
+        self._is_transitioning_frontend = True
+
+        if is_running:
+            if hasattr(self, "_btn_svelte_toggle_tab2"):
+                self._btn_svelte_toggle_tab2.setText("⏳ Parando...")
+                self._btn_svelte_toggle_tab2.setEnabled(False)
+            self._set_busy("Parando servidor SvelteKit (:5173)...", True)
+            
+            def _async_stop():
+                try:
+                    self._stop_frontend_process()
+                finally:
+                    self._cached_frontend_running = False
+                    self._is_transitioning_frontend = False
+                    self._queue_log("⛔ Servidor Frontend SvelteKit (:5173) encerrado.")
+                    self._set_busy("Parando servidor SvelteKit (:5173)...", False)
+                    self._service_watcher.check_once()
+            
+            threading.Thread(target=_async_stop, daemon=True).start()
+        else:
+            if hasattr(self, "_btn_svelte_toggle_tab2"):
+                self._btn_svelte_toggle_tab2.setText("⏳ Iniciando...")
+                self._btn_svelte_toggle_tab2.setEnabled(False)
+            self._set_busy("Iniciando servidor SvelteKit (:5173)...", True)
+
+            def _async_start():
+                try:
+                    kill_port_process(5173)
+                    frontend_dir = str(project_root / "frontend")
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+                    
+                    self._queue_log("🚀 Iniciando dev server do SvelteKit...")
+                    self.frontend_process = subprocess.Popen(
+                        "npm run dev",
+                        cwd=frontend_dir,
+                        shell=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        creationflags=subprocess.CREATE_NO_WINDOW,
+                        startupinfo=startupinfo,
+                    )
+                    
+                    # Aguarda a porta 5173 responder (máx 15 segundos)
+                    for _ in range(60):
+                        time.sleep(0.25)
+                        if is_port_in_use(5173):
+                            break
+                            
+                    self._cached_frontend_running = is_port_in_use(5173)
+                    if self._cached_frontend_running:
+                        self._queue_log("🟢 Servidor Frontend SvelteKit ativo em http://localhost:5173")
+                    else:
+                        self._queue_log("⚠️ Timeout: SvelteKit não respondeu em 15s")
+                except Exception as exc:
+                    self._queue_log(f"❌ Erro ao iniciar SvelteKit: {exc}")
+                finally:
+                    self._is_transitioning_frontend = False
+                    self._set_busy("Iniciando servidor SvelteKit (:5173)...", False)
+                    self._service_watcher.check_once()
+                    
             threading.Thread(target=_async_start, daemon=True).start()
 
     def _toggle_web_service(self):
@@ -988,6 +1177,7 @@ class MainWindow(QMainWindow):
         """Verifica na inicialização se a LLM/Ollama está operacional. Se não estiver, desliga o botão."""
         self._btn_llm_toggle.setText("🧠  Verificando IA...")
         self._btn_llm_toggle.setEnabled(False)
+        self._set_busy("Verificando Ollama / IA...", True)
 
         def _async_check():
             try:
@@ -995,6 +1185,7 @@ class MainWindow(QMainWindow):
                 if self.controller.use_llm:
                     self.controller.set_use_llm(True)
             finally:
+                self._set_busy("Verificando Ollama / IA...", False)
                 self._stats_emitter.stats_updated.emit()
 
         threading.Thread(target=_async_check, daemon=True).start()
@@ -1002,6 +1193,7 @@ class MainWindow(QMainWindow):
     def _toggle_llm_mode(self):
         self._btn_llm_toggle.setText("⏳  Alternando IA...")
         self._btn_llm_toggle.setEnabled(False)
+        self._set_busy("Testando conectividade da IA...", True)
         QApplication.processEvents()
 
         def _async_toggle_llm():
@@ -1009,6 +1201,7 @@ class MainWindow(QMainWindow):
                 new_mode = not self.controller.use_llm
                 self.controller.set_use_llm(new_mode)
             finally:
+                self._set_busy("Testando conectividade da IA...", False)
                 self._stats_emitter.stats_updated.emit()
 
         threading.Thread(target=_async_toggle_llm, daemon=True).start()
@@ -1087,7 +1280,8 @@ class MainWindow(QMainWindow):
             return
         self._is_quitting = True
 
-        # Oculta a janela e o ícone do tray instantaneamente (resposta de UI de 0ms)
+        # Oculta a janela e o ícone do tray sem piscar (0ms UI thread-safe)
+        self.setWindowOpacity(0.0)
         self.hide()
         if hasattr(self, "_tray_icon") and self._tray_icon:
             self._tray_icon.hide()
@@ -1115,7 +1309,7 @@ class MainWindow(QMainWindow):
                 # Para Frontend SvelteKit
                 self._stop_frontend_process()
             finally:
-                QApplication.quit()
+                QTimer.singleShot(0, QApplication.quit)
 
         threading.Thread(target=_async_shutdown, daemon=True).start()
 
@@ -1125,46 +1319,39 @@ class MainWindow(QMainWindow):
 
     def _on_service_status_received(self, is_be: bool, is_fe: bool):
         """Recebe o status dos serviços verificado pela thread em background."""
+        self._set_busy("Iniciando ambiente & verificando serviços...", False)
         self._cached_backend_running = is_be
         self._cached_frontend_running = is_fe
         self._refresh_service_buttons()
 
-    def _refresh_service_buttons(self):
-        """Atualiza os textos e cores dos botões de serviço instantaneamente."""
-        # Botão Unificado do Dashboard na Aba 1
-        if not self._btn_open_dashboard.isEnabled() or "⏳" not in self._btn_open_dashboard.text():
-            if self._is_dashboard_running():
-                self._btn_open_dashboard.setText("⛔  Parar Dashboard Web")
-                self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_STOP_STYLE)
-            else:
-                self._btn_open_dashboard.setText("🌐  Iniciar & Abrir Dashboard")
-                self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_START_STYLE)
-            self._btn_open_dashboard.setEnabled(True)
+    def _set_busy(self, reason: str, is_busy: bool):
+        """Emite sinal thread-safe para atualizar o status de carregamento/verificação no console."""
+        if hasattr(self, "_stats_emitter") and self._stats_emitter:
+            self._stats_emitter.busy_changed.emit(reason, is_busy)
 
-        # Backend Status na Aba 2 (Apenas Status)
-        if self._cached_backend_running:
-            self._lbl_backend_status.setText("🟢 Rodando (:8000)")
-            self._lbl_backend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
+    def _on_busy_changed(self, reason: str, is_busy: bool):
+        """Atualiza a lista interna de tarefas ativas e exibe ou oculta os indicadores do console."""
+        if is_busy:
+            self._active_busy_reasons[reason] = time.time()
         else:
-            self._lbl_backend_status.setText("● Parado")
-            self._lbl_backend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
+            self._active_busy_reasons.pop(reason, None)
 
-        # Frontend Status na Aba 2 (Apenas Status)
-        if self._cached_frontend_running:
-            self._lbl_frontend_status.setText("🟢 Rodando (:5173)")
-            self._lbl_frontend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
-        else:
-            self._lbl_frontend_status.setText("● Parado")
-            self._lbl_frontend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
+        has_busy = bool(self._active_busy_reasons)
+        if hasattr(self, "_bar_console_loading"):
+            self._bar_console_loading.setVisible(has_busy)
+        if not has_busy and hasattr(self, "_lbl_console_status"):
+            self._lbl_console_status.hide()
 
     def _animate_reading_spinner(self):
-        """Atualiza a animação inline de spinner enquanto um arquivo estiver sendo lido."""
+        """Atualiza a animação inline de spinner enquanto um arquivo estiver sendo lido ou serviços estiverem iniciando/verificando."""
+        self._spinner_idx = (self._spinner_idx + 1) % len(self._spinner_frames)
+        frame = self._spinner_frames[self._spinner_idx]
+
+        # 1. Indicador de Leitura de Arquivo
         if self.controller.current_filename:
-            self._spinner_idx = (self._spinner_idx + 1) % len(self._spinner_frames)
-            frame = self._spinner_frames[self._spinner_idx]
             raw_name = self.controller.current_filename
             short_name = format_display_filename(raw_name, max_chars=32)
-            self._lbl_current.setText(f"📄 [{frame}] {short_name}")
+            self._lbl_current.setText(f"📖 [{frame}] {short_name}")
             self._lbl_current.setToolTip(f"Arquivo em leitura:\n{raw_name}")
             self._lbl_current.setStyleSheet(
                 "background-color: #1a1708; border: 1px solid #78350f; border-radius: 6px; color: #f59e0b; font-weight: 700; font-size: 12px; padding: 4px 8px;"
@@ -1172,6 +1359,71 @@ class MainWindow(QMainWindow):
             self._bar_reading_active.show()
         else:
             self._bar_reading_active.hide()
+
+        # 2. Indicador Ativo no Console de Logs (Serviços e Verificações)
+        if hasattr(self, "_active_busy_reasons") and self._active_busy_reasons:
+            latest_reason = list(self._active_busy_reasons.keys())[-1]
+            if hasattr(self, "_lbl_console_status"):
+                self._lbl_console_status.setText(f"{frame}  {latest_reason}")
+                self._lbl_console_status.show()
+            if hasattr(self, "_bar_console_loading"):
+                self._bar_console_loading.show()
+        else:
+            if hasattr(self, "_lbl_console_status"):
+                self._lbl_console_status.hide()
+            if hasattr(self, "_bar_console_loading"):
+                self._bar_console_loading.hide()
+
+    def _refresh_service_buttons(self):
+        """Atualiza os textos e cores dos botões de serviço instantaneamente, respeitando transições."""
+
+        # Botão Unificado do Dashboard na Aba 1
+        if hasattr(self, "_btn_open_dashboard") and not getattr(self, "_is_transitioning_dashboard", False):
+            if self._is_dashboard_running():
+                self._btn_open_dashboard.setText("⛔  Parar Dashboard Completo")
+                self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_STOP_STYLE)
+            else:
+                self._btn_open_dashboard.setText("🌐  Iniciar & Abrir Dashboard Completo")
+                self._btn_open_dashboard.setStyleSheet(BTN_DASHBOARD_START_STYLE)
+            self._btn_open_dashboard.setEnabled(True)
+
+        # Botão Dedicado do FastAPI na Aba 2
+        if hasattr(self, "_btn_fastapi_toggle_tab2") and not getattr(self, "_is_transitioning_backend", False):
+            if self._cached_backend_running:
+                self._btn_fastapi_toggle_tab2.setText("⛔ Parar API")
+                self._btn_fastapi_toggle_tab2.setStyleSheet(BTN_SERVICE_STOP_STYLE)
+            else:
+                self._btn_fastapi_toggle_tab2.setText("🚀 Iniciar API")
+                self._btn_fastapi_toggle_tab2.setStyleSheet(BTN_SERVICE_START_STYLE)
+            self._btn_fastapi_toggle_tab2.setEnabled(True)
+
+        # Botão Dedicado do SvelteKit na Aba 2
+        if hasattr(self, "_btn_svelte_toggle_tab2") and not getattr(self, "_is_transitioning_frontend", False):
+            if self._cached_frontend_running:
+                self._btn_svelte_toggle_tab2.setText("⛔ Parar Svelte")
+                self._btn_svelte_toggle_tab2.setStyleSheet(BTN_SERVICE_STOP_STYLE)
+            else:
+                self._btn_svelte_toggle_tab2.setText("🚀 Iniciar Svelte")
+                self._btn_svelte_toggle_tab2.setStyleSheet(BTN_SERVICE_START_STYLE)
+            self._btn_svelte_toggle_tab2.setEnabled(True)
+
+        # Backend Status na Aba 2 (Apenas Status)
+        if hasattr(self, "_lbl_backend_status"):
+            if self._cached_backend_running:
+                self._lbl_backend_status.setText("🟢 Rodando (:8000)")
+                self._lbl_backend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
+            else:
+                self._lbl_backend_status.setText("● Parado")
+                self._lbl_backend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
+
+        # Frontend Status na Aba 2 (Apenas Status)
+        if hasattr(self, "_lbl_frontend_status"):
+            if self._cached_frontend_running:
+                self._lbl_frontend_status.setText("🟢 Rodando (:5173)")
+                self._lbl_frontend_status.setStyleSheet(f"color: {EMERALD}; font-weight: 700;")
+            else:
+                self._lbl_frontend_status.setText("● Parado")
+                self._lbl_frontend_status.setStyleSheet(f"color: {GREY}; font-weight: 700;")
 
     def _update_etl_stats(self):
         """Atualização ultrarrápida das barras e contadores (< 0.1ms)."""
@@ -1347,9 +1599,7 @@ class MainWindow(QMainWindow):
                 btn_reprocess.setStyleSheet(btn_reprocess_style)
                 filename = fn
                 btn_reprocess.clicked.connect(
-                    lambda _, f=filename: self.controller.reprocess_file_history(
-                        f, self.controller.active_rule.name
-                    )
+                    lambda _, f=filename: self._on_reprocess_clicked(f)
                 )
 
                 card_layout.addWidget(lbl_file, stretch=1)
@@ -1368,6 +1618,28 @@ class MainWindow(QMainWindow):
             err_label = QLabel(f"Erro ao carregar relatórios: {exc}")
             err_label.setStyleSheet(f"color: {RED};")
             self._reports_layout.insertWidget(0, err_label)
+
+    def _refresh_reports_clicked(self):
+        """Atualiza a lista de relatórios com feedback visual no console de logs."""
+        self._set_busy("Atualizando lista de relatórios...", True)
+        self._update_reports_list()
+        QTimer.singleShot(400, lambda: self._set_busy("Atualizando lista de relatórios...", False))
+
+    def _on_reprocess_clicked(self, filename: str):
+        """Executa o reprocessamento assíncrono de um arquivo com feedback visual de carregamento."""
+        self._set_busy(f"Reprocessando {filename}...", True)
+        self._queue_log(f"🔄 Solicitado reprocessamento do arquivo: {filename}")
+        rule_name = getattr(self.controller.active_rule, "name", "Homicídio")
+
+        def _async_reprocess():
+            try:
+                self.controller.reprocess_file_history(filename, rule_name)
+            finally:
+                self._set_busy(f"Reprocessando {filename}...", False)
+                self._stats_emitter.stats_updated.emit()
+                QTimer.singleShot(600, self._update_reports_list)
+
+        threading.Thread(target=_async_reprocess, daemon=True).start()
 
     # --- Logs Desacoplados com Efeito Typewriter Inteligente ---
 
@@ -1486,6 +1758,7 @@ def run():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setQuitOnLastWindowClosed(False)
+
     controller = get_main_controller()
     window = MainWindow(controller)
     window.show()

@@ -1,11 +1,22 @@
+<!--
+  ============================================================================
+  ReadRelint - Rota Raiz / (Visão Geral do Dashboard)
+  ============================================================================
+  Página principal de Inteligência Policial exibindo KPIs consolidados em tempo
+  real, os últimos RELINTs extraídos e monitoramento da saúde do motor Ollama.
+  ============================================================================
+-->
 <script>
+  import { onMount } from 'svelte';
   import StatCard from '$lib/components/ui/StatCard.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Table from '$lib/components/ui/Table.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
+  import Alert from '$lib/components/ui/Alert.svelte';
+  import { getDashboardStats } from '$lib/services/relintsService';
   
-  import { FileText, Brain, Users, Crosshair, ArrowRight } from 'phosphor-svelte';
+  import { FileText, Brain, Users, Crosshair, ArrowRight, ArrowsClockwise } from 'phosphor-svelte';
 
   /** @type {Array<{ key: string, label: string, width?: string, align?: 'left' | 'center' | 'right' }>} */
   const recentRelintsColumns = [
@@ -16,12 +27,38 @@
     { key: 'action', label: 'AÇÃO', align: 'right' }
   ];
 
-  const recentRelintsData = [
-    { code: 'RELINT-2026-001', spec: 'Homicídios & Facções', status: 'Concluído', method: 'Ollama (Llama 3.2)', badge: 'success' },
-    { code: 'RELINT-2026-002', spec: 'Tráfico de Drogas', status: 'Processando', method: 'Ollama (DeepSeek R1)', badge: 'warning' },
-    { code: 'RELINT-2026-003', spec: 'Roubos e Furtos', status: 'Pendente', method: 'Fila de Espera', badge: 'neutral' },
-    { code: 'RELINT-2026-004', spec: 'Homicídios', status: 'Erro IA', method: 'Ollama (Llama 3.2)', badge: 'error' },
-  ];
+  let stats = $state({
+    totalRelints: 0,
+    totalPersons: 0,
+    homicideCount: 0,
+    llmRate: 100,
+    /** @type {any[]} */
+    recentRelints: []
+  });
+
+  let isLoading = $state(true);
+  let errorMessage = $state('');
+
+  /**
+   * Carrega as estatísticas reais do backend FastAPI
+   */
+  async function loadStats() {
+    isLoading = true;
+    errorMessage = '';
+    try {
+      const data = await getDashboardStats();
+      stats = data;
+    } catch (err) {
+      console.error('Erro ao carregar estatísticas do dashboard:', err);
+      errorMessage = err instanceof Error ? err.message : 'Falha ao conectar com o backend FastAPI.';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  onMount(() => {
+    loadStats();
+  });
 </script>
 
 <svelte:head>
@@ -30,17 +67,32 @@
 
 <div class="dashboard-overview">
   <div class="overview-header">
-    <h2 class="section-title">Indicadores Globais de Inteligência</h2>
-    <p class="section-subtitle">Estatísticas processadas pelo motor Ollama nas últimas 24 horas.</p>
+    <div class="header-info">
+      <h2 class="section-title">Indicadores Globais de Inteligência</h2>
+      <p class="section-subtitle">Estatísticas consolidadas do banco de dados relacional e motor de IA local.</p>
+    </div>
+    
+    <Button variant="ghost" size="sm" onclick={loadStats} disabled={isLoading}>
+      {#snippet icon()}
+        <ArrowsClockwise size={16} weight="bold" class={isLoading ? 'spinning' : ''} />
+      {/snippet}
+      ATUALIZAR
+    </Button>
   </div>
+
+  {#if errorMessage}
+    <Alert type="error" title="Aviso de Conexão">
+      {errorMessage} (Certifique-se de que o backend FastAPI está em execução na porta 8000).
+    </Alert>
+  {/if}
 
   <div class="kpi-grid">
     <StatCard
       label="RELINTS PROCESSADOS"
-      value="1.248"
+      value={isLoading ? '...' : String(stats.totalRelints)}
       trend="+14%"
       trendType="positive"
-      description="Boletins lidos e estruturados"
+      description="Boletins no banco de dados"
     >
       {#snippet icon()}
         <FileText size={24} weight="fill" color="var(--color-amber-primary)" />
@@ -49,7 +101,7 @@
 
     <StatCard
       label="INDIVÍDUOS QUALIFICADOS"
-      value="3.502"
+      value={isLoading ? '...' : String(stats.totalPersons)}
       trend="+22%"
       trendType="positive"
       description="Pessoas extraídas dos relatos"
@@ -61,7 +113,7 @@
 
     <StatCard
       label="TAXA LEITURA OLLAMA"
-      value="98.5%"
+      value={isLoading ? '...' : `${stats.llmRate}%`}
       trend="+1.2%"
       trendType="positive"
       description="Precisão cognitiva média"
@@ -73,7 +125,7 @@
 
     <StatCard
       label="DOSSIÊS HOMICÍDIOS"
-      value="145"
+      value={isLoading ? '...' : String(stats.homicideCount)}
       trend="-5%"
       trendType="negative"
       description="Crimes contra a vida registrados"
@@ -86,9 +138,19 @@
 
   <div class="content-grid">
     <div class="main-column">
-      <Card variant="elevated" title="Últimos RELINTs Extraídos" subtitle="Acompanhamento em tempo real da fila de processamento IA.">
+      <Card variant="elevated" title="Últimos RELINTs Extraídos" subtitle="Acompanhamento em tempo real da base de dados.">
         <div class="table-container">
-          <Table columns={recentRelintsColumns} data={recentRelintsData}>
+          <Table 
+            columns={recentRelintsColumns} 
+            data={stats.recentRelints.map(r => ({
+              code: r.code,
+              spec: r.bm_group || 'Geral',
+              status: r.user_edited ? 'Revisado' : 'Processado',
+              badge: r.user_edited ? 'success' : 'neutral',
+              method: r.extraction_method || 'Ollama (IA)',
+              raw: r
+            }))}
+          >
             {#snippet rowSnippet(row)}
               <tr class="table-row">
                 <td class="td font-mono font-amber">{row.code}</td>
@@ -99,12 +161,14 @@
                 </td>
                 <td class="td text-muted">{row.method}</td>
                 <td class="td text-right">
-                  <Button variant="ghost" size="sm">
-                    {#snippet icon()}
-                      <ArrowRight size={16} weight="bold" />
-                    {/snippet}
-                    ABRIR
-                  </Button>
+                  <a href="/relints" class="inline-link">
+                    <Button variant="ghost" size="sm">
+                      {#snippet icon()}
+                        <ArrowRight size={16} weight="bold" />
+                      {/snippet}
+                      ABRIR
+                    </Button>
+                  </a>
                 </td>
               </tr>
             {/snippet}
@@ -129,8 +193,8 @@
             <span class="status-value">2.4s por RELINT</span>
           </div>
           <div class="status-item">
-            <span class="status-label">Fila de Espera</span>
-            <span class="status-value" style="color: var(--color-amber-primary);">12 documentos</span>
+            <span class="status-label">Modo Operação</span>
+            <span class="status-value font-amber">100% Offline (Local)</span>
           </div>
         </div>
       </Card>
@@ -147,6 +211,13 @@
   }
 
   .overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .header-info {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
@@ -198,6 +269,10 @@
     text-align: right;
   }
 
+  .inline-link {
+    text-decoration: none;
+  }
+
   .table-row {
     border-bottom: 1px solid var(--color-border-subtle);
   }
@@ -242,6 +317,15 @@
     font-size: var(--font-size-ui);
     font-weight: var(--font-weight-medium);
     color: var(--color-text-main);
+  }
+
+  :global(.spinning) {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   @media (max-width: 1024px) {

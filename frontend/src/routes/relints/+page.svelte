@@ -1,131 +1,164 @@
+<!--
+  ============================================================================
+  ReadRelint - Rota /relints (Página de Gerenciamento de RELINTs)
+  ============================================================================
+  Esta página orquestra o layout Master-Detail (30% / 70%) para visualização
+  e edição dos Boletins RELINT consumindo os dados reais da API FastAPI.
+  Possui carregamento assíncrono, feedback de erro e persistência automática.
+  ============================================================================
+-->
 <script>
+  import { onMount } from 'svelte';
   import RelintListPane from '$lib/components/relint/RelintListPane.svelte';
   import RelintDetailPane from '$lib/components/relint/RelintDetailPane.svelte';
+  import Alert from '$lib/components/ui/Alert.svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import { getRelints, getRelintById, updateRelint } from '$lib/services/relintsService';
+  import { ArrowsClockwise, WarningCircle } from 'phosphor-svelte';
 
-  // Dados MOCK estruturados de RELINTs para demonstração e interação fluida
-  let relintsList = $state([
-    {
-      id: 1,
-      code: 'RELINT-2026-001',
-      subject: 'Homicídio Consumado por Arma de Fogo - Facção Os Manos',
-      date_of_fact: '2026-08-20',
-      bm_group: 'Homicídio',
-      user_edited: true,
-      registry_number: '9012/2026',
-      police_unit: '1ª DP Homicídios',
-      registry_year: 2026,
-      address: 'Rua Voluntários da Pátria, 450',
-      neighborhood: 'Centro Histórico',
-      municipality: 'Porto Alegre',
-      summary: 'Vítima atingida por disparos provenientes de veículo em movimento. Suspeita de conflito de facções na região central.',
-      homicide_details: {
-        fact_type: 'Homicídio Consumado',
-        motivation: 'Disputa de Território',
-        means_used: 'Arma de Fogo (9mm)',
-        police_dept: 'DHPP'
-      },
-      participants: [
-        { id: 101, name: 'Marcos Vinícius "Vini"', alias: 'Vini', role: 'Vítima', photo_path: null },
-        { id: 102, name: 'Diego Ferreira', alias: 'Alemão', role: 'Autor', photo_path: null }
-      ],
-      raw_text: `RELINT Nº 2026-001 - DEPARTAMENTO DE HOMICÍDIOS
-FATO: Homicídio consumado registrado no Bairro Centro Histórico, Porto Alegre.
-PARTICIPANTES: Marcos Vinícius (Vítima) e Diego Ferreira (Autor).
-ANEXOS: Fotografias e cápsulas recolhidas no local.
-
-No dia 20 de agosto de 2026, por volta das 22h, a guarnição respondeu ao chamado referente a disparos efetuados na Rua Voluntários da Pátria...`
-    },
-    {
-      id: 2,
-      code: 'RELINT-2026-002',
-      subject: 'Apreensão de Entorpecentes e Armamento de Alto Calibre',
-      date_of_fact: '2026-08-22',
-      bm_group: 'Tráfico de Drogas',
-      user_edited: false,
-      registry_number: '4302/2026',
-      police_unit: '2ª DP de Alvorada',
-      registry_year: 2026,
-      address: 'Rua das Camélias, 120',
-      neighborhood: 'Americana',
-      municipality: 'Alvorada',
-      summary: 'Cumprimento de mandado de busca resultando na apreensão de 12kg de maconha, 2kg de cocaína e 1 fuzil 5.56.',
-      participants: [
-        { id: 103, name: 'Lucas Mendes', alias: 'Gordo', role: 'Suspeito', photo_path: null }
-      ],
-      raw_text: `RELINT Nº 2026-002 - OPERAÇÃO DE TRÁFICO
-FATO: Cumprimento de mandado na cidade de Alvorada com grande volume de apreensão.
-PARTICIPANTES: Lucas Mendes (Suspeito).
-ANEXOS: Auto de apreensão de drogas e armamento.`
-    },
-    {
-      id: 3,
-      code: 'RELINT-2026-003',
-      subject: 'Roubo a Estabelecimento Comercial com Retenção de Vítimas',
-      date_of_fact: '2026-08-23',
-      bm_group: 'Roubos e Furtos',
-      user_edited: false,
-      registry_number: '1105/2026',
-      police_unit: '3ª DP Canoas',
-      registry_year: 2026,
-      address: 'Av. Getúlio Vargas, 2200',
-      neighborhood: 'Niterói',
-      municipality: 'Canoas',
-      summary: 'Dois indivíduos armados renderam funcionários de farmácia e subtraíram valores do caixa e pertences.',
-      participants: [
-        { id: 104, name: 'Ana Paula Rocha', alias: '', role: 'Testemunha', photo_path: null }
-      ],
-      raw_text: `RELINT Nº 2026-003 - DELEGACIA DE CANOAS
-FATO: Roubo qualificado a estabelecimento comercial.
-PARTICIPANTES: Ana Paula Rocha (Testemunha).`
-    }
-  ]);
-
-  let selectedRelintId = $state(1);
-
-  let activeRelint = $derived(
-    relintsList.find((r) => r.id === selectedRelintId) || relintsList[0]
-  );
+  /** @type {any[]} */
+  let relintsList = $state([]);
+  let selectedRelintId = $state('');
+  let activeRelint = $state(/** @type {any} */ (null));
+  let isLoadingList = $state(true);
+  let isLoadingDetail = $state(false);
+  let errorMessage = $state('');
 
   /**
+   * Carrega a lista inicial de RELINTs do banco de dados
+   */
+  async function loadRelintsData() {
+    isLoadingList = true;
+    errorMessage = '';
+    try {
+      const data = await getRelints();
+      relintsList = data;
+      
+      // Se houver relatórios e nenhum selecionado, seleciona o primeiro
+      if (data.length > 0 && !selectedRelintId) {
+        await handleSelectRelint(data[0]);
+      } else if (selectedRelintId) {
+        const current = data.find((r) => r.id === selectedRelintId);
+        if (current) await handleSelectRelint(current);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar lista de RELINTs:', err);
+      errorMessage = err instanceof Error ? err.message : 'Falha ao conectar com a API FastAPI local.';
+    } finally {
+      isLoadingList = false;
+    }
+  }
+
+  /**
+   * Seleciona um relatório e busca o dossiê detalhado completo
    * @param {any} relint
    */
-  function handleSelectRelint(relint) {
+  async function handleSelectRelint(relint) {
+    if (!relint?.id) return;
     selectedRelintId = relint.id;
+    isLoadingDetail = true;
+    
+    try {
+      const detail = await getRelintById(relint.id);
+      activeRelint = detail;
+    } catch (err) {
+      console.error(`Erro ao buscar dossiê do RELINT ${relint.id}:`, err);
+      // Fallback para os dados parciais que já temos na lista caso o detalhe falhe
+      activeRelint = relint;
+    } finally {
+      isLoadingDetail = false;
+    }
   }
 
   /**
+   * Salva as alterações editadas no backend FastAPI
    * @param {any} updatedRelint
    */
-  function handleSaveRelint(updatedRelint) {
-    const idx = relintsList.findIndex((r) => r.id === updatedRelint.id);
-    if (idx !== -1) {
-      relintsList[idx] = { ...updatedRelint, user_edited: true };
+  async function handleSaveRelint(updatedRelint) {
+    if (!updatedRelint?.id) return;
+    
+    try {
+      const saved = await updateRelint(updatedRelint.id, updatedRelint);
+      activeRelint = saved;
+      
+      // Atualiza a linha correspondente na lista lateral
+      const idx = relintsList.findIndex((r) => r.id === saved.id);
+      if (idx !== -1) {
+        relintsList[idx] = {
+          ...relintsList[idx],
+          subject: saved.subject,
+          date_of_fact: saved.date_of_fact,
+          bm_group: saved.bm_group,
+          user_edited: true
+        };
+      }
+    } catch (err) {
+      console.error('Erro ao salvar RELINT:', err);
+      alert(err instanceof Error ? `Erro ao salvar: ${err.message}` : 'Erro ao salvar alterações no banco.');
     }
   }
+
+  onMount(() => {
+    loadRelintsData();
+  });
 </script>
 
 <svelte:head>
   <title>Boletins RELINT | ReadRelint Dashboard</title>
 </svelte:head>
 
-<div class="relints-master-detail-page">
-  <div class="pane-left">
-    <RelintListPane 
-      relints={relintsList} 
-      selectedId={selectedRelintId} 
-      onSelect={handleSelectRelint} 
-    />
-  </div>
+<div class="relints-page-wrapper">
+  {#if errorMessage}
+    <div class="error-banner">
+      <Alert type="error" title="Erro de Comunicação com o Servidor">
+        <p style="margin: 0 0 8px 0;">{errorMessage}</p>
+        <Button variant="secondary" size="sm" onclick={loadRelintsData}>
+          {#snippet icon()}
+            <ArrowsClockwise size={16} weight="bold" />
+          {/snippet}
+          TENTAR NOVAMENTE
+        </Button>
+      </Alert>
+    </div>
+  {/if}
 
-  <div class="pane-right">
-    <RelintDetailPane 
-      relint={activeRelint} 
-      onSave={handleSaveRelint} 
-    />
+  <div class="relints-master-detail-page">
+    <div class="pane-left">
+      <RelintListPane 
+        relints={relintsList} 
+        selectedId={selectedRelintId} 
+        onSelect={handleSelectRelint} 
+      />
+    </div>
+
+    <div class="pane-right">
+      {#if isLoadingDetail}
+        <div class="loading-state">
+          <ArrowsClockwise size={32} weight="bold" class="spinning" />
+          <span>Carregando dossiê completo...</span>
+        </div>
+      {:else}
+        <RelintDetailPane 
+          relint={activeRelint} 
+          onSave={handleSaveRelint} 
+        />
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
+  .relints-page-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    height: 100%;
+  }
+
+  .error-banner {
+    flex-shrink: 0;
+  }
+
   .relints-master-detail-page {
     display: grid;
     grid-template-columns: 320px 1fr;
@@ -144,6 +177,28 @@ PARTICIPANTES: Ana Paula Rocha (Testemunha).`
   .pane-right {
     height: 100%;
     overflow: hidden;
+    position: relative;
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-ui);
+  }
+
+  :global(.spinning) {
+    animation: spin 1s linear infinite;
+    color: var(--color-amber-primary);
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   @media (max-width: 992px) {

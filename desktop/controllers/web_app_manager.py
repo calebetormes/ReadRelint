@@ -67,12 +67,15 @@ class WebAppManager:
         self._log("Encerrando o servidor Painel Web...")
         try:
             self._server.should_exit = True
+            if hasattr(self, "_loop") and self._loop and self._loop.is_running():
+                self._loop.call_soon_threadsafe(self._loop.stop)
             self._log("Servidor Web encerrado com sucesso.")
         except Exception as exc:
             self._log(f"Erro ao encerrar o servidor Web: {exc}")
         finally:
             self._server = None
             self._thread = None
+            self._loop = None
 
     def destroy(self) -> None:
         """Libera todos os recursos ao fechar a aplicação."""
@@ -84,10 +87,21 @@ class WebAppManager:
                 app,
                 host=self._DEFAULT_HOST,
                 port=self._DEFAULT_PORT,
-                log_level="warning"
+                log_level="warning",
+                log_config=None
             )
             self._server = uvicorn.Server(config)
-            self._thread = threading.Thread(target=self._server.run, daemon=True)
+            
+            def _runner():
+                import asyncio
+                self._loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self._loop)
+                try:
+                    self._server.run()
+                except Exception as ex:
+                    self._log(f"Erro na execução do Uvicorn: {ex}")
+
+            self._thread = threading.Thread(target=_runner, daemon=True)
             self._thread.start()
 
             if open_browser:
