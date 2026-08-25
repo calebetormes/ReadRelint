@@ -28,9 +28,10 @@ def get_ibge_names_set() -> Set[str]:
         return _IBGE_NAMES_CACHE
 
     json_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "common", "resources", "ibge_names.json"
+        os.path.dirname(__file__), "..", "resources", "ibge_names.json"
     )
     json_path = os.path.normpath(json_path)
+
 
     try:
         with open(json_path, "r", encoding="utf-8") as f:

@@ -7,7 +7,8 @@ Combina parser de blocos estruturados, spaCy NER, validação positiva IBGE e fi
 from typing import Any, Dict, List, Tuple
 from backend.engine.cleaners.text_cleaner import clean_person_name
 from backend.engine.extractors.base import ExtractionAlert
-from backend.engine.extractors.common.negative_filters import is_blacklisted_name
+from backend.engine.extractors.deterministic.participants.negative_filters import is_blacklisted_name
+
 from backend.engine.extractors.deterministic.participants.ibge_validator import is_valid_brazilian_name
 from backend.engine.extractors.deterministic.participants.role_detector import (
     detect_participation_role,

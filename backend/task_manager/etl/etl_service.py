@@ -155,117 +155,73 @@ class EtlService:
             else:
                 schema_model = IncidentReport
 
+            # Execução 100% ISOLADA de acordo com o motor selecionado
             if self.use_llm and self.llm_processor:
-                if on_progress: on_progress(f"[{filename}] -> Processando com IA local (Ollama)...")
+                if on_progress: on_progress(f"[{filename}] -> Processando exclusivamente com IA local (Ollama)...")
                 if on_sent_to_llm: on_sent_to_llm(filename)
                 try:
-                    response_dict = self.llm_processor.process_text(cleaned_text, questions=questions, schema_model=schema_model, pre_extracted_entities=pre_extracted_entities)
-                    if not isinstance(response_dict, dict):
-                        response_dict = {}
-                    extraction_method = "Ollama (IA)"
+                    from backend.engine.extractors.llm.pipeline import LlmPipeline
+                    llm_pipeline = LlmPipeline(processor=self.llm_processor)
+                    ext_result = llm_pipeline.extract(
+                        text=cleaned_text,
+                        filename=filename,
+                        rule=rule,
+                        pre_extracted_entities=pre_extracted_entities
+                    )
+                    if ext_result.success and ext_result.data:
+                        response_dict = ext_result.data
+                        extraction_method = "Ollama (IA)"
+                    else:
+                        raise RuntimeError(f"Erro na extração LLM: {ext_result.alerts}")
                 except Exception as llm_err:
                     self.use_llm = False
                     msg_disconnect = f"⚠️ Conexão com o Ollama perdida ({llm_err}). Alternando automaticamente para Regex (Sem IA)..."
                     if on_progress: on_progress(f"[{filename}] {msg_disconnect}")
                     if on_llm_disconnected: on_llm_disconnected(str(llm_err))
-                    response_dict = {}
+                    from backend.engine.extractors.deterministic.pipeline import DeterministicPipeline
+                    det_pipeline = DeterministicPipeline()
+                    ext_result = det_pipeline.extract(text=cleaned_text, filename=filename)
+                    response_dict = ext_result.data
                     extraction_method = "Regex (Sem IA)"
             else:
-                if on_progress: on_progress(f"[{filename}] ⚡ Processamento Ultra-Rápido (Sem IA + NER)...")
-                response_dict = {}
-                # Usar entidades GLiNER como fallback premium
-                from backend.engine.cleaners.text_cleaner import clean_person_name
-                fallback_parts = []
-                for ent in pre_extracted_entities:
-                    if ent["label"] == "Pessoa":
-                        c_name = clean_person_name(ent["text"])
-                        if c_name:
-                            fallback_parts.append({"name": c_name, "participation_type": "Suspeito", "document": "", "nickname": ""})
-                    elif ent["label"] in ["CPF", "RG"] and fallback_parts:
-                        fallback_parts[-1]["document"] = ent["text"]
-                    elif ent["label"] == "Endereço" and "address" not in response_dict:
-                        response_dict["address"] = ent["text"]
-                if fallback_parts:
-                    response_dict["participants"] = fallback_parts
+                if on_progress: on_progress(f"[{filename}] ⚡ Processamento Ultra-Rápido 100% Regex (Sem IA)...")
+                from backend.engine.extractors.deterministic.pipeline import DeterministicPipeline
+                det_pipeline = DeterministicPipeline()
+                ext_result = det_pipeline.extract(text=cleaned_text, filename=filename)
+                response_dict = ext_result.data
                 extraction_method = "Regex (Sem IA)"
 
             response_dict = self._normalize_response_dict(response_dict)
             response_dict["extraction_method"] = extraction_method
 
-            # 1. Definir o conteúdo integral do histórico preservando o cabeçalho introdutório do RELINT
+            # Conteúdo integral do histórico (armazenamento puro do texto limpo)
             final_content = clean_relint_text(cleaned_text)
             if "content" in response_dict:
                 del response_dict["content"]
 
-            # 1.1 Classificação determinística por Regra específica
-            rule_forced_bm = None
-            if rule and hasattr(rule, 'get_bm_group'):
-                rule_forced_bm = rule.get_bm_group(
-                    filename=filename,
-                    subject=response_dict.get("subject", "") or ""
-                )
-                if rule_forced_bm:
-                    llm_bm = response_dict.get("bm_group", "Outros")
-                    if llm_bm != rule_forced_bm:
-                        if on_progress:
-                            on_progress(f"[{filename}] ⚡ BM Group corrigido: '{llm_bm}' → '{rule_forced_bm}' (regra determinística)")
-                    response_dict["bm_group"] = rule_forced_bm
+            # SE MODO REGEX: Garante preenchimento de campos determinísticos adicionais
+            if extraction_method == "Regex (Sem IA)":
+                if not response_dict.get("subject"):
+                    response_dict["subject"] = extract_subject_fallback(final_content, filename)
+                if not response_dict.get("summary"):
+                    response_dict["summary"] = extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
+                if not response_dict.get("date_of_fact"):
+                    response_dict["date_of_fact"] = extract_date_of_fact(final_content) or "Não Informado"
+                if not response_dict.get("time_of_fact"):
+                    response_dict["time_of_fact"] = extract_time_of_fact(final_content) or "Não Informado"
+                if not response_dict.get("map_url") or not response_dict.get("coordinates"):
+                    r_map, r_coords = resolve_coordinates_and_map_info(final_content)
+                    response_dict["map_url"] = r_map
+                    response_dict["coordinates"] = r_coords
+                if not response_dict.get("bm_group") or response_dict.get("bm_group") == "Outros":
+                    response_dict["bm_group"] = classify_bm_group(filename=filename, subject=response_dict.get("subject", ""), content=final_content)
 
-            # 1.2 Classificação determinística por padrões regex
-            current_bm = response_dict.get("bm_group", "Outros")
-            if not rule_forced_bm and current_bm in ("Outros", "outros", None, ""):
-                classified_bm = classify_bm_group(
-                    filename=filename,
-                    subject=response_dict.get("subject", "") or "",
-                    content=final_content,
-                    llm_bm_group=current_bm,
-                )
-                if classified_bm != current_bm:
-                    if on_progress:
-                        on_progress(f"[{filename}] 🎯 BM Group classificado: '{current_bm}' → '{classified_bm}' (classificador regex)")
-                    response_dict["bm_group"] = classified_bm
-
-            # 2. Extração / Sanitização da data e hora do fato
-            extracted_date = extract_date_of_fact(final_content)
-            date_val = response_dict.get("date_of_fact") or response_dict.get("modification_date_history")
-            if not date_val or str(date_val).strip() in ["Não Informado", "None", ""]:
-                date_val = extracted_date if extracted_date else "Não Informado"
-            
-            response_dict["date_of_fact"] = date_val
-            response_dict["modification_date_history"] = date_val
-
-            time_val = response_dict.get("time_of_fact")
-            if not time_val or str(time_val).strip() in ["Não Informado", "None", ""]:
-                extracted_time = extract_time_of_fact(final_content)
-                time_val = extracted_time if extracted_time else "Não Informado"
-            response_dict["time_of_fact"] = time_val
-
-            # 3. Extração / Resolução de Links de Mapa e Coordenadas
-            map_url = response_dict.get("map_url")
-            coords = response_dict.get("coordinates")
-            resolved_map, resolved_coords = resolve_coordinates_and_map_info(final_content, map_url=map_url or "")
-            
-            if not map_url or map_url == "None":
-                response_dict["map_url"] = resolved_map
-            if not coords or coords == "None":
-                response_dict["coordinates"] = resolved_coords
-
-            # 1.0 Fallback do Assunto caso venha nulo ou vazio
-            subject_val = response_dict.get("subject")
-            if not subject_val or str(subject_val).strip() in ["None", "null", ""]:
-                subject_val = extract_subject_fallback(final_content, filename)
-                response_dict["subject"] = subject_val
-
-            # 4. Sanitiza o resumo caso venha nulo ou com texto de placeholder/cabeçalho
-            summary_val = response_dict.get("summary")
-            if not summary_val or "Resumo do Histórico" in str(summary_val) or len(str(summary_val).strip()) < 5 or "RELATÓRIO DE INTELIGÊNCIA" in str(summary_val):
-                summary_val = response_dict.get("main_fact") or extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
-            response_dict["summary"] = summary_val
 
             # 5. Filtragem e Enriquecimento Híbrido de Participantes (Sanitização + Anti-PM + Enriquecimento)
             from backend.engine.cleaners.text_cleaner import clean_person_name
-            from backend.engine.extractors.common.negative_filters import is_blacklisted_name
+            from backend.engine.extractors.deterministic.participants.negative_filters import is_blacklisted_name
             from backend.engine.extractors.deterministic.participants.role_detector import (
+
                 detect_participation_role,
                 extract_document_near_name
             )

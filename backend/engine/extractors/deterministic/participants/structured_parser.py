@@ -6,7 +6,8 @@ Parser de blocos formais e seções estruturadas de participantes em boletins (N
 import re
 from typing import Any, Dict, List
 from backend.engine.cleaners.text_cleaner import clean_person_name
-from backend.engine.extractors.common.negative_filters import is_blacklisted_name
+from backend.engine.extractors.deterministic.participants.negative_filters import is_blacklisted_name
+
 
 
 from backend.engine.extractors.deterministic.participants.role_detector import detect_participation_role

@@ -63,41 +63,22 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 - [x] **Maximização e Otimização da Área de Leitura & Dossiê:**
   - **Layout 100% Fluido no AppShell:** Remoção do limite artificial `max-width: 1440px`, permitindo que o Dashboard ocupe 100% da resolução em monitores Full HD, Quad HD e UltraWide.
   - **Painel Master-Detail Proporcional 30% / 70% e Retrátil na rota `/relints`:** Coluna lateral balanceada com botão flutuante de recolhimento instantâneo para 100% no Dossiê.
-  - [x] **Otimização de Inicialização & Novo Workflow `/run`:**
-    - Script autônomo e leve `start_web.py` para subir diretamente o **FastAPI** (`:8000`) e o **SvelteKit** (`:5173`) abrindo no navegador sem necessidade da interface desktop PyQt6.
-    - Atualização do workflow `/run` (`.agents/workflows/run.md`) para inicialização imediata e silenciosa.
-  - [x] **Performance Extrema do Dashboard (Backend & Frontend):**
-    - Criação do método nativo `get_dashboard_metrics()` no `SqliteRepo` executando agregação SQL em tempo constante (< 5ms).
-    - Novo endpoint dedicado `GET /api/v1/relints/stats` consumido em paralelo com os 5 relatórios mais recentes (`limit=5`), acelerando o carregamento da Home de ~1.5s para menos de 50ms.
-    - Inclusão de skeleton loaders animados (`.table-skeleton` com shimmer gradient) em `+page.svelte`.
-  - [x] **Transições Fluidas de Página & Dossiê (Apple WWDC Fluid Motion):**
-    - Animação `.page-enter-animation` em `+layout.svelte` com curvas cúbicas Apple (`cubic-bezier(0.16, 1, 0.3, 1)`), transicionando rotas com elevação e microescala suaves sem layout shift.
-    - Animação `.relint-enter-animation` em `relints/+page.svelte` proporcionando troca imediata e suave de dossiês ao selecionar diferentes boletins na lista lateral.
-    - Fixação de altura rigorosamente constante (`64px`, `flex-shrink: 0`) no cabeçalho `Header.svelte`.
-  - **Redesign Visual dos Cards (Foco e Clareza):**
-    - **Linha 1:** Ícone PDF com o número limpo do RELINT (ex: `RELINT 200`) em fonte mono âmbar à esquerda, e ícones de Especialidade (Homicídio, Tráfico, Patrimônio) + Status de Revisão (`🟢 Revisado` / `⚪ Pendente`) posicionados lado a lado na direita.
-    - **Linha 2:** Texto do **Assunto** em destaque limpo de 12px com limite de 2 linhas (`-webkit-line-clamp: 2`).
-    - **Linha 3:** Rodapé limpo com a **Data do Fato** (sem rótulo redundante) e data do arquivo à direita.
-    - Chips horizontais de filtro de especialidade (Todos, Homicídio, Tráfico, Patrimônio) com ícones coloridos e contador dinâmico de relatórios.
-  - **Aba Síntese e Campos de Metadados Limpos:**
-    - A primeira aba do dossiê foi renomeada para **Síntese** com ícone `Sparkle`.
-    - **Síntese do Fato em Destaque:** Card amplo posicionado no topo com tipografia confortável de 15px e linha de destaque âmbar.
-    - **Campos de Metadados em Modo Leitura:** Os campos *Assunto*, *Data do Fato*, *Número de Registro*, *Órgão Registrador* e *Ano* são exibidos como texto puro limpo (sem caixas de input). Os inputs só são renderizados quando o usuário clica no botão **EDITAR**.
-- [x] **Workflow `/run` e Inicialização Rápida (`--autostart`):**
-  - Implementado o workflow enxuto `.agents/workflows/run.md` (`/run`) para inicialização imediata do ecossistema.
-  - Adicionado suporte ao argumento `--autostart` em `painel.py` e `desktop/ui/pyqt_app.py`, garantindo que o painel abra em primeiro plano (não minimizado) e acione automaticamente o Backend FastAPI (:8000), Frontend SvelteKit (:5173) e o navegador no Dashboard.
-  - Atualizado o script executável `Iniciar-Painel.bat` com `--autostart`.
-
-
+  - **Otimização de Inicialização & Novo Workflow `/run`:** Script autônomo e leve `start_web.py` para subir diretamente o **FastAPI** (`:8000`) e o **SvelteKit** (`:5173`) abrindo no navegador.
+  - **Performance Extrema do Dashboard (Backend & Frontend):** Método `get_dashboard_metrics()` no `SqliteRepo` executando agregação SQL em tempo constante (< 5ms) e endpoint `GET /api/v1/relints/stats`.
+  - **Transições Fluidas de Página & Dossiê (Apple WWDC Fluid Motion):** Animação `.page-enter-animation` em `+layout.svelte` e `.relint-enter-animation` em `relints/+page.svelte`.
+  - **Módulo Completo de Participantes & Dossiês (`/participantes` e `TabParticipants.svelte`):** Página inteira Master-Detail e modal de visualização e edição direta com persistência SQLite.
+- [x] **Desacoplamento e Isolamento Físico dos Motores LLM e Regex:**
+  - Criação do pipeline especialista `LlmPipeline` em `backend/engine/extractors/llm/` com execução 100% orientada a IA sem fallbacks silenciosos.
+  - Centralização do motor determinístico em `DeterministicPipeline` e realocação de listas negras (`negative_filters.py`) e base IBGE (`ibge_names.json`) para a pasta `deterministic/`.
+  - Expurgo da pasta compartilhada `common/`.
+- [x] **Configuração de Ambiente IDE (.vscode):**
+  - Adicionada regra `files.exclude` no `.vscode/settings.json` para ocultar automaticamente pastas `__pycache__`, `.pytest_cache` e arquivos `.pyc`/`.pyo`.
 
 ## 2. Próximas Etapas (Prioridade)
+### Extração Cognitiva via LLM
+- [ ] Refinar prompts estruturados e schemas para extração de Síntese factual completa e Endereços detalhados.
 
-### ETAPA 2 — Recursos Avançados de Vinculação e Edição
-- [ ] Implementar seletor interativo para vincular fotos específicas a participantes durante o modal de edição do RELINT.
-- [ ] Refinar feedback visual e notificações de conclusão de arquivos na Web.
-- [ ] Adicionar ordenação rápida e filtros por status de erro no relatório de leitura.
-
-### ETAPA 2 — Acesso Online Seguro (Cloudflare Tunnel + E2EE)
+### Acesso Online Seguro (Cloudflare Tunnel + E2EE)
 - [ ] Configurar **Cloudflare Tunnel** para expor o FastAPI local via domínio fixo com HTTPS.
 - [ ] Implementar **Criptografia Ponta-a-Ponta (E2EE)** na camada da aplicação.
 
