@@ -14,7 +14,7 @@
   import Alert from '$lib/components/ui/Alert.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import { getRelints, getRelintById, updateRelint } from '$lib/services/relintsService';
-  import { ArrowsClockwise, WarningCircle } from 'phosphor-svelte';
+  import { ArrowsClockwise, WarningCircle, CaretLeft, CaretRight, ListDashes } from 'phosphor-svelte';
 
   /** @type {any[]} */
   let relintsList = $state([]);
@@ -23,6 +23,7 @@
   let isLoadingList = $state(true);
   let isLoadingDetail = $state(false);
   let errorMessage = $state('');
+  let isListCollapsed = $state(false);
 
   /**
    * Carrega a lista inicial de RELINTs do banco de dados
@@ -122,14 +123,31 @@
     </div>
   {/if}
 
-  <div class="relints-master-detail-page">
-    <div class="pane-left">
-      <RelintListPane 
-        relints={relintsList} 
-        selectedId={selectedRelintId} 
-        onSelect={handleSelectRelint} 
-      />
-    </div>
+  <div class="relints-master-detail-page" class:list-collapsed={isListCollapsed}>
+    <aside class="pane-left" class:collapsed={isListCollapsed}>
+      <div class="pane-left-content">
+        <RelintListPane 
+          relints={relintsList} 
+          selectedId={selectedRelintId} 
+          onSelect={handleSelectRelint} 
+        />
+      </div>
+    </aside>
+
+    <!-- Botão Flutuante de Toggle da Lista Lateral -->
+    <button 
+      class="collapse-toggle-btn"
+      class:is-collapsed={isListCollapsed}
+      onclick={() => isListCollapsed = !isListCollapsed}
+      title={isListCollapsed ? "Expandir lista de RELINTs (Ctrl + B)" : "Recolher lista para ampliar leitura"}
+      aria-label="Alternar lista lateral"
+    >
+      {#if isListCollapsed}
+        <CaretRight size={16} weight="bold" />
+      {:else}
+        <CaretLeft size={16} weight="bold" />
+      {/if}
+    </button>
 
     <div class="pane-right">
       {#if isLoadingDetail}
@@ -160,24 +178,76 @@
   }
 
   .relints-master-detail-page {
+    position: relative;
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 30% 70%;
     height: calc(100vh - 64px - var(--space-6) * 2);
     background-color: var(--color-bg-surface-card);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    transition: grid-template-columns var(--duration-normal) var(--ease-spring-snappy);
+  }
+
+  .relints-master-detail-page.list-collapsed {
+    grid-template-columns: 0px 1fr;
   }
 
   .pane-left {
     height: 100%;
     overflow: hidden;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .pane-left.collapsed {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pane-left-content {
+    width: 100%;
+    height: 100%;
+  }
+
+  .collapse-toggle-btn {
+    position: absolute;
+    left: calc(30% - 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 48px;
+    background-color: var(--color-bg-surface-elevated);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    z-index: 30;
+    transition: 
+      left var(--duration-normal) var(--ease-spring-snappy),
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .collapse-toggle-btn:hover {
+    background-color: var(--color-bg-surface-card);
+    color: var(--color-amber-primary);
+    border-color: var(--color-amber-primary);
+  }
+
+  .collapse-toggle-btn.is-collapsed {
+    left: 8px;
   }
 
   .pane-right {
     height: 100%;
     overflow: hidden;
     position: relative;
+    min-width: 0;
   }
 
   .loading-state {

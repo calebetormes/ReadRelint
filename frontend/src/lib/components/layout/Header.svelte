@@ -1,7 +1,6 @@
 <script>
   import { page } from '$app/stores';
-  import { List, Palette } from 'phosphor-svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
+  import { List } from 'phosphor-svelte';
 
   /** @type {{ title?: string, onMobileToggle?: () => void }} */
   let {
@@ -34,12 +33,7 @@
   </div>
 
   <div class="header-right">
-    <!-- Placeholder para o seletor de temas (ThemeManager) futuro -->
-    <div class="theme-selector" role="button" tabindex="0">
-      <Palette size={18} weight="fill" color="var(--color-text-muted)" />
-      <span class="theme-text">Dark Theme</span>
-      <Badge variant="amber" size="sm">Padrão</Badge>
-    </div>
+    <!-- Futura área do usuário -->
   </div>
 </header>
 
@@ -93,31 +87,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-4);
-  }
-
-  .theme-selector {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    background-color: var(--color-bg-surface-card);
-    border: 1px solid var(--color-border-medium);
-    border-radius: var(--radius-default);
-    cursor: pointer;
-    transition: 
-      background-color var(--duration-fast) var(--ease-standard),
-      border-color var(--duration-fast) var(--ease-standard);
-  }
-
-  .theme-selector:hover {
-    background-color: var(--color-bg-surface-elevated);
-    border-color: var(--color-amber-primary);
-  }
-
-  .theme-text {
-    font-family: var(--font-family-main);
-    font-size: var(--font-size-ui);
-    color: var(--color-text-main);
   }
 
   /* Responsividade básica */

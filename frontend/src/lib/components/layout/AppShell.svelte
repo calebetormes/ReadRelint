@@ -68,8 +68,6 @@
     flex: 1;
     padding: var(--space-6);
     box-sizing: border-box;
-    max-width: 1440px;
-    margin: 0 auto;
     width: 100%;
   }
 

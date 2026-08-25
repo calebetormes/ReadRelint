@@ -60,6 +60,19 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
     - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);
     - `.agents/workflows/sync-penpot.md` (`/sync-penpot`: Workflow de auditoria 1:1 e sincronização Penpot -> Código);
     - `.agents/workflows/export-to-penpot.md` (`/export-to-penpot`: Workflow de geração de componentes Código -> Penpot).
+- [x] **Maximização e Otimização da Área de Leitura & Dossiê:**
+  - **Layout 100% Fluido no AppShell:** Remoção do limite artificial `max-width: 1440px`, permitindo que o Dashboard ocupe 100% da resolução em monitores Full HD, Quad HD e UltraWide.
+  - **Painel Master-Detail Proporcional 30% / 70% e Retrátil na rota `/relints`:** Coluna lateral balanceada com botão flutuante de recolhimento instantâneo para 100% no Dossiê.
+  - **Redesign Visual dos Cards (Foco e Clareza):**
+    - **Linha 1:** Ícone PDF com o número limpo do RELINT (ex: `RELINT 200`) em fonte mono âmbar à esquerda, e ícones de Especialidade (Homicídio, Tráfico, Patrimônio) + Status de Revisão (`🟢 Revisado` / `⚪ Pendente`) posicionados lado a lado na direita.
+    - **Linha 2:** Texto do **Assunto** em destaque limpo de 12px com limite de 2 linhas (`-webkit-line-clamp: 2`).
+    - **Linha 3:** Rodapé limpo com a **Data do Fato** (sem rótulo redundante) e data do arquivo à direita.
+    - Chips horizontais de filtro de especialidade (Todos, Homicídio, Tráfico, Patrimônio) com ícones coloridos e contador dinâmico de relatórios.
+  - **Cabeçalho de Dossiê Minimalista e Direto:**
+    - Título semibold de 18px.
+    - **Barra de Metadados Limpa:** Data direta com ícone de calendário (sem o texto redundante "Fato:"), apenas o Município (com ícone de localização, ocultando termos genéricos "Não Informado") e Unidade Policial.
+    - **Método de Extração por Ícone Minimalista:** Substituição de badges de texto seco por ícones coloridos compactos com tooltip (`✨ Verde Esmeralda` para Ollama IA e `⚡ Âmbar` para Regex sem IA).
+    - Botão de ação direta `EDITAR` / `SALVAR E REVISAR`.
 
 
 ## 2. Próximas Etapas (Prioridade)

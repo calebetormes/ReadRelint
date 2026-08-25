@@ -2,8 +2,10 @@
   import Tabs from '$lib/components/ui/Tabs.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
+  import Alert from '$lib/components/ui/Alert.svelte';
   import { 
     CheckCircle, 
+    Clock,
     FloppyDisk, 
     PencilSimple, 
     FileText, 
@@ -11,7 +13,12 @@
     MapPin, 
     Shield, 
     UserList, 
-    Article 
+    Article,
+    CalendarBlank,
+    Buildings,
+    Sparkle,
+    Cpu,
+    Hash
   } from 'phosphor-svelte';
 
   import TabGeneral from './tabs/TabGeneral.svelte';
@@ -33,6 +40,11 @@
       isEditing = false;
     }
   });
+
+  function isLlmMethod(method) {
+    const m = String(method || '').toLowerCase();
+    return (m.includes('ollama') || m.includes('ia')) && !m.includes('sem ia') && !m.includes('regex');
+  }
 
   function handleButtonClick() {
     if (!isEditing) {
@@ -70,39 +82,82 @@
       <div class="header-titles">
         <div class="code-row">
           <span class="relint-code font-mono">{relint.code}</span>
-          {#if relint.user_edited}
-            <Badge variant="success" size="sm">
-              {#snippet icon()}
-                <CheckCircle size={14} weight="fill" />
-              {/snippet}
-              Revisado
-            </Badge>
-          {:else}
-            <Badge variant="neutral" size="sm">Pendente Revisão</Badge>
-          {/if}
-
+          
           {#if isEditing}
             <Badge variant="amber" size="sm" dot>Modo Edição Ativo</Badge>
           {/if}
         </div>
+
         <h2 class="relint-subject">{relint.subject || 'Sem assunto definido'}</h2>
+
+        <!-- Barra de Metadados Rápida -->
+        <div class="header-meta-bar">
+          {#if relint.date_of_fact}
+            <div class="meta-item" title="Data do Fato">
+              <CalendarBlank size={14} weight="bold" color="var(--color-text-muted)" />
+              <span>{relint.date_of_fact}</span>
+            </div>
+          {/if}
+
+          {#if relint.municipality && relint.municipality !== 'Não Informado' && relint.municipality !== 'N/I'}
+            <div class="meta-item" title="Município">
+              <MapPin size={14} weight="bold" color="var(--color-text-muted)" />
+              <span>{relint.municipality}</span>
+            </div>
+          {/if}
+
+          {#if relint.police_unit}
+            <div class="meta-item" title="Unidade Policial">
+              <Buildings size={14} weight="bold" color="var(--color-text-muted)" />
+              <span>{relint.police_unit}</span>
+            </div>
+          {/if}
+
+          <!-- Método de Extração Apenas com Ícone -->
+          <div class="meta-item">
+            {#if isLlmMethod(relint.extraction_method)}
+              <span class="extraction-icon-pill is-ia" title="Extraído com Inteligência Artificial (Ollama)">
+                <Sparkle size={13} weight="fill" />
+              </span>
+            {:else}
+              <span class="extraction-icon-pill is-regex" title="Extraído deterministicamente sem IA (Regex)">
+                <Cpu size={13} weight="bold" />
+              </span>
+            {/if}
+          </div>
+        </div>
       </div>
 
       <div class="header-actions">
         <Button variant={isEditing ? "primary" : "secondary"} size="md" onclick={handleButtonClick}>
           {#snippet icon()}
             {#if isEditing}
-              <FloppyDisk size={18} weight="bold" />
+              <FloppyDisk size={16} weight="bold" />
             {:else}
-              <PencilSimple size={18} weight="bold" />
+              <PencilSimple size={16} weight="bold" />
             {/if}
           {/snippet}
           {#if isEditing}
-            {isSaving ? 'SALVANDO...' : 'SALVAR E MARCAR REVISADO'}
+            {isSaving ? 'SALVANDO...' : 'SALVAR E REVISAR'}
           {:else}
-            EDITAR DADOS
+            EDITAR
           {/if}
         </Button>
+
+        <!-- Status de Revisão como Alerta Compacto Abaixo do Botão -->
+        <div class="status-alert-box">
+          {#if relint.user_edited}
+            <span class="status-pill is-success" title="Relatório revisado por curadoria humana">
+              <CheckCircle size={13} weight="fill" />
+              <span>Revisado</span>
+            </span>
+          {:else}
+            <span class="status-pill is-warning" title="Aguardando validação humana">
+              <Clock size={13} weight="bold" />
+              <span>Pendente Revisão</span>
+            </span>
+          {/if}
+        </div>
       </div>
     </div>
 
@@ -158,6 +213,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    flex: 1;
+    min-width: 0;
   }
 
   .code-row {
@@ -167,16 +224,102 @@
   }
 
   .relint-code {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-bold);
+    font-size: 11px;
+    font-weight: var(--font-weight-medium);
     color: var(--color-amber-primary);
+    letter-spacing: 0.2px;
+    opacity: 0.9;
   }
 
   .relint-subject {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-bold);
+    font-size: 18px;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-main);
     margin: 0;
+    line-height: var(--line-height-140);
+    letter-spacing: -0.2px;
+  }
+
+  .header-meta-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+  }
+
+  .meta-item span {
+    color: var(--color-text-main);
+    font-size: 12px;
+  }
+
+  .extraction-icon-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+
+  .extraction-icon-pill.is-ia {
+    color: #10b981;
+    background-color: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .extraction-icon-pill.is-regex {
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  .status-alert-box {
+    display: flex;
+    align-items: center;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+
+  .status-pill.is-warning {
+    color: #fbbf24;
+    background-color: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .status-pill.is-success {
+    color: #34d399;
+    background-color: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
   }
 
   .tabs-wrapper {
