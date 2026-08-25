@@ -4,13 +4,16 @@
    Global Reset & Base Application Styles
    ========================================================================== */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   min-height: 100vh;
   background-color: var(--color-bg-primary);
@@ -24,7 +27,10 @@ html, body {
   overflow-x: hidden;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -57,4 +63,41 @@ a:hover {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-amber-dark);
+}
+
+/* ==========================================================================
+   Apple-Style Smooth Page & View Transitions (GPU-Accelerated)
+   ========================================================================== */
+@keyframes appleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes relintDetailEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter-animation {
+  animation: appleFadeIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+.relint-enter-animation {
+  animation: relintDetailEnter 1.048s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }

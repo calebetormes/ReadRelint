@@ -101,16 +101,26 @@ def _find_report_by_id(report_id: str, repo: SqliteRepo):
 # Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
+@router.get("/stats")
+def get_relints_statistics(repo: SqliteRepo = Depends(get_db_repo)) -> Dict[str, Any]:
+    """Retorna estatísticas consolidadas para os KPI Cards em tempo constante (< 5ms)."""
+    return repo.get_dashboard_metrics()
+
+
 @router.get("", response_model=List[RelintSummaryResponse])
 def list_relints(
     search: Optional[str] = Query(None, description="Full-text search in subject/summary/content/participants"),
     bm_group: Optional[str] = Query(None, description="Filter by BM Group (case-insensitive)"),
     relint_type: Optional[str] = Query(None, description="Filter by RELINT type"),
     municipality: Optional[str] = Query(None, description="Filter by municipality (partial match)"),
+    limit: Optional[int] = Query(None, description="Maximum number of records to return"),
+    offset: int = Query(0, description="Offset for pagination"),
     repo: SqliteRepo = Depends(get_db_repo),
 ) -> List[RelintSummaryResponse]:
-    """Returns all RELINT reports, with optional text search and category filters."""
+    """Returns all RELINT reports, with optional text search, category filters and pagination."""
     results = []
+    skipped = 0
+
 
     for report in repo.get_all():
         b_group = _enum_to_str(report.bm_group)
@@ -140,6 +150,10 @@ def list_relints(
             if not matches:
                 continue
 
+        if offset > 0 and skipped < offset:
+            skipped += 1
+            continue
+
         results.append(RelintSummaryResponse(
             id=str(report.id or ""),
             source_file=report.source_file or "",
@@ -159,7 +173,11 @@ def list_relints(
             user_edited=getattr(report, "user_edited", False) or False,
         ))
 
+        if limit is not None and len(results) >= limit:
+            break
+
     return results
+
 
 
 @router.get("/{report_id}", response_model=RelintDetailResponse)

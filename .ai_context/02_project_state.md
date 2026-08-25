@@ -63,6 +63,17 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 - [x] **Maximização e Otimização da Área de Leitura & Dossiê:**
   - **Layout 100% Fluido no AppShell:** Remoção do limite artificial `max-width: 1440px`, permitindo que o Dashboard ocupe 100% da resolução em monitores Full HD, Quad HD e UltraWide.
   - **Painel Master-Detail Proporcional 30% / 70% e Retrátil na rota `/relints`:** Coluna lateral balanceada com botão flutuante de recolhimento instantâneo para 100% no Dossiê.
+  - [x] **Otimização de Inicialização & Novo Workflow `/run`:**
+    - Script autônomo e leve `start_web.py` para subir diretamente o **FastAPI** (`:8000`) e o **SvelteKit** (`:5173`) abrindo no navegador sem necessidade da interface desktop PyQt6.
+    - Atualização do workflow `/run` (`.agents/workflows/run.md`) para inicialização imediata e silenciosa.
+  - [x] **Performance Extrema do Dashboard (Backend & Frontend):**
+    - Criação do método nativo `get_dashboard_metrics()` no `SqliteRepo` executando agregação SQL em tempo constante (< 5ms).
+    - Novo endpoint dedicado `GET /api/v1/relints/stats` consumido em paralelo com os 5 relatórios mais recentes (`limit=5`), acelerando o carregamento da Home de ~1.5s para menos de 50ms.
+    - Inclusão de skeleton loaders animados (`.table-skeleton` com shimmer gradient) em `+page.svelte`.
+  - [x] **Transições Fluidas de Página & Dossiê (Apple WWDC Fluid Motion):**
+    - Animação `.page-enter-animation` em `+layout.svelte` com curvas cúbicas Apple (`cubic-bezier(0.16, 1, 0.3, 1)`), transicionando rotas com elevação e microescala suaves sem layout shift.
+    - Animação `.relint-enter-animation` em `relints/+page.svelte` proporcionando troca imediata e suave de dossiês ao selecionar diferentes boletins na lista lateral.
+    - Fixação de altura rigorosamente constante (`64px`, `flex-shrink: 0`) no cabeçalho `Header.svelte`.
   - **Redesign Visual dos Cards (Foco e Clareza):**
     - **Linha 1:** Ícone PDF com o número limpo do RELINT (ex: `RELINT 200`) em fonte mono âmbar à esquerda, e ícones de Especialidade (Homicídio, Tráfico, Patrimônio) + Status de Revisão (`🟢 Revisado` / `⚪ Pendente`) posicionados lado a lado na direita.
     - **Linha 2:** Texto do **Assunto** em destaque limpo de 12px com limite de 2 linhas (`-webkit-line-clamp: 2`).

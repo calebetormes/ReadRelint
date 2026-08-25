@@ -140,42 +140,51 @@
     <div class="main-column">
       <Card variant="elevated" title="Últimos RELINTs Extraídos" subtitle="Acompanhamento em tempo real da base de dados.">
         <div class="table-container">
-          <Table 
-            columns={recentRelintsColumns} 
-            data={stats.recentRelints.map(r => ({
-              code: r.code,
-              spec: r.bm_group || 'Geral',
-              status: r.user_edited ? 'Revisado' : 'Processado',
-              badge: r.user_edited ? 'success' : 'neutral',
-              method: r.extraction_method || 'Ollama (IA)',
-              raw: r
-            }))}
-          >
-            {#snippet rowSnippet(row)}
-              <tr class="table-row">
-                <td class="td font-mono font-amber">{row.code}</td>
-                <td class="td">{row.spec}</td>
-                <td class="td">
-                  <!-- @ts-ignore -->
-                  <Badge variant={row.badge} size="sm" dot>{row.status}</Badge>
-                </td>
-                <td class="td text-muted">{row.method}</td>
-                <td class="td text-right">
-                  <a href="/relints" class="inline-link">
-                    <Button variant="ghost" size="sm">
-                      {#snippet icon()}
-                        <ArrowRight size={16} weight="bold" />
-                      {/snippet}
-                      ABRIR
-                    </Button>
-                  </a>
-                </td>
-              </tr>
-            {/snippet}
-          </Table>
+          {#if isLoading && stats.recentRelints.length === 0}
+            <div class="table-skeleton">
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+            </div>
+          {:else}
+            <Table 
+              columns={recentRelintsColumns} 
+              data={stats.recentRelints.map(r => ({
+                code: r.code,
+                spec: r.bm_group || 'Geral',
+                status: r.user_edited ? 'Revisado' : 'Processado',
+                badge: r.user_edited ? 'success' : 'neutral',
+                method: r.extraction_method || 'Ollama (IA)',
+                raw: r
+              }))}
+            >
+              {#snippet rowSnippet(row)}
+                <tr class="table-row">
+                  <td class="td font-mono font-amber">{row.code}</td>
+                  <td class="td">{row.spec}</td>
+                  <td class="td">
+                    <!-- @ts-ignore -->
+                    <Badge variant={row.badge} size="sm" dot>{row.status}</Badge>
+                  </td>
+                  <td class="td text-muted">{row.method}</td>
+                  <td class="td text-right">
+                    <a href="/relints" class="inline-link">
+                      <Button variant="ghost" size="sm">
+                        {#snippet icon()}
+                          <ArrowRight size={16} weight="bold" />
+                        {/snippet}
+                        ABRIR
+                      </Button>
+                    </a>
+                  </td>
+                </tr>
+              {/snippet}
+            </Table>
+          {/if}
         </div>
       </Card>
     </div>
+
 
     <div class="side-column">
       <Card variant="glass" title="Status do Motor IA (Ollama)">
@@ -319,6 +328,26 @@
     color: var(--color-text-main);
   }
 
+  .table-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) 0;
+  }
+
+  .skeleton-row {
+    height: 44px;
+    background: linear-gradient(90deg, var(--color-bg-tertiary) 25%, var(--color-bg-surface-elevated) 50%, var(--color-bg-tertiary) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   :global(.spinning) {
     animation: spin 1s linear infinite;
   }
@@ -334,3 +363,4 @@
     }
   }
 </style>
+

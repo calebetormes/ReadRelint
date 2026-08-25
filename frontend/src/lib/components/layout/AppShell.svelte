@@ -9,6 +9,7 @@
   let mobileMenuOpen = $state(false);
 </script>
 
+
 <div class="app-layout">
   <!-- Sidebar Container -->
   <div class="app-sidebar" class:mobile-open={mobileMenuOpen}>
@@ -25,6 +26,7 @@
       {/if}
     </main>
   </div>
+
 
   <!-- Mobile Overlay -->
   {#if mobileMenuOpen}
@@ -69,6 +71,7 @@
     padding: var(--space-6);
     box-sizing: border-box;
     width: 100%;
+    position: relative;
   }
 
   .mobile-overlay {

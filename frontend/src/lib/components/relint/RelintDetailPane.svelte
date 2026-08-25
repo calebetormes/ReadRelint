@@ -41,10 +41,12 @@
     }
   });
 
+  /** @param {any} method */
   function isLlmMethod(method) {
     const m = String(method || '').toLowerCase();
     return (m.includes('ollama') || m.includes('ia')) && !m.includes('sem ia') && !m.includes('regex');
   }
+
 
   function handleButtonClick() {
     if (!isEditing) {

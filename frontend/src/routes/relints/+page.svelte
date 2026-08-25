@@ -9,12 +9,14 @@
 -->
 <script>
   import { onMount } from 'svelte';
+  import { fly, fade } from 'svelte/transition';
   import RelintListPane from '$lib/components/relint/RelintListPane.svelte';
   import RelintDetailPane from '$lib/components/relint/RelintDetailPane.svelte';
   import Alert from '$lib/components/ui/Alert.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import { getRelints, getRelintById, updateRelint } from '$lib/services/relintsService';
   import { ArrowsClockwise, WarningCircle, CaretLeft, CaretRight, ListDashes } from 'phosphor-svelte';
+
 
   /** @type {any[]} */
   let relintsList = $state([]);
@@ -155,13 +157,23 @@
           <ArrowsClockwise size={32} weight="bold" class="spinning" />
           <span>Carregando dossiê completo...</span>
         </div>
+      {:else if activeRelint}
+        {#key selectedRelintId}
+          <div class="relint-enter-animation detail-transition-wrap">
+            <RelintDetailPane 
+              relint={activeRelint} 
+              onSave={handleSaveRelint} 
+            />
+          </div>
+        {/key}
       {:else}
-        <RelintDetailPane 
-          relint={activeRelint} 
-          onSave={handleSaveRelint} 
-        />
+        <div class="empty-state">
+          <span>Selecione um relatório para visualizar o dossiê.</span>
+        </div>
       {/if}
     </div>
+
+
   </div>
 </div>
 
@@ -250,6 +262,21 @@
     min-width: 0;
   }
 
+  .detail-transition-wrap {
+    width: 100%;
+    height: 100%;
+    will-change: transform, opacity;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-ui);
+  }
+
   .loading-state {
     display: flex;
     flex-direction: column;
@@ -265,6 +292,7 @@
     animation: spin 1s linear infinite;
     color: var(--color-amber-primary);
   }
+
 
   @keyframes spin {
     from { transform: rotate(0deg); }

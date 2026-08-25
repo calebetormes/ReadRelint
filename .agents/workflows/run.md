@@ -1,20 +1,16 @@
 ---
-description: Abre o painel desktop e inicia todos os serviços do ReadRelint automaticamente
+description: Inicia os serviços do ReadRelint (FastAPI + SvelteKit) e abre o navegador automaticamente
 ---
 
-# Workflow: Run (Iniciar Painel & Serviços)
+# Workflow: Run (Iniciar FastAPI + SvelteKit)
 
-Execute o comando abaixo para abrir o painel em primeiro plano e já iniciar todos os serviços automaticamente:
+Execute o comando abaixo para iniciar o backend e o frontend web e abrir no navegador:
 
 ```powershell
-& .\.venv\Scripts\python.exe painel.py --autostart
+& .\.venv\Scripts\python.exe start_web.py
 ```
 
-*(Ou dê duplo-clique no executável [Iniciar-Painel.bat](file:///e:/www/ReadRelint/Iniciar-Painel.bat))*
-
 ### O que o comando faz automaticamente:
-1. Traz a janela do **Painel Desktop PyQt6** para a frente (não minimizada).
-2. Inicia o **Backend FastAPI** (:8000).
-3. Inicia o **Frontend SvelteKit** (:5173).
-4. Abre o navegador automaticamente em `http://localhost:5173`.
-
+1. Inicia o **Backend FastAPI** (`:8000`) em segundo plano via Uvicorn.
+2. Inicia o **Frontend SvelteKit** (`:5173`) em segundo plano via Vite.
+3. Aguarda os serviços responderem e abre automaticamente o navegador em `http://localhost:5173`.

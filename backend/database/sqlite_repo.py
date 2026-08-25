@@ -783,3 +783,38 @@ class SqliteRepo(IDatabaseRepo):
                 "llm": llm_cnt,
                 "regex": regex_cnt
             }
+
+    def get_dashboard_metrics(self) -> dict:
+        """
+        Retorna todas as métricas essenciais do dashboard em uma única transação SQL ultrarrápida.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Total de relints, contagem de homicídios e métodos
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) AS total_relints,
+                    SUM(CASE WHEN grupo_bm = 'Homicídio' THEN 1 ELSE 0 END) AS homicide_count,
+                    SUM(CASE WHEN metodo_extracao LIKE '%Ollama%' OR metodo_extracao LIKE '%LLM%' OR (metodo_extracao LIKE '%IA%' AND metodo_extracao NOT LIKE '%Sem IA%') THEN 1 ELSE 0 END) AS llm_count
+                FROM relints;
+            """)
+            rel_row = cursor.fetchone()
+            total_relints = rel_row["total_relints"] if (rel_row and rel_row["total_relints"]) else 0
+            homicide_count = rel_row["homicide_count"] if (rel_row and rel_row["homicide_count"]) else 0
+            llm_count = rel_row["llm_count"] if (rel_row and rel_row["llm_count"]) else 0
+
+            # Total de pessoas cadastradas / participantes
+            cursor.execute("SELECT COUNT(*) AS total_persons FROM pessoas;")
+            p_row = cursor.fetchone()
+            total_persons = p_row["total_persons"] if (p_row and p_row["total_persons"]) else 0
+
+            llm_rate = round((llm_count / total_relints) * 100, 1) if total_relints > 0 else 100.0
+
+            return {
+                "total_relints": total_relints,
+                "total_persons": total_persons,
+                "homicide_count": homicide_count,
+                "llm_rate": llm_rate
+            }
+

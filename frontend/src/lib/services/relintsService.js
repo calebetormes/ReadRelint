@@ -62,24 +62,30 @@ import { apiClient } from '$lib/api/client';
  */
 
 /**
- * Busca a lista de RELINTs cadastrados com suporte a busca e filtros
+ * Busca a lista de RELINTs cadastrados com suporte a busca, filtros e paginação
  * @param {Object} [filters]
  * @param {string} [filters.search] - Termo de busca livre
  * @param {string} [filters.bm_group] - Filtro de especialidade / grupo BM
  * @param {string} [filters.relint_type] - Filtro de tipo de boletim
  * @param {string} [filters.municipality] - Filtro por cidade/município
+ * @param {number} [filters.limit] - Limite de registros
+ * @param {number} [filters.offset] - Deslocamento inicial
  * @returns {Promise<RelintSummary[]>}
  */
 export async function getRelints(filters = {}) {
+
   const queryParams = new URLSearchParams();
 
   if (filters.search) queryParams.set('search', filters.search);
   if (filters.bm_group && filters.bm_group !== 'Todos') queryParams.set('bm_group', filters.bm_group);
   if (filters.relint_type && filters.relint_type !== 'Todos') queryParams.set('relint_type', filters.relint_type);
   if (filters.municipality && filters.municipality !== 'Todos') queryParams.set('municipality', filters.municipality);
+  if (filters.limit !== undefined) queryParams.set('limit', String(filters.limit));
+  if (filters.offset !== undefined) queryParams.set('offset', String(filters.offset));
 
   const queryString = queryParams.toString();
   const endpoint = `/api/v1/relints${queryString ? `?${queryString}` : ''}`;
+
 
   const data = await apiClient.get(endpoint);
   
@@ -120,12 +126,32 @@ export async function updateRelint(reportId, payload) {
 }
 
 /**
- * Retorna as estatísticas consolidadas para os KPI Cards do Dashboard
+ * Retorna as estatísticas consolidadas para os KPI Cards do Dashboard em alta performance
  * @returns {Promise<{ totalRelints: number, totalPersons: number, homicideCount: number, llmRate: number, recentRelints: RelintSummary[] }>}
  */
 export async function getDashboardStats() {
-  const relintsList = await getRelints();
+  try {
+    // Busca métricas agregadas instantâneas em paralelo com os últimos 5 relatórios
+    const [metricsData, recentRelints] = await Promise.all([
+      apiClient.get('/api/v1/relints/stats').catch(() => null),
+      getRelints({ limit: 5 }).catch(() => [])
+    ]);
 
+    if (metricsData) {
+      return {
+        totalRelints: metricsData.total_relints || 0,
+        totalPersons: metricsData.total_persons || 0,
+        homicideCount: metricsData.homicide_count || 0,
+        llmRate: metricsData.llm_rate !== undefined ? metricsData.llm_rate : 100,
+        recentRelints: (recentRelints || []).slice(0, 5)
+      };
+    }
+  } catch (err) {
+    console.warn('Fallback para cálculo de estatísticas:', err);
+  }
+
+  // Fallback de contingência caso a rota /stats não responda
+  const relintsList = await getRelints();
   const totalRelints = relintsList.length;
   let totalPersons = 0;
   let homicideCount = 0;
@@ -154,3 +180,4 @@ export async function getDashboardStats() {
     recentRelints: relintsList.slice(0, 5)
   };
 }
+

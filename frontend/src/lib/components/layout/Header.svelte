@@ -33,26 +33,33 @@
   </div>
 
   <div class="header-right">
-    <!-- Futura área do usuário -->
+    <!-- Área reservada para futuras ações e perfil -->
   </div>
 </header>
+
+
 
 <style>
   .top-header {
     height: 64px;
+    min-height: 64px;
+    max-height: 64px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--space-6);
-    background-color: rgba(13, 13, 13, 0.8);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(13, 13, 13, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--color-border-subtle);
     position: sticky;
     top: 0;
     z-index: 40;
     box-sizing: border-box;
   }
+
+
 
   .header-left {
     display: flex;
