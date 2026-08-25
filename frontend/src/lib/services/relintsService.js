@@ -82,12 +82,12 @@ export async function getRelints(filters = {}) {
   if (filters.municipality && filters.municipality !== 'Todos') queryParams.set('municipality', filters.municipality);
   if (filters.limit !== undefined) queryParams.set('limit', String(filters.limit));
   if (filters.offset !== undefined) queryParams.set('offset', String(filters.offset));
+  queryParams.set('_t', String(Date.now()));
 
   const queryString = queryParams.toString();
   const endpoint = `/api/v1/relints${queryString ? `?${queryString}` : ''}`;
 
-
-  const data = await apiClient.get(endpoint);
+  const data = await apiClient.get(endpoint, { headers: { 'Cache-Control': 'no-cache' } });
   
   // Adiciona o código de exibição amigável (ex: RELINT-001) caso venha apenas o ID numérico
   return (data || []).map((/** @type {any} */ item) => ({
@@ -131,9 +131,10 @@ export async function updateRelint(reportId, payload) {
  */
 export async function getDashboardStats() {
   try {
+    const timestamp = Date.now();
     // Busca métricas agregadas instantâneas em paralelo com os últimos 5 relatórios
     const [metricsData, recentRelints] = await Promise.all([
-      apiClient.get('/api/v1/relints/stats').catch(() => null),
+      apiClient.get(`/api/v1/relints/stats?_t=${timestamp}`, { headers: { 'Cache-Control': 'no-cache' } }).catch(() => null),
       getRelints({ limit: 5 }).catch(() => [])
     ]);
 

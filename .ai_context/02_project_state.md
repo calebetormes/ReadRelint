@@ -71,14 +71,47 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - Criação do pipeline especialista `LlmPipeline` em `backend/engine/extractors/llm/` com execução 100% orientada a IA sem fallbacks silenciosos.
   - Centralização do motor determinístico em `DeterministicPipeline` e realocação de listas negras (`negative_filters.py`) e base IBGE (`ibge_names.json`) para a pasta `deterministic/`.
   - Expurgo da pasta compartilhada `common/`.
+- [x] **Reatividade em Tempo Real via SSE (Server-Sent Events) no SvelteKit:**
+  - Criação do serviço singleton [eventsService.js](file:///d:/www/ReadRelint/frontend/src/lib/services/eventsService.js) com auto-reconexão inteligente.
+  - Atualização instantânea sem refresh dos contadores, KPIs e lista de relatórios recentes na rota `/` ([+page.svelte](file:///d:/www/ReadRelint/frontend/src/routes/+page.svelte)).
+  - Correção de bloqueio silencioso CORS do navegador usando URL relativas no Svelte para bypass do FastAPI no WebView nativo do Windows.
+- [ ] **Migração da Reatividade para WebSockets (Bidirecional):**
+  - Substituição planejada do fluxo unidirecional SSE (`EventSource`) por WebSockets nativos (`ws://`) no Svelte 5 e FastAPI.
+  - O objetivo é pavimentar o caminho para a funcionalidade de edição reversa de relatórios pela UI web em tempo real.
 - [x] **Configuração de Ambiente IDE (.vscode):**
+
+
   - Adicionada regra `files.exclude` no `.vscode/settings.json` para ocultar automaticamente pastas `__pycache__`, `.pytest_cache` e arquivos `.pyc`/`.pyo`.
 
-## 2. Próximas Etapas (Prioridade)
-### Extração Cognitiva via LLM
-- [ ] Refinar prompts estruturados e schemas para extração de Síntese factual completa e Endereços detalhados.
+## 2. Próximas Etapas (Prioridade e Roteiro de Tasks)
 
-### Acesso Online Seguro (Cloudflare Tunnel + E2EE)
+### 🧠 FASE 1: EXTRAÇÃO COGNITIVA (100% LLM)
+- [x] **Task 1.1 — Engenharia de Prompt e Estruturação da Síntese:**
+  - Modularização em `backend/engine/extractors/llm/prompts/summary_prompt.py`.
+  - Método das 5 Perguntas Policiais (*O quê, Quem, Onde/Quando, Como, Desfecho*).
+  - Regra explícita anti-redundância: zero repetição de endereços ou dados burocráticos de pessoas na síntese.
+- [x] **Task 1.2 — Engenharia de Prompt e Decomposição de Endereço / Localização:**
+  - Criação de `backend/engine/extractors/llm/prompts/address_prompt.py`.
+  - Padrão de saída simplificado: `Rua/Av, nº - Município`.
+  - Extração de coordenadas decimais Google Maps (`-29.xxxx, -51.xxxx`) e link `map_url`.
+- [x] **Task 1.3 — Schemas Pydantic & Validador de Saída JSON:**
+  - Criação de `backend/engine/extractors/llm/schemas/address_schema.py`.
+  - Validador e normalizador `backend/engine/extractors/llm/validators/llm_response_validator.py` com geração de links Google Maps.
+- [x] **Task 1.4 — Calibração e Validação de Testes Unitários:**
+  - Suíte completa em `tests/test_llm_prompts.py` (14 testes passando).
+
+### ⚡ FASE 2: EXTRAÇÃO DETERMINÍSTICA (100% REGEX & HEURÍSTICAS)
+- [ ] **Task 2.1 — Modularização dos Extratores Regex por Domínio:**
+
+  - Criação de classes dedicadas em `backend/engine/extractors/deterministic/extractors/` (`date_time_extractor.py`, `metadata_extractor.py`, `classifier_extractor.py`).
+- [ ] **Task 2.2 — Extrator Especialista de Endereço Regex & Coordenadas:**
+  - Criação de `address_extractor.py` e `coordinates_extractor.py` (vias, números e conversão de GPS/UTM).
+- [ ] **Task 2.3 — Extrator Heurístico de Síntese Regex:**
+  - Criação de `summary_extractor.py` para seleção do parágrafo mais representativo em modo sem IA.
+- [ ] **Task 2.4 — Suíte de Testes Automatizados:**
+  - Criação de testes unitários isolados para cada sub-extrator determinístico.
+
+### 🌐 FASE 3: Acesso Online Seguro & Infraestrutura
 - [ ] Configurar **Cloudflare Tunnel** para expor o FastAPI local via domínio fixo com HTTPS.
 - [ ] Implementar **Criptografia Ponta-a-Ponta (E2EE)** na camada da aplicação.
 
@@ -91,3 +124,4 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 - [ ] **Exportação de Relatórios Estruturados:** Botões para exportar Dossiê e Casos para Excel, CSV ou PDF.
 - [ ] **Grafos de Vínculos (Visualização Gráfica):** Plot interativo mostrando conexões em rede entre Pessoas e Relatórios.
 - [ ] **Check de Hashes (SHA-256):** Hashing dos PDFs para re-processamento automático ao detectar modificações no arquivo.
+

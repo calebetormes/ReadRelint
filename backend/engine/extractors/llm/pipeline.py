@@ -64,7 +64,8 @@ class LlmPipeline(IExtractor):
 
 
             if isinstance(raw_response, dict):
-                result.data = raw_response
+                from backend.engine.extractors.llm.validators.llm_response_validator import validate_and_normalize_llm_response
+                result.data = validate_and_normalize_llm_response(raw_response)
             else:
                 result.data = {}
                 result.add_alert(
@@ -72,6 +73,7 @@ class LlmPipeline(IExtractor):
                     stage="llm_json_parser",
                     message="Resposta da LLM não pôde ser interpretada como um dicionário JSON."
                 )
+
 
         except Exception as err:
             result.success = False

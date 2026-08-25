@@ -15,6 +15,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import Alert from '$lib/components/ui/Alert.svelte';
   import { getDashboardStats } from '$lib/services/relintsService';
+  import { realtimeService } from '$lib/services/eventsService';
   
   import { FileText, Brain, Users, Crosshair, ArrowRight, ArrowsClockwise } from 'phosphor-svelte';
 
@@ -41,38 +42,53 @@
 
   /**
    * Carrega as estatísticas reais do backend FastAPI
+   * @param {boolean} [silent=false]
    */
-  async function loadStats() {
-    isLoading = true;
+  async function loadStats(silent = false) {
+    if (!silent) isLoading = true;
     errorMessage = '';
     try {
       const data = await getDashboardStats();
       stats = data;
     } catch (err) {
       console.error('Erro ao carregar estatísticas do dashboard:', err);
-      errorMessage = err instanceof Error ? err.message : 'Falha ao conectar com o backend FastAPI.';
+      if (!silent) {
+        errorMessage = err instanceof Error ? err.message : 'Falha ao conectar com o backend FastAPI.';
+      }
     } finally {
-      isLoading = false;
+      if (!silent) isLoading = false;
     }
   }
 
   onMount(() => {
     loadStats();
+
+    // Inscreve para atualizações reativas automáticas via SSE
+    const unsubscribe = realtimeService.subscribe('relint_created', (/** @type {any} */ _eventData) => {
+      // Recarrega silenciosamente os KPIs e a tabela de recentes
+      loadStats(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   });
+
 </script>
 
 <svelte:head>
-  <title>Visão Geral | ReadRelint Dashboard</title>
+  <title>Inteligência Policial | ReadRelint Dashboard</title>
 </svelte:head>
 
 <div class="dashboard-overview">
   <div class="overview-header">
     <div class="header-info">
-      <h2 class="section-title">Indicadores Globais de Inteligência</h2>
-      <p class="section-subtitle">Estatísticas consolidadas do banco de dados relacional e motor de IA local.</p>
+      <h2 class="section-title">Visão Geral de Inteligência</h2>
+      <p class="section-subtitle">Acompanhamento consolidado de boletins RELINT e índices operacionais.</p>
     </div>
     
-    <Button variant="ghost" size="sm" onclick={loadStats} disabled={isLoading}>
+    <Button variant="ghost" size="sm" onclick={() => loadStats(false)} disabled={isLoading}>
+
       {#snippet icon()}
         <ArrowsClockwise size={16} weight="bold" class={isLoading ? 'spinning' : ''} />
       {/snippet}

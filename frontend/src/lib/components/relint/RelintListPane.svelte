@@ -25,20 +25,28 @@
     { id: 'Roubos e Furtos', label: 'Patrimônio', icon: ShieldWarning, color: 'var(--color-functional-info)' }
   ];
 
-  let filteredRelints = $derived(() => {
-    return relints.filter((r) => {
-      const matchSearch = 
-        !searchQuery ||
-        r.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.source_file?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchSpecialty = 
-        filterSpecialty === 'Todos' || r.bm_group === filterSpecialty;
+  let filteredRelints = $derived(
+    relints
+      .filter((r) => {
+        const matchSearch = 
+          !searchQuery ||
+          r.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          r.source_file?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchSpecialty = 
+          filterSpecialty === 'Todos' || r.bm_group === filterSpecialty;
 
-      return matchSearch && matchSpecialty;
-    });
-  });
+        return matchSearch && matchSpecialty;
+      })
+      .sort((a, b) => {
+        const numA = Number(a.id) || 0;
+        const numB = Number(b.id) || 0;
+        return numB - numA;
+      })
+  );
+
+
 
   /**
    * Extrai apenas o número do RELINT ou código limpo (ex: "RELINT 200")
@@ -65,8 +73,9 @@
   <div class="list-header">
     <div class="header-top-row">
       <span class="header-title">Boletins</span>
-      <span class="count-badge">{filteredRelints().length} {filteredRelints().length === 1 ? 'relatório' : 'relatórios'}</span>
+      <span class="count-badge">{filteredRelints.length} {filteredRelints.length === 1 ? 'relatório' : 'relatórios'}</span>
     </div>
+
 
     <Input 
       placeholder="Buscar por código, assunto..." 
@@ -97,8 +106,9 @@
 
   <!-- Lista com Cards Estilizados -->
   <div class="relint-items-list">
-    {#each filteredRelints() as relint (relint.id)}
+    {#each filteredRelints as relint (relint.id)}
       {@const isSelected = selectedId === relint.id}
+
       <button 
         class="relint-card-item" 
         class:is-selected={isSelected}

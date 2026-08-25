@@ -142,8 +142,13 @@ class EtlService:
             if not cleaned_text or not cleaned_text.strip():
                 cleaned_text = clean_relint_text(raw_text)
 
+            # Fallback seguro: se a limpeza removeu tudo mas o PDF tinha texto original, usa o texto bruto normalizado
+            if not cleaned_text.strip() and raw_text and raw_text.strip():
+                cleaned_text = raw_text.strip()
+
             if not cleaned_text.strip():
                 raise ValueError("O arquivo PDF está vazio após a limpeza.")
+
 
             # Extração segura do histórico usando regra 11 (pós ANEXOS)
             history_from_annex = extract_history_from_annex(raw_text)
@@ -199,16 +204,19 @@ class EtlService:
             if "content" in response_dict:
                 del response_dict["content"]
 
+            # Garante que a síntese nunca fique vazia, mesmo se o modelo omitir o campo
+            if not response_dict.get("summary") or not str(response_dict.get("summary")).strip():
+                response_dict["summary"] = extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
+
             # SE MODO REGEX: Garante preenchimento de campos determinísticos adicionais
             if extraction_method == "Regex (Sem IA)":
                 if not response_dict.get("subject"):
                     response_dict["subject"] = extract_subject_fallback(final_content, filename)
-                if not response_dict.get("summary"):
-                    response_dict["summary"] = extract_fallback_summary(final_content, subject=response_dict.get("subject", ""))
                 if not response_dict.get("date_of_fact"):
                     response_dict["date_of_fact"] = extract_date_of_fact(final_content) or "Não Informado"
                 if not response_dict.get("time_of_fact"):
                     response_dict["time_of_fact"] = extract_time_of_fact(final_content) or "Não Informado"
+
                 if not response_dict.get("map_url") or not response_dict.get("coordinates"):
                     r_map, r_coords = resolve_coordinates_and_map_info(final_content)
                     response_dict["map_url"] = r_map

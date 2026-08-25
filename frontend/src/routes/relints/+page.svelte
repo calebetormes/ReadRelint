@@ -15,7 +15,9 @@
   import Alert from '$lib/components/ui/Alert.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import { getRelints, getRelintById, updateRelint } from '$lib/services/relintsService';
+  import { realtimeService } from '$lib/services/eventsService';
   import { ArrowsClockwise, WarningCircle, CaretLeft, CaretRight, ListDashes } from 'phosphor-svelte';
+
 
 
   /** @type {any[]} */
@@ -103,7 +105,26 @@
 
   onMount(() => {
     loadRelintsData();
+
+    // Inscreve para novos RELINTs processados em tempo real
+    const unsubscribe = realtimeService.subscribe('relint_created', async (/** @type {any} */ eventData) => {
+      try {
+        const freshData = await getRelints();
+        relintsList = freshData;
+        if (!selectedRelintId && freshData.length > 0) {
+          handleSelectRelint(freshData[0]);
+        }
+      } catch (err) {
+        console.error('Erro ao atualizar lista em tempo real:', err);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   });
+
+
 </script>
 
 <svelte:head>

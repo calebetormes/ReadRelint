@@ -1533,6 +1533,10 @@ class MainWindow(QMainWindow):
                             "error_msg": rule_dict[active_rule],
                         })
 
+            # Inverte para que os últimos processados apareçam no topo
+            items_to_render.reverse()
+
+
             for item_data in items_to_render:
                 fn = item_data["filename"]
                 is_llm = item_data["is_llm"]
