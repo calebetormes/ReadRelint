@@ -68,11 +68,10 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
     - **Linha 2:** Texto do **Assunto** em destaque limpo de 12px com limite de 2 linhas (`-webkit-line-clamp: 2`).
     - **Linha 3:** Rodapé limpo com a **Data do Fato** (sem rótulo redundante) e data do arquivo à direita.
     - Chips horizontais de filtro de especialidade (Todos, Homicídio, Tráfico, Patrimônio) com ícones coloridos e contador dinâmico de relatórios.
-  - **Cabeçalho de Dossiê Minimalista e Direto:**
-    - Título semibold de 18px.
-    - **Barra de Metadados Limpa:** Data direta com ícone de calendário (sem o texto redundante "Fato:"), apenas o Município (com ícone de localização, ocultando termos genéricos "Não Informado") e Unidade Policial.
-    - **Método de Extração por Ícone Minimalista:** Substituição de badges de texto seco por ícones coloridos compactos com tooltip (`✨ Verde Esmeralda` para Ollama IA e `⚡ Âmbar` para Regex sem IA).
-    - Botão de ação direta `EDITAR` / `SALVAR E REVISAR`.
+  - **Aba Síntese e Campos de Metadados Limpos:**
+    - A primeira aba do dossiê foi renomeada para **Síntese** com ícone `Sparkle`.
+    - **Síntese do Fato em Destaque:** Card amplo posicionado no topo com tipografia confortável de 15px e linha de destaque âmbar.
+    - **Campos de Metadados em Modo Leitura:** Os campos *Assunto*, *Data do Fato*, *Número de Registro*, *Órgão Registrador* e *Ano* são exibidos como texto puro limpo (sem caixas de input). Os inputs só são renderizados quando o usuário clica no botão **EDITAR**.
 
 
 ## 2. Próximas Etapas (Prioridade)

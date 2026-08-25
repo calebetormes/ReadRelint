@@ -61,7 +61,7 @@
   }
 
   const tabsItems = [
-    { id: 'geral', label: 'Geral', icon: iconInfo },
+    { id: 'geral', label: 'Síntese', icon: iconSparkle },
     { id: 'localizacao', label: 'Localização', icon: iconMapPin },
     { id: 'especialidade', label: 'Especialidade', icon: iconShield },
     { id: 'participantes', label: 'Participantes', icon: iconUserList },
@@ -69,7 +69,7 @@
   ];
 </script>
 
-{#snippet iconInfo()} <Info size={16} weight="fill" /> {/snippet}
+{#snippet iconSparkle()} <Sparkle size={16} weight="fill" /> {/snippet}
 {#snippet iconMapPin()} <MapPin size={16} weight="fill" /> {/snippet}
 {#snippet iconShield()} <Shield size={16} weight="fill" /> {/snippet}
 {#snippet iconUserList()} <UserList size={16} weight="fill" /> {/snippet}
