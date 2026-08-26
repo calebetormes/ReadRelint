@@ -13,6 +13,9 @@ from backend.engine.extractors.llm.llm_processor import ILlmProcessor
 from backend.engine.extractors.llm.ollama_client import OllamaClient
 
 
+from backend.engine.extractors.llm.extractors.summary_extractor import SummaryExtractor
+
+
 class LlmPipeline(IExtractor):
     """
     Pipeline especialista de extração puramente cognitiva via LLM.
@@ -20,6 +23,7 @@ class LlmPipeline(IExtractor):
 
     def __init__(self, processor: Optional[ILlmProcessor] = None) -> None:
         self.processor = processor or OllamaClient()
+        self.summary_extractor = SummaryExtractor(self.processor)
 
     def extract(
         self,
@@ -73,6 +77,13 @@ class LlmPipeline(IExtractor):
                     stage="llm_json_parser",
                     message="Resposta da LLM não pôde ser interpretada como um dicionário JSON."
                 )
+
+            # Pass 1: Extração Dedicada de Síntese e Assunto (Alta Fidelidade)
+            summary_data = self.summary_extractor.extract(cleaned_text, filename=filename)
+            if summary_data.get("summary"):
+                result.data["summary"] = summary_data["summary"]
+            if summary_data.get("subject") and (not result.data.get("subject") or len(str(result.data.get("subject"))) < 5):
+                result.data["subject"] = summary_data["subject"]
 
 
         except Exception as err:
