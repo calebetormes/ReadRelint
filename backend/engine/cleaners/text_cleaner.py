@@ -340,21 +340,25 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
     body = re.sub(r'<!--\s*image\s*-->', '', body, flags=re.IGNORECASE)
     body = re.sub(r'(?:\\?[_\-=\*]){3,}', '', body)
 
-    # 3. Divide em parágrafos e busca o primeiro parágrafo narrativo significativo
-    paragraphs = [p.strip() for p in re.split(r'\n{1,}', body) if len(p.strip()) > 30]
+    # 3. Divide em parágrafos reais (\n\n) e busca o primeiro parágrafo narrativo significativo
+    paragraphs = [p.strip() for p in re.split(r'\n{2,}', body) if len(p.strip()) > 30]
 
     narrative = ""
     for p in paragraphs:
         upper_p = p.upper()
-        # Ignora linhas de metadados, separadores e texto de legendas/placeholder
-        if any(kw in upper_p for kw in ["RELATÓRIO DE INTELIGÊNCIA", "ORIGEM:", "DIFUSÃO:", "REFERÊNCIA:", "DATA:"]):
+        # Ignora blocos de metadados
+        if "RELATÓRIO DE INTELIGÊNCIA" in upper_p and len(p) < 100:
+            continue
+        if re.match(r'^(ORIGEM|DIFUSÃO|REFERÊNCIA|DATA)\s*:', upper_p):
             continue
         # Ignora linhas com preenchimento
         if re.match(r'^[_\-=\*\s]{3,}$', p):
             continue
-        # Ignora textos muito curtos (apenas bairro, cidade, etc.)
+        # Ignora textos muito curtos
         if len(p.split()) < 5:
             continue
+        
+        # Encontramos o parágrafo principal
         narrative = p
         break
 
@@ -362,18 +366,24 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
         body_clean = re.sub(r'^[\s_\-=\*\n\\]+', '', body)
         narrative = body_clean[:400]
 
+    # Remove quebras de linha no meio da síntese para ficar um texto corrido bonito
+    narrative = re.sub(r'\s+', ' ', narrative).strip()
+
     # Limita tamanho a 450 caracteres sem cortar palavra
     if len(narrative) > 450:
         narrative = narrative[:450].rsplit(' ', 1)[0] + "..."
 
     # Limpa pontuação final solta
-    narrative = narrative.strip(r" ._\-\\").strip()
-    if narrative and not narrative.endswith('.'):
+    narrative = narrative.strip(" ._-\\").strip()
+    if narrative and not narrative.endswith('.') and not narrative.endswith('...'):
         narrative += "."
 
     if subject and not narrative.lower().startswith(subject.lower()[:15]):
+        if not narrative or narrative == ".":
+            return subject
         return f"{subject}. {narrative}"
-    return narrative
+    
+    return narrative or subject
 
 
 def clean_person_name(name: str) -> str:
