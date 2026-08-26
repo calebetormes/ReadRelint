@@ -369,14 +369,13 @@ def extract_fallback_summary(text: str, subject: str = "") -> str:
     # Remove quebras de linha no meio da síntese para ficar um texto corrido bonito
     narrative = re.sub(r'\s+', ' ', narrative).strip()
 
-    # Limita tamanho a 450 caracteres sem cortar palavra
+    # Limita tamanho a 450 caracteres sem cortar palavra e limpa a pontuação adequadamente
     if len(narrative) > 450:
-        narrative = narrative[:450].rsplit(' ', 1)[0] + "..."
-
-    # Limpa pontuação final solta
-    narrative = narrative.strip(" ._-\\").strip()
-    if narrative and not narrative.endswith('.') and not narrative.endswith('...'):
-        narrative += "."
+        narrative = narrative[:450].rsplit(' ', 1)[0].strip(" ._-\\") + "..."
+    else:
+        narrative = narrative.strip(" ._-\\").strip()
+        if narrative and not narrative.endswith('.'):
+            narrative += "."
 
     if subject and not narrative.lower().startswith(subject.lower()[:15]):
         if not narrative or narrative == ".":
