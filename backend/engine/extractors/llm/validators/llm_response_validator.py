@@ -8,9 +8,11 @@ import urllib.parse
 from typing import Dict, Any, Tuple
 
 
-def sanitize_summary(summary: Any) -> str:
+def sanitize_summary(summary: Any, subject: str = "") -> str:
     """
     Sanitiza o texto da síntese removendo chavões residuais de preâmbulo policial.
+    Se a síntese for muito curta ou idêntica ao assunto (preguiça da LLM), retorna vazio
+    para forçar o fallback do Regex.
     """
     if not summary or isinstance(summary, bool):
         return ""
@@ -31,6 +33,12 @@ def sanitize_summary(summary: Any) -> str:
     # Garante primeira letra maiúscula
     if text:
         text = text[0].upper() + text[1:]
+
+    # Trava inteligente B1: Rejeitar se for idêntica ao subject ou muito curta
+    if subject and text:
+        # Se o texto da síntese começar quase exatamente igual ao subject, é plágio da LLM
+        if text.lower().startswith(subject.lower()[:30]) or len(text) < 50:
+            return ""
 
     return text
 
@@ -107,7 +115,8 @@ def validate_and_normalize_llm_response(raw_data: Dict[str, Any]) -> Dict[str, A
 
     # 1. Sanitiza a síntese
     summary = normalized.get("summary") or normalized.get("resumo") or ""
-    normalized["summary"] = sanitize_summary(summary)
+    subject = normalized.get("subject") or normalized.get("assunto") or ""
+    normalized["summary"] = sanitize_summary(summary, subject=subject)
 
     # 2. Formata endereço simplificado e resolve Google Maps
     address, map_url, coords = format_address_and_maps(normalized)
