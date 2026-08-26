@@ -177,12 +177,16 @@ class EtlService:
                         response_dict = ext_result.data
                         extraction_method = "Ollama (IA)"
                     else:
-                        raise RuntimeError(f"Erro na extração LLM: {ext_result.alerts}")
+                        msg_fallback = f"⚠️ Falha na extração LLM ({ext_result.alerts}). Alternando para Regex (Sem IA) neste arquivo..."
+                        if on_progress: on_progress(f"[{filename}] {msg_fallback}")
+                        from backend.engine.extractors.deterministic.pipeline import DeterministicPipeline
+                        det_pipeline = DeterministicPipeline()
+                        ext_result = det_pipeline.extract(text=cleaned_text, filename=filename)
+                        response_dict = ext_result.data
+                        extraction_method = "Regex (Sem IA)"
                 except Exception as llm_err:
-                    self.use_llm = False
-                    msg_disconnect = f"⚠️ Conexão com o Ollama perdida ({llm_err}). Alternando automaticamente para Regex (Sem IA)..."
-                    if on_progress: on_progress(f"[{filename}] {msg_disconnect}")
-                    if on_llm_disconnected: on_llm_disconnected(str(llm_err))
+                    msg_fallback = f"⚠️ Erro inesperado no pipeline LLM ({llm_err}). Alternando para Regex (Sem IA) neste arquivo..."
+                    if on_progress: on_progress(f"[{filename}] {msg_fallback}")
                     from backend.engine.extractors.deterministic.pipeline import DeterministicPipeline
                     det_pipeline = DeterministicPipeline()
                     ext_result = det_pipeline.extract(text=cleaned_text, filename=filename)

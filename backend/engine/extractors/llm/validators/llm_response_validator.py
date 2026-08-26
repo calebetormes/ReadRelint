@@ -8,14 +8,14 @@ import urllib.parse
 from typing import Dict, Any, Tuple
 
 
-def sanitize_summary(summary: str) -> str:
+def sanitize_summary(summary: Any) -> str:
     """
     Sanitiza o texto da síntese removendo chavões residuais de preâmbulo policial.
     """
-    if not summary:
+    if not summary or isinstance(summary, bool):
         return ""
 
-    text = summary.strip()
+    text = str(summary).strip()
 
     # Remove preâmbulos comuns
     patterns_to_remove = [
@@ -42,11 +42,16 @@ def format_address_and_maps(raw_data: Dict[str, Any]) -> Tuple[str, str, str]:
 
     Retorna: (formatted_address: str, map_url: str, coordinates: str)
     """
-    street = (raw_data.get("street") or raw_data.get("address") or "").strip()
-    number = (raw_data.get("number") or "").strip()
-    municipality = (raw_data.get("municipality") or raw_data.get("municipio") or "").strip()
-    raw_coords = (raw_data.get("coordinates") or "").strip()
-    raw_map_url = (raw_data.get("map_url") or "").strip()
+    def _safe_str(val: Any) -> str:
+        if isinstance(val, bool) or val is None:
+            return ""
+        return str(val).strip()
+
+    street = _safe_str(raw_data.get("street") or raw_data.get("address"))
+    number = _safe_str(raw_data.get("number"))
+    municipality = _safe_str(raw_data.get("municipality") or raw_data.get("municipio"))
+    raw_coords = _safe_str(raw_data.get("coordinates"))
+    raw_map_url = _safe_str(raw_data.get("map_url"))
 
     # 1. Montagem do endereço simplificado: Rua, nº - Município
     address_parts = []
