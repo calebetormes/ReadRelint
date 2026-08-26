@@ -1,8 +1,8 @@
 /**
  * ============================================================================
- * ReadRelint - Serviço de Eventos em Tempo Real (SSE - Server-Sent Events)
+ * ReadRelint - Serviço de Eventos em Tempo Real (WebSockets Bidirecional)
  * ============================================================================
- * Gerencia a conexão persistente com o endpoint SSE do FastAPI (/api/v1/events)
+ * Gerencia a conexão persistente com o endpoint WebSocket do FastAPI (/api/v1/events)
  * fornecendo auto-reconexão inteligente e distribuição de eventos reativos para
  * as páginas e componentes do SvelteKit.
  * ============================================================================
@@ -10,12 +10,12 @@
 
 import { browser } from '$app/environment';
 
-const API_BASE_URL = '/api/v1';
+const API_BASE_PATH = '/api/v1/events';
 
 class RealtimeEventsService {
   constructor() {
-    /** @type {EventSource | null} */
-    this.eventSource = null;
+    /** @type {WebSocket | null} */
+    this.ws = null;
     /** @type {Map<string, Set<Function>>} */
     this.listeners = new Map();
     this.reconnectTimer = null;
@@ -23,15 +23,19 @@ class RealtimeEventsService {
   }
 
   /**
-   * Inicializa a conexão SSE no navegador
+   * Inicializa a conexão WebSocket no navegador
    */
   connect() {
-    if (!browser || this.eventSource) return;
+    if (!browser || (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING))) return;
 
     try {
-      this.eventSource = new EventSource(`${API_BASE_URL}/events`);
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}${API_BASE_PATH}`;
 
-      this.eventSource.onopen = () => {
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.onopen = () => {
         this.isConnected = true;
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
@@ -39,12 +43,22 @@ class RealtimeEventsService {
         }
       };
 
-      this.eventSource.onerror = () => {
-        this.isConnected = false;
-        if (this.eventSource) {
-          this.eventSource.close();
-          this.eventSource = null;
+      this.ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const eventType = payload.event || 'message';
+          const eventData = payload.data || {};
+          
+          this._emit(eventType, eventData);
+        } catch (e) {
+          console.error('Erro ao interpretar mensagem do WebSocket:', e);
         }
+      };
+
+      this.ws.onclose = () => {
+        this.isConnected = false;
+        this.ws = null;
+        
         // Tenta reconectar em 3 segundos
         if (!this.reconnectTimer) {
           this.reconnectTimer = setTimeout(() => {
@@ -54,27 +68,27 @@ class RealtimeEventsService {
         }
       };
 
-      // Escuta eventos do tipo 'relint_created'
-      this.eventSource.addEventListener('relint_created', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          this._emit('relint_created', data);
-        } catch (e) {
-          console.error('Erro ao interpretar evento relint_created:', e);
-        }
-      });
+      this.ws.onerror = (error) => {
+        console.error('Erro na conexão WebSocket:', error);
+        // O onclose será disparado em seguida, cuidando da reconexão
+      };
 
-      // Escuta eventos gerais de log/status se enviados
-      this.eventSource.addEventListener('log', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          this._emit('log', data);
-        } catch (e) {
-          console.error('Erro ao interpretar evento de log:', e);
-        }
-      });
     } catch (err) {
-      console.error('Falha ao abrir EventSource:', err);
+      console.error('Falha ao abrir WebSocket:', err);
+    }
+  }
+
+  /**
+   * Envia uma mensagem para o servidor via WebSocket
+   * @param {string} eventName 
+   * @param {any} data 
+   */
+  send(eventName, data = {}) {
+    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const payload = JSON.stringify({ event: eventName, data: data });
+      this.ws.send(payload);
+    } else {
+      console.warn('Não foi possível enviar a mensagem, WebSocket não está conectado.');
     }
   }
 
@@ -91,7 +105,7 @@ class RealtimeEventsService {
     this.listeners.get(eventName)?.add(callback);
 
     // Garante que a conexão está ativa ao assinar
-    if (browser && !this.eventSource) {
+    if (browser && !this.ws) {
       this.connect();
     }
 

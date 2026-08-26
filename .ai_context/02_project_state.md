@@ -75,7 +75,7 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
   - Criação do serviço singleton [eventsService.js](file:///d:/www/ReadRelint/frontend/src/lib/services/eventsService.js) com auto-reconexão inteligente.
   - Atualização instantânea sem refresh dos contadores, KPIs e lista de relatórios recentes na rota `/` ([+page.svelte](file:///d:/www/ReadRelint/frontend/src/routes/+page.svelte)).
   - Correção de bloqueio silencioso CORS do navegador usando URL relativas no Svelte para bypass do FastAPI no WebView nativo do Windows.
-- [ ] **Migração da Reatividade para WebSockets (Bidirecional):**
+- [x] **Migração da Reatividade para WebSockets (Bidirecional):**
   - Substituição planejada do fluxo unidirecional SSE (`EventSource`) por WebSockets nativos (`ws://`) no Svelte 5 e FastAPI.
   - O objetivo é pavimentar o caminho para a funcionalidade de edição reversa de relatórios pela UI web em tempo real.
 - [x] **Configuração de Ambiente IDE (.vscode):**
