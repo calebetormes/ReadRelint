@@ -205,5 +205,19 @@ Sempre que concluir grandes blocos de tarefas:
   3. *Sanitização de Ruídos Narrativos:* Truncamento e limpeza automática de links `https://`, menções a coordenadas no meio da frase, jargões operacionais da BM e pontos de referência comerciais nos logradouros.
   4. *Enquadramento Panorâmico sem Balão de Ponto:* Documentos sem rua abrem a visualização panorâmica da cidade inteira (`z=12`) sem balão/marcador falso (`iwloc=`), pavimentando futuras camadas de mapas de calor (Heatmaps).
   5. *Preservação de Abreviaturas e Zonas Rurais:* Suporte a iniciais compostas de ruas (`Rua Elias C. Lash`) e normalização automática de rodovias/linhas sem bairro para `Interior`.
+- **[ADR-090] Especificação Completa dos Filtros e Camadas de Sanitização na Extração de Endereços por LLM:**
+  Documentação exaustiva de todas as 9 camadas de validação, filtragem e normalização aplicadas no pipeline geográfico:
+  1. **Filtro Anti-Alucinação de Coordenadas (Zero Fake GPS):** Validação estrita dos números de latitude/longitude retornados pela IA contra o texto bruto do PDF ou redirecionamento de links `maps.app.goo.gl`. Coordenadas inventadas ou fictícias (ex: `-30.0346, -51.2177` ou `-28.1234, -53.1234`) são descartadas sumariamente (`coordinates = ""`).
+  2. **Filtro de Desambiguação de Local do Crime vs Terceiros:** Instrução cognitiva e corte determinístico para capturar estritamente o local do fato do 1º parágrafo da ocorrência, ignorando endereços residenciais de suspeitos investigados citados ao longo do texto, delegacias de polícia e hospitais/UPAs de atendimento.
+  3. **Filtro e Herança Obrigatória de Município:** Extração determinística do município no cabeçalho formal `ASSUNTO: ... EM [MUNICÍPIO] - RS` ou nome do arquivo PDF. Se a IA omitir a cidade ou alucinar um município divergente do assunto, o valor do `ASSUNTO` é forçado, impedindo que buscas no Google Maps caiam na capital (Porto Alegre).
+  4. **Filtro de Ruídos Narrativos e Verbos Operacionais da BM:** Truncamento automático de frases operacionais da polícia concatenadas ao logradouro (ex: `foi informado através da sala de operações...`, `foi acionada a guarnição...`, `via telefone 190...`, `chegou ao conhecimento...`, `comunicação de venda ativa...`, `após ligação anônima...`).
+  5. **Filtro de Links HTTP e Expressões de GPS no Meio do Texto:** Remoção de URLs (`https://...`) e menções literais como `coordenadas geográficas ((...`, `lat/long`, `coord.` misturadas indevidamente ao nome da rua ou do bairro.
+  6. **Filtro de Referências Comerciais em Parênteses:** Remoção de expressões entre parênteses referentes a estabelecimentos comerciais e pontos de apoio (ex: `( FARMÁCIA SÃO JOÃO )`, `( PONTO DE REFERÊNCIA LOJA MULTICORES )`), garantindo um logradouro limpo para geocodificação.
+  7. **Filtro e Normalização de Zona Rural (Bairro "Interior"):** Detecção automática de vias rurais (`Linha`, `Estrada`, `Assentamento`, `Fazenda`, `Interior`, `BR-`, `RS-`, `Rodovia`). Se o bairro for omitido, normaliza compulsoriamente como `"Interior"`.
+  8. **Filtro de Formatação Padrão Google e Descarte de Placeholders:** Eliminação de termos nulos (`"Sem informação"`, `"Não informado"`, `"Não consta"`, `"N/A"`, `"Desconhecido"`, `"-"`). Monta o padrão unificado `Logradouro, nº [ou S/N] - Bairro, Município - RS`. Se apenas o município for conhecido, formata limpamente como `[Município] - RS`.
+  9. **Filtro de Classificação de Confiabilidade no Frontend (3 Cores):**
+     - *Alta (Verde):* Coordenadas GPS numéricas/DMS reais presentes no documento original.
+     - *Média (Azul):* Links diretos encurtados ou de local específico citados no PDF (`maps.app.goo.gl` / `google.com/maps/place`).
+     - *Baixa (Âmbar):* Somente endereço textual no documento (com link de busca `/maps/search` gerado dinamicamente).
 
 
