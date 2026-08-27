@@ -454,17 +454,33 @@ class SqliteRepo(IDatabaseRepo):
             cursor.execute("DELETE FROM relint_participantes WHERE relint_id = ?;", (relint_id,))
             for part in (report.participants or []):
                 if isinstance(part, dict):
-                    p_name = (part.get("name") or part.get("nome") or "").strip()
-                    p_doc = (part.get("document") or part.get("documento") or "").strip()
-                    p_nick = (part.get("nickname") or part.get("alcunha") or "").strip()
-                    p_back = (part.get("background") or part.get("antecedentes") or "").strip()
+                    raw_name = part.get("name") or part.get("nome")
+                    p_name = str(raw_name).strip() if (raw_name and not isinstance(raw_name, bool)) else ""
+                    
+                    raw_doc = part.get("document") or part.get("documento")
+                    p_doc = str(raw_doc).strip() if (raw_doc and not isinstance(raw_doc, bool)) else ""
+                    
+                    raw_nick = part.get("nickname") or part.get("alcunha")
+                    p_nick = str(raw_nick).strip() if (raw_nick and not isinstance(raw_nick, bool)) else ""
+                    
+                    raw_back = part.get("background") or part.get("antecedentes")
+                    p_back = str(raw_back).strip() if (raw_back and not isinstance(raw_back, bool)) else ""
+                    
                     raw_type = part.get("participation_type") or part.get("tipo_participacao") or "Acusado"
                     photo_path = part.get("photo_path") or part.get("caminho_foto") or ""
                 else:
-                    p_name = (getattr(part, "name", "") or "").strip()
-                    p_doc = (getattr(part, "document", "") or "").strip()
-                    p_nick = (getattr(part, "nickname", "") or "").strip()
-                    p_back = (getattr(part, "background", "") or "").strip()
+                    raw_name = getattr(part, "name", "")
+                    p_name = str(raw_name).strip() if (raw_name and not isinstance(raw_name, bool)) else ""
+                    
+                    raw_doc = getattr(part, "document", "")
+                    p_doc = str(raw_doc).strip() if (raw_doc and not isinstance(raw_doc, bool)) else ""
+                    
+                    raw_nick = getattr(part, "nickname", "")
+                    p_nick = str(raw_nick).strip() if (raw_nick and not isinstance(raw_nick, bool)) else ""
+                    
+                    raw_back = getattr(part, "background", "")
+                    p_back = str(raw_back).strip() if (raw_back and not isinstance(raw_back, bool)) else ""
+                    
                     raw_type = getattr(part, "participation_type", "Acusado")
                     photo_path = getattr(part, "photo_path", "") or ""
 

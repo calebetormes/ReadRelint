@@ -14,6 +14,7 @@ from backend.engine.extractors.llm.ollama_client import OllamaClient
 
 
 from backend.engine.extractors.llm.extractors.summary_extractor import SummaryExtractor
+from backend.engine.extractors.llm.extractors.location_extractor import LocationExtractor
 
 
 class LlmPipeline(IExtractor):
@@ -24,6 +25,7 @@ class LlmPipeline(IExtractor):
     def __init__(self, processor: Optional[ILlmProcessor] = None) -> None:
         self.processor = processor or OllamaClient()
         self.summary_extractor = SummaryExtractor(self.processor)
+        self.location_extractor = LocationExtractor(self.processor)
 
     def extract(
         self,
@@ -84,6 +86,12 @@ class LlmPipeline(IExtractor):
                 result.data["summary"] = summary_data["summary"]
             if summary_data.get("subject") and (not result.data.get("subject") or len(str(result.data.get("subject"))) < 5):
                 result.data["subject"] = summary_data["subject"]
+
+            # Pass 2: Extração Dedicada de Localização e Georreferenciamento
+            location_data = self.location_extractor.extract(cleaned_text, filename=filename)
+            for loc_key in ["address", "municipality", "neighborhood", "police_unit", "coordinates", "map_url", "geo_precision"]:
+                if location_data.get(loc_key):
+                    result.data[loc_key] = location_data[loc_key]
 
 
         except Exception as err:

@@ -123,20 +123,23 @@ def resolve_report_map_info(report: Any) -> Tuple[str, str, str, str]:
     inferred_coords = f"{est_lat}, {est_lng} (Aproximado)"
 
     # 2. Direct Link present in RELINT (Precisão Média)
-    if final_url:
-        return final_url, inferred_coords, "direct_link", "Precisão Média (Link Citado no RELINT)"
+    # Somente se for link encurtado ou link de local específico citado no PDF
+    if final_url and any(pat in final_url for pat in ["maps.app.goo.gl", "goo.gl/maps", "/maps/place", "?q="]):
+        # Se for link de busca genérica por query de endereço, não é link direto
+        if "search/?api=1&query=" not in final_url:
+            return final_url, inferred_coords, "direct_link", "Precisão Média (Link Citado no RELINT)"
 
-    # 3. Inferred Address Search (Precisão Estimada)
+    # 3. Inferred Address Search (Baixa Precisão / Somente Endereço)
     query_parts = []
     if addr_info["formatted_address"] and addr_info["formatted_address"] != "Endereço não informado":
         query_parts.append(addr_info["formatted_address"])
     elif addr_info["municipality"] != "Não Informado":
         query_parts.append(f"{addr_info['municipality']} - RS")
 
-    if query_parts:
-        query_str = urllib.parse.quote(", ".join(query_parts))
-        generated_url = f"https://www.google.com/maps/search/?api=1&query={query_str}"
-        return generated_url, inferred_coords, "address_inferred", "Precisão Estimada (Busca por Endereço)"
+    if query_parts or final_url:
+        query_str = urllib.parse.quote(", ".join(query_parts)) if query_parts else ""
+        generated_url = final_url if final_url else f"https://www.google.com/maps/search/?api=1&query={query_str}"
+        return generated_url, inferred_coords, "address_inferred", "Baixa Precisão (Somente Endereço)"
 
     # 4. Low Precision Fallback (Sempre cria URL e Coordenadas por Município ou Estado)
     muni_query = addr_info["municipality"] if addr_info["municipality"] != "Não Informado" else "Rio Grande do Sul"

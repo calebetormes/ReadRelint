@@ -250,12 +250,14 @@ class EtlService:
             pm_keywords = ["PM", "POLICIAL", "POLICIA", "TENENTE", "CAPITAO", "MAJOR", "CORONEL", "SUBTENENTE"]
             
             for p in raw_participants:
-                p_dict = p if isinstance(p, dict) else p.model_dump()
-                raw_p_name = p_dict.get("name", "") or ""
+                p_dict = p if isinstance(p, dict) else (p.model_dump() if hasattr(p, "model_dump") else {})
+                raw_p_name = p_dict.get("name", "")
+                if isinstance(raw_p_name, bool) or not raw_p_name:
+                    continue
                 p_type = p_dict.get("participation_type", "") or ""
                 
                 # Executa o parser sintático nativo no nome do participante
-                parsed = BrazilianNameParser.parse_person(raw_p_name)
+                parsed = BrazilianNameParser.parse_person(str(raw_p_name))
                 clean_p_name = parsed["name"]
                 extracted_nick = parsed["nickname"]
                 
@@ -272,7 +274,7 @@ class EtlService:
                 if any(kw in upper_name for kw in pm_keywords) or upper_name.startswith("SD ") or upper_name.startswith("SGT ") or upper_name.startswith("CB "):
                     is_pm = True
                     
-                if not is_pm and clean_p_name.strip():
+                if not is_pm and clean_p_name and str(clean_p_name).strip():
                     filtered_participants.append(p_dict)
             # 6. Extração de Imagens do PDF (Galeria do RELINT)
             import re
@@ -327,13 +329,19 @@ class EtlService:
 
             # Upsert de Participantes no banco de Pessoas
             for participant in (report.participants or []):
-                p_name = participant.name if isinstance(participant, Participant) else (participant.get("name") if isinstance(participant, dict) else "")
+                raw_name = participant.name if isinstance(participant, Participant) else (participant.get("name") if isinstance(participant, dict) else "")
+                p_name = str(raw_name).strip() if (raw_name and not isinstance(raw_name, bool)) else ""
                 if not p_name:
                     continue
                 
-                p_doc = participant.document if isinstance(participant, Participant) else (participant.get("document") if isinstance(participant, dict) else "")
-                p_nick = participant.nickname if isinstance(participant, Participant) else (participant.get("nickname") if isinstance(participant, dict) else "")
-                p_photo = participant.photo_path if isinstance(participant, Participant) else (participant.get("photo_path") if isinstance(participant, dict) else "")
+                raw_doc = participant.document if isinstance(participant, Participant) else (participant.get("document") if isinstance(participant, dict) else "")
+                p_doc = str(raw_doc).strip() if (raw_doc and not isinstance(raw_doc, bool)) else ""
+
+                raw_nick = participant.nickname if isinstance(participant, Participant) else (participant.get("nickname") if isinstance(participant, dict) else "")
+                p_nick = str(raw_nick).strip() if (raw_nick and not isinstance(raw_nick, bool)) else ""
+
+                raw_photo = participant.photo_path if isinstance(participant, Participant) else (participant.get("photo_path") if isinstance(participant, dict) else "")
+                p_photo = str(raw_photo).strip() if (raw_photo and not isinstance(raw_photo, bool)) else ""
 
                 person_id = p_doc if p_doc else p_name.lower()
                 existing_person = self.person_repo.get_by_id(person_id)

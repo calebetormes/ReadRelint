@@ -192,4 +192,18 @@ Sempre que concluir grandes blocos de tarefas:
 - **[ADR-085] Desacoplamento Arquitetural Estrito dos Motores LLM e Regex:** Separação física e lógica em pastas dedicadas (`backend/engine/extractors/llm/` e `backend/engine/extractors/deterministic/`). No modo LLM (`LlmPipeline`), a extração é 100% orientada pelo modelo Ollama sem nenhum fallback silencioso de regex sobrepondo campos; no modo Determinístico (`DeterministicPipeline`), a execução roda 100% offline via Regex e heurísticas puras.
 - **[ADR-086] Bypass de CORS em Transmissão SSE no SvelteKit:** Identificado bloqueio silencioso do navegador de política de segurança (CORS) devido ao mismatch entre `127.0.0.1` (servidor nativo PyQt) e `localhost` na url hardcoded da inicialização do `EventSource` no frontend SPA. Solucionado através do uso de URL Base Relativa (`/api/v1`) em todo o ecossistema Svelte, eliminando travamentos de socket cross-domain.
 - **[ADR-087] Migração de SSE para WebSockets Bidirecionais (Concluída):** Substituição do fluxo unidirecional EventSource (SSE) por conexões WebSockets nativas no FastAPI (`@router.websocket`) e SvelteKit (`eventsService.js`). Habilitado o método `.send()` no frontend para pavimentar futuras edições e comunicações em tempo real da interface Web de volta para o backend, garantindo resiliência e auto-reconexão inteligente.
+- **[ADR-088] Arquitetura Cognitiva Multi-Pass em 5 Leituras Especializadas (Multi-Step Extraction):** Decisão de substituir a extração monolítica da LLM (que tentava inferir 15+ campos em um único JSON pesado) por uma arquitetura em **5 Leituras Cognitivas Especializadas** com schemas e prompts ultraleves e focados:
+  1. *Pass 1 (Síntese & Assunto):* Redação dedicada da síntese factual explicativa em parágrafo único e extração do assunto (`SummaryExtractor` com `SummaryExtraction`), blindada contra preâmbulos policiais e plágios do título.
+  2. *Pass 2 (Localização & Georreferenciamento):* Resolução de endereço, bairro, município, unidade BPM e coordenadas.
+  3. *Pass 3 (Apreensões):* Veículos, armas e drogas estruturadas.
+  4. *Pass 4 (Participantes & Vínculos):* Autores, vítimas, testemunhas, antecedentes e exclusão de PMs.
+  5. *Pass 5 (Classificação & Regras Especializadas):* Roteamento para as tabelas polimórficas de especialidade.
+- **[ADR-089] Blindagem de Georreferenciamento, Anti-Alucinação de GPS e Sanitização de Endereços:** 
+  Implementação de travas no `LocationExtractor` e `TabLocation.svelte`:
+  1. *Zero Fake GPS:* Descarte sumário de coordenadas inventadas pela LLM quando os dígitos não existirem literalmente no documento ou em link resolvido.
+  2. *Herança Determinística de Município:* Captura e injeção compulsória da cidade a partir do `ASSUNTO` ou nome do arquivo para impedir que buscas no mapa caiam na capital (Porto Alegre).
+  3. *Sanitização de Ruídos Narrativos:* Truncamento e limpeza automática de links `https://`, menções a coordenadas no meio da frase, jargões operacionais da BM e pontos de referência comerciais nos logradouros.
+  4. *Enquadramento Panorâmico sem Balão de Ponto:* Documentos sem rua abrem a visualização panorâmica da cidade inteira (`z=12`) sem balão/marcador falso (`iwloc=`), pavimentando futuras camadas de mapas de calor (Heatmaps).
+  5. *Preservação de Abreviaturas e Zonas Rurais:* Suporte a iniciais compostas de ruas (`Rua Elias C. Lash`) e normalização automática de rodovias/linhas sem bairro para `Interior`.
+
 

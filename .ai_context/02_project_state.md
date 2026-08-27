@@ -56,10 +56,11 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
     - **Indicadores de Carregamento Ativo no Console:** Badge dinâmico no cabeçalho com spinner animado (`⠋ ⠙ ⠹...`) e barra de progresso indeterminada de 3px indicando atividades em segundo plano (verificação de IA, inicialização de serviços, reindexação e reprocessamento).
     - **Reprocessamento individual assíncrono na Aba de Relatórios:** Botão `🔄 Re-processar` em cada card de RELINT executa em background com feedback visual imediato no console e auto-atualização do histórico.
   - Reorganizada a estrutura de rotas: `/` tornou-se a "Visão Geral" do Dashboard (Estatísticas e KPIs) usando o novo App Shell, enquanto a biblioteca visual foi preservada na rota exclusiva `/design-system`.
-- [x] **Pipeline Cognitivo Multi-Pass (Etapa 1 - Síntese Concluída):**
+- [x] **Pipeline Cognitivo Multi-Pass (Etapas 1 e 2 Concluídas):**
   - Transição da extração monolítica da LLM para uma arquitetura em 5 leituras especializadas.
   - **Etapa 1 (Síntese & Assunto):** Implementação do schema isolado `SummaryExtraction`, do extrator especializado `SummaryExtractor` (`backend/engine/extractors/llm/extractors/summary_extractor.py`) e integração ao `LlmPipeline`.
-  - Blindagem contra resumos vazios ou plágios do título com sanitização inteligente e fallback determinístico de alta fidelidade.
+  - **Etapa 2 (Localização & Georreferenciamento):** Implementação do schema isolado `LocationExtraction`, do extrator `LocationExtractor` (`backend/engine/extractors/llm/extractors/location_extractor.py`) com normalização no padrão Google Maps, herança determinística obrigatória de município, sanitização estrita de ruídos (links, verbos policiais, coordenadas no meio do texto), tratamento de zonas rurais como `Interior`, blindagem anti-alucinação de GPS (zero fake GPS), enquadramento de município sem balão no mapa e classificação estrita em 3 níveis de precisão (Alta/Verde, Média/Azul, Baixa/Âmbar).
+  - **Interface SvelteKit (`TabLocation.svelte`):** Renderização de badge dinâmico de precisão de 3 cores, box de mapa escuro interativo com suporte a enquadramento de cidade inteira sem balão e botão de abertura direta no Google Maps com ícones Phosphor.
 - [x] **Preservados todos os documentos de contexto e workflows na pasta `.agents/` e `.ai_context/`:**
   - `.ai_context/05_design_system_penpot_guide.md` (Guia de Design System e sincronização com Penpot);
     - `.agents/workflows/sync-penpot.md` (`/sync-penpot`: Workflow de auditoria 1:1 e sincronização Penpot -> Código);

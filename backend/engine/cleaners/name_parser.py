@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Tuple, List, Set
+from typing import Dict, Tuple, List, Set, Any
 
 class BrazilianNameParser:
     """
@@ -79,15 +79,15 @@ class BrazilianNameParser:
     )
 
     @classmethod
-    def extract_nickname(cls, raw_text: str) -> Tuple[str, str]:
+    def extract_nickname(cls, raw_text: Any) -> Tuple[str, str]:
         """
         Extrai alcúnhas/vulgos do texto do participante (ex: vulgo 'Alemão', "Guto" ou (Marquinhos)).
         Retorna uma tupla: (texto_sem_alcunha, alcunha_extraida)
         """
-        if not raw_text:
+        if not raw_text or isinstance(raw_text, bool):
             return "", ""
 
-        text = raw_text.strip()
+        text = str(raw_text).strip()
         nickname = ""
 
         # 1. Padrão explícito: vulgo 'XXX', vulgo "XXX", alcunha XXX, conhecido por XXX
@@ -195,29 +195,34 @@ class BrazilianNameParser:
         return " ".join(final_parts)
 
     @classmethod
-    def clean_name(cls, raw_name: str) -> str:
+    def clean_name(cls, raw_name: Any) -> str:
         """
         Higieniza uma string bruta de nome, aplicando remoção de prefixos, sufixos e
         filtragem de tokens válidos de nomes próprios civis do Português do Brasil.
         """
-        if not raw_name:
+        if not raw_name or isinstance(raw_name, bool):
             return ""
 
+        raw_name_str = str(raw_name)
+
         # Extrai alcunha se estiver grudada na string
-        text_without_nick, _ = cls.extract_nickname(raw_name)
-        target_text = text_without_nick if text_without_nick else raw_name
+        text_without_nick, _ = cls.extract_nickname(raw_name_str)
+        target_text = text_without_nick if text_without_nick else raw_name_str
 
         stripped_text = cls._strip_prefixes_and_suffixes(target_text)
         valid_tokens = cls._filter_valid_tokens(stripped_text)
         return cls._format_name_parts(valid_tokens)
 
     @classmethod
-    def parse_person(cls, raw_string: str) -> Dict[str, str]:
+    def parse_person(cls, raw_string: Any) -> Dict[str, str]:
         """
         Recebe uma string bruta de participante e retorna um dicionário estruturado:
         {"name": "Nome Limpo em Title Case", "nickname": "Alcunha se encontrada"}
         """
-        text_without_nick, nickname = cls.extract_nickname(raw_string)
+        if not raw_string or isinstance(raw_string, bool):
+            return {"name": "", "nickname": ""}
+
+        text_without_nick, nickname = cls.extract_nickname(str(raw_string))
         cleaned_name = cls.clean_name(text_without_nick)
 
         return {
