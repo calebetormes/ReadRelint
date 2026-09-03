@@ -5,9 +5,10 @@ Extrator especializado de Localização, Endereço e Georreferenciamento via LLM
 
 import logging
 import re
+import unicodedata
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.extractors.llm.llm_processor import ILlmProcessor
 from backend.engine.extractors.llm.schemas.location_schema import LocationExtraction
@@ -45,6 +46,25 @@ def sanitize_address_field(text: str) -> str:
     return s
 
 
+def normalize_line_broken_sign(text: str) -> str:
+    """
+    Remove a quebra de linha que o PyMuPDF às vezes insere entre um sinal de "-" isolado
+    no fim de uma linha e o dígito que continua na linha seguinte (ex: "-\\n28.7" -> "-28.7").
+    Sem essa correção, o sinal negativo da coordenada se perde na extração.
+    """
+    if not text:
+        return text
+    return re.sub(r'-\s*\n\s*(\d)', r'-\1', text)
+
+
+def dms_to_decimal(degrees: str, minutes: str, seconds: str, hemisphere: str) -> float:
+    """Converte uma coordenada em graus/minutos/segundos (DMS) para decimal."""
+    value = float(degrees) + float(minutes) / 60 + float(seconds.replace(",", ".")) / 3600
+    if hemisphere.upper() in ("S", "W", "O"):
+        value = -value
+    return value
+
+
 def check_raw_text_geo_sources(text: str) -> Tuple[bool, bool, str, str]:
     """
     Analisa o texto bruto do documento para determinar com precisão a origem das informações geográficas:
@@ -55,15 +75,22 @@ def check_raw_text_geo_sources(text: str) -> Tuple[bool, bool, str, str]:
     if not text:
         return False, False, "", ""
 
-    # 1. Busca coordenadas explícitas no texto (decimal ou DMS)
+    text = normalize_line_broken_sign(text)
+
+    # 1. Busca coordenadas explícitas no texto (decimal ou DMS, já convertida para decimal)
     raw_coords = ""
     match_dec = re.search(r'(-?\d{1,2}\.\d{4,8})\s*[\s,;/]+\s*(-?\d{1,2}\.\d{4,8})', text)
     if match_dec:
         raw_coords = f"{match_dec.group(1)}, {match_dec.group(2)}"
     else:
-        match_dms = re.search(r'(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[Ss])\s*[\s,;]+\s*(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[WwOo])', text)
+        match_dms = re.search(
+            r'(\d{1,2})°\s*(\d{1,2})[\'′]\s*([\d.,]+)\"?\s*([Ss])\s*[\s,;]+\s*(\d{1,2})°\s*(\d{1,2})[\'′]\s*([\d.,]+)\"?\s*([WwOo])',
+            text
+        )
         if match_dms:
-            raw_coords = f"{match_dms.group(1)} {match_dms.group(2)}"
+            lat = dms_to_decimal(match_dms.group(1), match_dms.group(2), match_dms.group(3), match_dms.group(4))
+            lon = dms_to_decimal(match_dms.group(5), match_dms.group(6), match_dms.group(7), match_dms.group(8))
+            raw_coords = f"{lat:.6f}, {lon:.6f}"
 
     # 2. Busca link explícito do Google Maps no texto
     raw_map_url = ""
@@ -229,6 +256,109 @@ def format_google_standard_address(
     return formatted.strip(" ,-") or "-"
 
 
+def normalize_for_match(value: str) -> str:
+    """Normaliza texto para comparação tolerante: remove acento, baixa a caixa e colapsa espaços."""
+    if not value:
+        return ""
+    stripped_accents = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r'\s+', ' ', stripped_accents).strip().lower()
+
+
+def text_contains(candidate: str, text: str) -> bool:
+    """Verifica se um valor aparece literalmente no texto, tolerando acento/caixa/espaçamento."""
+    norm_candidate = normalize_for_match(candidate)
+    return bool(norm_candidate) and norm_candidate in normalize_for_match(text)
+
+
+# Tabela determinística de área de cobertura territorial dos batalhões da Brigada Militar.
+# Fonte: fornecida pelo usuário. Único critério primário para resolução de 'police_unit'.
+MUNICIPALITY_TO_BATTALION: Dict[str, str] = {}
+
+
+def _register_battalion_coverage(battalion: str, municipalities: List[str]) -> None:
+    for municipality in municipalities:
+        MUNICIPALITY_TO_BATTALION[normalize_for_match(municipality)] = battalion
+
+
+_register_battalion_coverage("16º BPM", [
+    "Cruz Alta", "Boa Vista do Cadeado", "Pejuçara", "Ibirubá", "XV de Novembro",
+    "Fortaleza dos Valos", "Selbach", "Saldanha Marinho", "Salto do Jacuí",
+    "Boa Vista do Incra", "Jacuizinho",
+])
+_register_battalion_coverage("37º BPM", [
+    "Frederico Westphalen", "Caiçara", "Seberi", "Erval Seco", "Palmitinho",
+    "Pinheirinho do Vale", "Taquaruçu do Sul", "Vista Alegre", "Planalto",
+    "Alpestre", "Ametista", "Rodeio Bonito", "Cristal do Sul", "Iraí", "Vicente Dutra",
+])
+_register_battalion_coverage("39º BPM", [
+    "Palmeira das Missões", "Panambi", "Novo Barreiro", "São Pedro das Missões",
+    "São José das Missões", "Dois Irmãos das Missões", "Boa Vista das Missões",
+    "Jaboticaba", "Cerro Grande", "Pinhal", "Novo Tiradentes", "Lajeado do Bugre",
+    "Sagrada Família", "Condor", "Santa Bárbara do Sul",
+])
+
+
+def resolve_battalion_by_municipality(municipality: str) -> str:
+    """Consulta a tabela fixa de município -> BPM territorial (fonte primária)."""
+    return MUNICIPALITY_TO_BATTALION.get(normalize_for_match(municipality), "")
+
+
+def extract_battalion_mentions(text: str) -> List[str]:
+    """Retorna a lista de números de batalhão válidos (16/37/39) citados literalmente no texto, sem duplicar."""
+    if not text:
+        return []
+    mentions: List[str] = []
+    for match in re.finditer(r'\b(\d{1,2})[º°]?\s*BPM\b', text, re.IGNORECASE):
+        number = match.group(1)
+        if number in ("16", "37", "39") and number not in mentions:
+            mentions.append(number)
+    return mentions
+
+
+def resolve_police_unit(municipality: str, text: str) -> str:
+    """
+    Resolve 'police_unit' em 3 camadas 100% determinísticas (campo não passa mais pela LLM):
+    1. Exatamente 1 batalhão citado literalmente no texto -> o texto decide (cobre apoio mútuo entre batalhões).
+    2. Zero ou mais de uma menção (ambíguo) -> a tabela de município decide.
+    3. Município fora da tabela e sem menção literal única -> vazio.
+    """
+    mentions = extract_battalion_mentions(text)
+    if len(mentions) == 1:
+        return f"{mentions[0]}º BPM"
+    return resolve_battalion_by_municipality(municipality)
+
+
+RS_LATITUDE_RANGE = (-34.0, -27.0)
+RS_LONGITUDE_RANGE = (-58.0, -49.0)
+
+
+def enforce_rs_coordinate_signs(coordinates: str) -> str:
+    """
+    Valida o formato decimal estrito e força o sinal negativo em latitude/longitude:
+    100% dos RELINTs são do Rio Grande do Sul (hemisfério sul/oeste), então qualquer
+    coordenada válida aqui É sempre negativa nos dois eixos. Corrige tanto a perda de
+    sinal por quebra de linha do PDF quanto documentos que nunca digitaram o sinal.
+    Descarta (retorna "") qualquer valor fora do formato decimal ou fora da área do RS
+    (inclui placeholders textuais como 'N/A', 'Sem informação', links não resolvidos, etc.).
+    """
+    if not coordinates:
+        return ""
+
+    match = re.match(r'^-?(\d{1,2}\.\d{3,})\s*,\s*-?(\d{1,2}\.\d{3,})$', coordinates.strip())
+    if not match:
+        return ""
+
+    lat_str, lon_str = f"-{match.group(1)}", f"-{match.group(2)}"
+    lat, lon = float(lat_str), float(lon_str)
+
+    if not (RS_LATITUDE_RANGE[0] <= lat <= RS_LATITUDE_RANGE[1]):
+        return ""
+    if not (RS_LONGITUDE_RANGE[0] <= lon <= RS_LONGITUDE_RANGE[1]):
+        return ""
+
+    return f"{lat_str}, {lon_str}"
+
+
 class LocationExtractor:
     """
     Extrator cognitivo dedicado para geolocalização, endereçamento e coordenadas.
@@ -245,6 +375,9 @@ class LocationExtractor:
         - Média: Link do Google Maps encontrado no documento (coordenadas geradas via link).
         - Baixa: Somente endereço no documento (coordenadas/links gerados por busca com município).
         """
+        # Corrige de saída o artefato de quebra de linha do PyMuPDF entre um "-" isolado e o dígito seguinte
+        text = normalize_line_broken_sign(text)
+
         has_raw_coords, has_raw_map_url, raw_coords, raw_map_url = check_raw_text_geo_sources(text)
 
         # Determina com rigor a precisão com base na fonte textual bruta
@@ -258,18 +391,12 @@ class LocationExtractor:
         # Extrai município determinístico do Assunto ou do nome do arquivo
         fb_muni = extract_municipality_from_context(text, filename=filename)
 
-        # Extrai batalhão policial (ex: '37º BPM', '39º BPM')
-        fb_unit = ""
-        unit_match = re.search(r'\b(\d{1,2}[º°]?\s*BPM(?:\/[A-Z\-]+)?)\b', text, re.IGNORECASE)
-        if unit_match:
-            fb_unit = unit_match.group(1).strip()
-
         data: Dict[str, Any] = {
             "street": "",
             "number": "",
             "neighborhood": "",
             "municipality": fb_muni,
-            "police_unit": fb_unit,
+            "police_unit": "",
             "address": "",
             "coordinates": raw_coords,
             "map_url": raw_map_url,
@@ -290,20 +417,19 @@ class LocationExtractor:
                 data["street"] = sanitize_address_field(str(raw_response.get("street") or "").strip())
                 data["number"] = sanitize_address_field(str(raw_response.get("number") or "").strip())
                 data["neighborhood"] = sanitize_address_field(str(raw_response.get("neighborhood") or "").strip())
-                
-                extracted_muni = sanitize_address_field(str(raw_response.get("municipality") or "").strip())
-                if extracted_muni and len(extracted_muni) > 2:
-                    # Se o município extraído da LLM não bater com o Assunto formal, prefere o do Assunto
-                    if fb_muni and fb_muni.lower() not in extracted_muni.lower() and extracted_muni.lower() not in text.lower():
-                        data["municipality"] = fb_muni
-                    else:
-                        data["municipality"] = extracted_muni
-                elif fb_muni:
-                    data["municipality"] = fb_muni
 
-                extracted_unit = str(raw_response.get("police_unit") or "").strip()
-                if extracted_unit and len(extracted_unit) > 2:
-                    data["police_unit"] = extracted_unit
+                # Guardrail determinístico: descarta a rua se ela não existir literalmente no texto
+                # (evita o viés de âncora no exemplo do prompt, ex: "Rua General Osório" cravada sem sustentação)
+                if data["street"] and not text_contains(data["street"], text):
+                    logger.warning(f"Descartando rua sem evidência no texto ('{data['street']}').")
+                    data["street"] = ""
+
+                # Regra determinística (ADR-089): o município do cabeçalho ASSUNTO é sempre autoritativo,
+                # mesmo quando a LLM extrai um nome de cidade diferente citado em outro trecho do texto.
+                if not fb_muni:
+                    extracted_muni = sanitize_address_field(str(raw_response.get("municipality") or "").strip())
+                    if extracted_muni and len(extracted_muni) > 2:
+                        data["municipality"] = extracted_muni
 
                 # Validação anti-alucinação de coordenadas:
                 # Só aceita coordenadas da LLM se os dígitos existirem literalmente no texto
@@ -324,6 +450,10 @@ class LocationExtractor:
 
         except Exception as err:
             logger.error(f"Erro na execução do LocationExtractor: {err}. Mantendo fallback.")
+
+        # Resolução 100% determinística de 'police_unit' (tabela município -> BPM + evidência textual).
+        # O campo não é mais perguntado à LLM (elimina o viés de âncora no exemplo do prompt).
+        data["police_unit"] = resolve_police_unit(data["municipality"], text)
 
         # 1.1. Fallback determinístico de logradouro se a LLM omitiu ou colocou apenas o bairro na rua
         if data["street"].lower().startswith("bairro"):
@@ -351,11 +481,10 @@ class LocationExtractor:
             if resolved_coords:
                 data["coordinates"] = resolved_coords
 
-        # Normaliza formato das coordenadas
-        if data["coordinates"]:
-            coord_match = re.search(r'(-?\d{1,2}\.\d{4,8})\s*[\s,;/]+\s*(-?\d{1,2}\.\d{4,8})', data["coordinates"])
-            if coord_match:
-                data["coordinates"] = f"{coord_match.group(1)}, {coord_match.group(2)}"
+        # Normaliza formato, força o sinal negativo (100% dos RELINTs são do RS) e valida a faixa geográfica.
+        # Qualquer placeholder textual ("N/A", "Sem informação", link não resolvido, DMS não convertido etc.)
+        # é descartado aqui por não bater no formato decimal esperado.
+        data["coordinates"] = enforce_rs_coordinate_signs(data["coordinates"])
 
         # 4. Formatação do Endereço Padrão Google (Garante Município e RS)
         formatted_addr = format_google_standard_address(

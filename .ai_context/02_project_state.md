@@ -87,6 +87,21 @@ Este documento documenta o que já foi construído, o que está sendo finalizado
 
 
   - Adicionada regra `files.exclude` no `.vscode/settings.json` para ocultar automaticamente pastas `__pycache__`, `.pytest_cache` e arquivos `.pyc`/`.pyo`.
+- [x] **Correção de Inconsistências na Extração de Localização/Unidade (Auditoria + Guardrails Determinísticos):**
+  - Auditoria completa nos 562 RELINTs comparando `endereco`/`municipio`/`unidade_policial`/`coordenadas` contra a Transcrição Literal — detalhamento completo em [`proposta_melhorias_extracao_geo.md`](./proposta_melhorias_extracao_geo.md) e [`proposta_termometro_certeza.md`](./proposta_termometro_certeza.md).
+  - **`police_unit` sai do prompt da LLM e vira 100% determinístico**: tabela fixa de 41 municípios → 16º/37º/39º BPM, com regra de mão dupla (menção literal única no texto vence; ambíguo/ausente cai para a tabela; fora da tabela e sem menção fica vazio). Eliminava o viés de âncora no exemplo do prompt (56% dos registros vinham "39º BPM", 70% deles sem nenhuma sustentação no texto).
+  - **Guardrail de evidência textual para `street`**: descarta a rua devolvida pela LLM se ela não existir literalmente no texto (mesmo viés de âncora identificado em "Rua General Osório").
+  - **Prioridade determinística de `municipality`**: o município do cabeçalho `ASSUNTO` agora sempre prevalece sobre a resposta da LLM (antes só prevalecia quando o valor da LLM não aparecia em nenhum lugar do texto, o que falhava quando o documento citava a cidade errada em outro contexto).
+  - **Correção da perda do sinal "-" nas coordenadas**: normalização do artefato de quebra de linha do PyMuPDF (`-\n<dígitos>`), conversão real de DMS para decimal, e blindagem geográfica que força sinal negativo em lat/long e valida a faixa aproximada do RS (descarta também placeholders textuais como "N/A"/"Sem informação").
+  - **Correção crítica no `LlmPipeline`**: o Pass 2 (`LocationExtractor`, com todos os guardrails acima) só sobrescrevia o resultado do pass legado (schema `IncidentReport`, sem guardrails) quando retornava valor não-vazio — deixando vazar placeholders/alucinações do pass antigo sempre que o Pass 2 corretamente abstraía. Agora o Pass 2 é sempre autoritativo para os campos geográficos.
+  - Suíte de testes dedicada em `tests/test_location_extractor.py` (23 testes, incluindo reprodução dos casos reais encontrados na auditoria).
+- [x] **Extração de Especialidades em 2 Estágios (Substitui as Rules/Entidades Legadas Desconectadas):**
+  - Detalhamento completo nos ADR-091 a ADR-094 (`.ai_context/03_decisions_and_workflow.md`).
+  - Descoberto que as 7 classes `Rule` especializadas e as entidades polimórficas (`HomicideReport` etc.) nunca estavam conectadas ao pipeline ao vivo (`main_controller.py` usa `RelintRule()` fixo) — os campos de especialidade nunca eram perguntados à LLM e as tabelas de detalhe (`homicidio_detalhes` etc.) só recebiam valores default do Pydantic, nunca dado real.
+  - **Estágio 1 (Classificação):** `classify_bm_group()` (`bm_classifier.py`) passa a rodar sempre (antes só no modo sem-IA), priorizando filename+assunto sobre o conteúdo — 100% determinístico, sem LLM.
+  - **Estágio 2 (Extração):** Novo `SpecialtyExtractor` (`backend/engine/extractors/llm/extractors/specialty_extractor.py`), Passo 3 do pipeline multi-pass. Campos binários (`injured_victims`, `hostage_victim`, `recovered`, `location_type`) resolvidos por regex, sem LLM. Campos livres (`motivation`, `drug_quantity`, `vehicle_model` etc.) usam schemas Pydantic minúsculos por especialidade (`specialty_schemas.py`) com guardrails de enum fechado e evidência literal no texto. Especialidades sem campo livre (`Roubo a Residência`, `Furto Qualificado`, `Outros`) nunca chamam a LLM.
+  - `IncidentReport` ganha `model_config = ConfigDict(extra="allow")` para os campos de especialidade sobreviverem sem reviver os schemas monolíticos por subclasse.
+  - Suíte de testes dedicada em `tests/test_specialty_extractor.py` (20 testes).
 
 ## 2. Próximas Etapas (Prioridade e Roteiro de Tasks)
 

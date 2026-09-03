@@ -18,7 +18,6 @@ Hierarquia de prioridade (maior especificidade vence):
 """
 
 import re
-from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -138,22 +137,19 @@ def classify_bm_group(
     filename: str = "",
     subject: str = "",
     content: str = "",
-    llm_bm_group: Optional[str] = None,
 ) -> str:
     """
     Classifica deterministicamente o BmGroup de uma ocorrência analisando
     o nome do arquivo, o assunto e o conteúdo com padrões regex ordenados.
 
-    Retorna:
-      - O valor string do BmGroup classificado (ex: "Homicídio").
-      - Se a LLM já retornou um valor válido (não "Outros"), ele é preservado
-        desde que não seja contraditado por um padrão de maior prioridade.
+    100% determinístico, em 2 camadas apenas — nunca recorre a um palpite
+    livre da LLM como fallback: quando nenhum padrão bate, retorna "Outros"
+    (decisão confirmada com o usuário; ver ADR de classificação de especialidades).
 
     Args:
         filename: Nome do arquivo PDF de origem.
         subject: Campo ASSUNTO extraído do RELINT.
         content: Texto do histórico/conteúdo.
-        llm_bm_group: Classificação sugerida pelo LLM (pode ser None ou "Outros").
     """
     # Passada 1: Busca estrita no título e assunto (alta prioridade)
     primary = f"{filename} {subject}".lower()
@@ -169,9 +165,5 @@ def classify_bm_group(
         for pattern in patterns:
             if re.search(pattern, full_corpus, re.IGNORECASE):
                 return bm_value
-
-    # Nenhum padrão bateu: se a LLM sugeriu algo diferente de "Outros", preservar
-    if llm_bm_group and llm_bm_group not in ("Outros", "outros", None):
-        return llm_bm_group
 
     return "Outros"

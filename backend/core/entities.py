@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ParticipationType(str, Enum):
@@ -83,6 +83,11 @@ class IncidentReport(BaseModel):
     """
     Representa a entidade de domínio de um relatório de incidente (RELINT) processado.
     """
+    # 'extra=allow' permite que os campos de especialidade resolvidos pelo SpecialtyExtractor
+    # (motivation, drug_quantity, vehicle_model etc.) sobrevivam como atributos reais do objeto,
+    # mesmo sem estarem declarados aqui — evita reintroduzir uma subclasse Pydantic por especialidade.
+    model_config = ConfigDict(extra="allow")
+
     id: Optional[str] = Field(default=None, description="ID único no banco de dados")
     source_file: str = Field(description="Nome do arquivo PDF de origem")
     registry_number: Optional[str] = Field(default=None, description="Número do registro Policial ou DP (ex: 516/151641/2026)")

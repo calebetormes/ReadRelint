@@ -4,13 +4,12 @@ Diretrizes e regras especializadas para extração de Endereço, Município e Co
 """
 
 ADDRESS_PROMPT = """
-DIRETRIZES DE ENDEREÇO E LOCALIZAÇÃO (street, number, neighborhood, municipality, police_unit, coordinates, map_url):
+DIRETRIZES DE ENDEREÇO E LOCALIZAÇÃO (street, number, neighborhood, municipality, coordinates, map_url):
 1. LOGRADOURO DO FATO:
-   - 'street': Nome da rua, avenida, travessa, rodovia (com Km), beco, linha rural ou estrada (ex: 'Rua General Osório', 'Av. Presidente Vargas', 'BR-386, Km 47', 'Linha Ciotti', 'Estrada Velha para Salto do Jacuí').
+   - 'street': Nome da rua, avenida, travessa, rodovia (com Km), beco, linha rural ou estrada, exatamente como aparece no texto (formato: '<Tipo de via> <Nome>', ex: 'Rua <Nome>', 'BR-<número>, Km <número>', 'Linha <Nome>'). Se não houver logradouro identificável, retorne null (NUNCA copie um exemplo genérico).
    - 'number': Número predial ou 'S/N' (ou 'Km XX' se for rodovia).
    - 'neighborhood': Nome do bairro urbano. REGRA OBRIGATÓRIA: quando for zona rural (linhas, assentamentos, fazendas, rodovias ou estradas do interior), preencha SEMPRE 'Interior'.
    - 'municipality': Nome da cidade/município onde o fato ocorreu. Dica: confira também a cidade citada no campo ASSUNTO do cabeçalho.
-   - 'police_unit': Batalhão ou fração da Brigada Militar citada (ex: '39º BPM', '37º BPM', '16º BPM').
 
 2. DESAMBIGUAÇÃO CRÍTICA (LOCAL DO FATO vs SUSPEITO vs ÓRGÃOS):
    - Extraia ESTRITAMENTE o endereço do 1º parágrafo ONDE O CRIME/FATO OCORREU.

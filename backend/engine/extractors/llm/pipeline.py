@@ -13,8 +13,10 @@ from backend.engine.extractors.llm.llm_processor import ILlmProcessor
 from backend.engine.extractors.llm.ollama_client import OllamaClient
 
 
+from backend.engine.cleaners.bm_classifier import classify_bm_group
 from backend.engine.extractors.llm.extractors.summary_extractor import SummaryExtractor
 from backend.engine.extractors.llm.extractors.location_extractor import LocationExtractor
+from backend.engine.extractors.llm.extractors.specialty_extractor import SpecialtyExtractor
 
 
 class LlmPipeline(IExtractor):
@@ -26,6 +28,7 @@ class LlmPipeline(IExtractor):
         self.processor = processor or OllamaClient()
         self.summary_extractor = SummaryExtractor(self.processor)
         self.location_extractor = LocationExtractor(self.processor)
+        self.specialty_extractor = SpecialtyExtractor(self.processor)
 
     def extract(
         self,
@@ -87,12 +90,28 @@ class LlmPipeline(IExtractor):
             if summary_data.get("subject") and (not result.data.get("subject") or len(str(result.data.get("subject"))) < 5):
                 result.data["subject"] = summary_data["subject"]
 
-            # Pass 2: Extração Dedicada de Localização e Georreferenciamento
+            # Pass 2: Extração Dedicada de Localização e Georreferenciamento.
+            # Sobrescreve incondicionalmente: o Pass 2 tem guardrails determinísticos que o
+            # schema genérico do primeiro pass não tem, então mesmo um resultado vazio aqui
+            # (ex: campo sem evidência suficiente) deve prevalecer sobre o valor sem validação.
             location_data = self.location_extractor.extract(cleaned_text, filename=filename)
             for loc_key in ["address", "municipality", "neighborhood", "police_unit", "coordinates", "map_url", "geo_precision"]:
-                if location_data.get(loc_key):
-                    result.data[loc_key] = location_data[loc_key]
+                result.data[loc_key] = location_data.get(loc_key, "")
 
+            # Classificação determinística de bm_group (filename+assunto primeiro, conteúdo como fallback)
+            # ANTES do Passo 3, para que o schema de especialidade correto seja escolhido.
+            bm_group = classify_bm_group(
+                filename=filename,
+                subject=result.data.get("subject", ""),
+                content=cleaned_text
+            )
+            result.data["bm_group"] = bm_group
+
+            # Passo 3: Extração Dedicada de Campos de Especialidade (só quando o bm_group tem algum)
+            specialty_data = self.specialty_extractor.extract(
+                cleaned_text, bm_group=bm_group, neighborhood=result.data.get("neighborhood", "")
+            )
+            result.data.update(specialty_data)
 
         except Exception as err:
             result.success = False

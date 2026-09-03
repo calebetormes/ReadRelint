@@ -103,15 +103,20 @@ class TestBmClassifier:
         result = classify_bm_group(filename="RELINT-001.pdf", subject="Ocorrência diversa")
         assert result == "Outros"
 
-    def test_preserva_llm_quando_nao_outros(self):
-        """Se a LLM deu algo válido e não achamos padrão, preservar a resposta dela."""
+    def test_nao_confia_em_palpite_livre_da_llm(self):
+        """
+        Nunca deve haver um 3º fallback que preserve um palpite livre da LLM.
+        100% determinístico: regex bateu ou "Outros", nunca um terceiro caminho.
+        (bug real: 'Encontro de artefato explosivo' foi classificado como 'Roubo a
+        Estabelecimento' porque o antigo fallback preservava a resposta legada não
+        confiável da LLM quando as 2 camadas de regex não encontravam nada.)
+        """
         result = classify_bm_group(
-            filename="RELINT.pdf",
-            subject="Ocorrência diversa",
-            content="Sem informação específica",
-            llm_bm_group="Prisão por Tráfico"
+            filename="RELATÓRIO DE INTELIGÊNCIA Nº 424/2026/ADJ-CI",
+            subject="Encontro de artefato explosivo em Cruz Alta - RS",
+            content="A guarnição isolou o local e removeu o artefato para detonação."
         )
-        assert result == "Prisão por Tráfico"
+        assert result == "Outros"
 
     # --- Prioridade: Homicídio > Tráfico ---
     def test_homicidio_prevalece_sobre_trafico(self):

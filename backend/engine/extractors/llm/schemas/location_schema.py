@@ -13,7 +13,7 @@ class LocationExtraction(BaseModel):
     """
     street: Optional[str] = Field(
         default=None,
-        description="Nome do logradouro onde o fato ocorreu (ex: Rua General Osório, Av. Presidente Vargas, BR-386, Linha Santa Ana)."
+        description="Nome do logradouro onde o fato ocorreu, exatamente como aparece no texto. Se não houver logradouro identificável no documento, retorne null."
     )
     number: Optional[str] = Field(
         default=None,
@@ -26,10 +26,6 @@ class LocationExtraction(BaseModel):
     municipality: Optional[str] = Field(
         default=None,
         description="Nome da cidade/município da ocorrência (ex: Porto Alegre, Frederico Westphalen, Seberi, Panambi)."
-    )
-    police_unit: Optional[str] = Field(
-        default=None,
-        description="Batalhão ou fração da Brigada Militar mencionada/responsável (ex: 39º BPM, 37º BPM, 16º BPM)."
     )
     coordinates: Optional[str] = Field(
         default=None,

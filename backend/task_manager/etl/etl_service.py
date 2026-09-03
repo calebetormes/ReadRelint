@@ -225,9 +225,15 @@ class EtlService:
                     r_map, r_coords = resolve_coordinates_and_map_info(final_content)
                     response_dict["map_url"] = r_map
                     response_dict["coordinates"] = r_coords
-                if not response_dict.get("bm_group") or response_dict.get("bm_group") == "Outros":
-                    response_dict["bm_group"] = classify_bm_group(filename=filename, subject=response_dict.get("subject", ""), content=final_content)
 
+            # Classificação determinística de bm_group SEMPRE ativa (não só no modo sem-IA):
+            # a resposta livre da LLM para esse campo não é confiável (ex: prisões por tráfico
+            # caindo em "Outros"). classify_bm_group já prioriza filename+assunto sobre o conteúdo.
+            response_dict["bm_group"] = classify_bm_group(
+                filename=filename,
+                subject=response_dict.get("subject", ""),
+                content=final_content
+            )
 
             # 5. Filtragem e Enriquecimento Híbrido de Participantes (Sanitização + Anti-PM + Enriquecimento)
             from backend.engine.cleaners.text_cleaner import clean_person_name
