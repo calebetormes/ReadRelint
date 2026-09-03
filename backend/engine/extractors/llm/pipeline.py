@@ -16,7 +16,7 @@ from backend.engine.extractors.llm.ollama_client import OllamaClient
 from backend.engine.cleaners.bm_classifier import classify_bm_group
 from backend.engine.extractors.llm.extractors.summary_extractor import SummaryExtractor
 from backend.engine.extractors.llm.extractors.location_extractor import LocationExtractor
-from backend.engine.extractors.llm.extractors.specialty_extractor import SpecialtyExtractor
+from backend.engine.extractors.llm.extractors.specialty_extractor import ALL_SPECIALTY_FIELDS, SpecialtyExtractor
 
 
 class LlmPipeline(IExtractor):
@@ -107,11 +107,16 @@ class LlmPipeline(IExtractor):
             )
             result.data["bm_group"] = bm_group
 
-            # Passo 3: Extração Dedicada de Campos de Especialidade (só quando o bm_group tem algum)
+            # Passo 3: Extração Dedicada de Campos de Especialidade (só quando o bm_group tem algum).
+            # Sobrescreve incondicionalmente, como no Passo 2: se o Passo 3 descartou um campo por
+            # falta de evidência/enum inválido, isso deve prevalecer sobre a resposta crua e sem
+            # guardrail do Pass 1 legado (ex: 'motivation' fora do enum aceito pelo Passo 3, mas
+            # aceita pela normalização mais permissiva de HomicideReport na leitura/gravação).
             specialty_data = self.specialty_extractor.extract(
                 cleaned_text, bm_group=bm_group, neighborhood=result.data.get("neighborhood", "")
             )
-            result.data.update(specialty_data)
+            for field_name in ALL_SPECIALTY_FIELDS:
+                result.data[field_name] = specialty_data.get(field_name, "")
 
         except Exception as err:
             result.success = False

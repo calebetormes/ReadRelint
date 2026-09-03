@@ -52,6 +52,11 @@ class MainController:
         self.pdf_reader = PdfReader()
         self.use_llm: bool = True
         self.llm_processor = OllamaClient()
+        # Fixo em RelintRule (schema genérico) DE PROPÓSITO — não é um TODO pendente.
+        # As 7 classes Rule especializadas (backend/engine/extractors/llm/rules/) NÃO devem ser
+        # ativadas aqui: a extração de especialidade já é resolvida de forma independente por
+        # classify_bm_group() + SpecialtyExtractor (ver ADR-094/095 em .ai_context). Reativar essas
+        # Rules reintroduziria o schema monolítico legado em paralelo ao pipeline multi-pass atual.
         self.active_rule = RelintRule()
         
         project_root = Path(__file__).resolve().parents[2]

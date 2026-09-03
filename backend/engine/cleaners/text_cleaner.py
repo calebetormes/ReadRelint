@@ -256,15 +256,69 @@ def extract_map_url(text: str) -> str:
 
     return ""
 
+def normalize_line_broken_sign(text: str) -> str:
+    """
+    Remove a quebra de linha que o PyMuPDF às vezes insere entre um sinal de "-" isolado
+    no fim de uma linha e o dígito que continua na linha seguinte (ex: "-\\n28.7" -> "-28.7").
+    Sem essa correção, o sinal negativo da coordenada se perde na extração.
+    """
+    if not text:
+        return text
+    return re.sub(r'-\s*\n\s*(\d)', r'-\1', text)
+
+
+def dms_to_decimal(degrees: str, minutes: str, seconds: str, hemisphere: str) -> float:
+    """Converte uma coordenada em graus/minutos/segundos (DMS) para decimal."""
+    value = float(degrees) + float(minutes) / 60 + float(seconds.replace(",", ".")) / 3600
+    if hemisphere.upper() in ("S", "W", "O"):
+        value = -value
+    return value
+
+
+RS_LATITUDE_RANGE = (-34.0, -27.0)
+RS_LONGITUDE_RANGE = (-58.0, -49.0)
+
+
+def enforce_rs_coordinate_signs(coordinates: str) -> str:
+    """
+    Valida o formato decimal estrito e força o sinal negativo em latitude/longitude:
+    100% dos RELINTs são do Rio Grande do Sul (hemisfério sul/oeste), então qualquer
+    coordenada válida aqui É sempre negativa nos dois eixos. Corrige tanto a perda de
+    sinal por quebra de linha do PDF quanto documentos que nunca digitaram o sinal.
+    Descarta (retorna "") qualquer valor fora do formato decimal ou fora da área do RS
+    (inclui placeholders textuais como 'N/A', 'Sem informação', links não resolvidos, etc.).
+    Sempre normaliza a saída para exatamente 6 casas decimais (padrão do Google Maps),
+    truncando precisão excessiva e completando com zeros quando o documento tinha menos dígitos.
+    """
+    if not coordinates:
+        return ""
+
+    match = re.match(r'^-?(\d{1,2}\.\d{3,})\s*,\s*-?(\d{1,2}\.\d{3,})$', coordinates.strip())
+    if not match:
+        return ""
+
+    lat, lon = -float(match.group(1)), -float(match.group(2))
+
+    if not (RS_LATITUDE_RANGE[0] <= lat <= RS_LATITUDE_RANGE[1]):
+        return ""
+    if not (RS_LONGITUDE_RANGE[0] <= lon <= RS_LONGITUDE_RANGE[1]):
+        return ""
+
+    return f"{lat:.6f}, {lon:.6f}"
+
+
 def resolve_coordinates_and_map_info(text: str, map_url: str = "") -> Tuple[str, str]:
     """
     Identifica o link do mapa e tenta extrair as coordenadas geográficas (Latitude, Longitude).
-    Suporta coordenadas decimais (-28.26123, -53.49123) e DMS (28°15'40"S 53°29'28"W).
+    Suporta coordenadas decimais (-28.26123, -53.49123) e DMS (28°15'40"S 53°29'28"W), com
+    as mesmas blindagens do motor via LLM: correção de quebra de linha no sinal, conversão
+    real de DMS para decimal e validação/normalização de sinal contra a faixa geográfica do RS.
     Retorna uma tupla: (map_url, coordinates)
     """
     if not text and not map_url:
         return "", ""
 
+    text = normalize_line_broken_sign(text or "")
     found_url = map_url if map_url else extract_map_url(text)
     coords = ""
 
@@ -273,11 +327,16 @@ def resolve_coordinates_and_map_info(text: str, map_url: str = "") -> Tuple[str,
     if match_coords:
         coords = f"{match_coords.group(1)}, {match_coords.group(2)}"
 
-    # 2. Se não encontrou decimais simples, buscar formato DMS (Graus, Minutos e Segundos)
+    # 2. Se não encontrou decimais simples, buscar formato DMS e converter para decimal
     if not coords:
-        match_dms = re.search(r'(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[Ss])\s*[\s,;]+\s*(\d{1,2}°\s*\d{1,2}[\'′]\s*[\d\.]+\"?\s*[WwOo])', text)
+        match_dms = re.search(
+            r'(\d{1,2})°\s*(\d{1,2})[\'′]\s*([\d.,]+)\"?\s*([Ss])\s*[\s,;]+\s*(\d{1,2})°\s*(\d{1,2})[\'′]\s*([\d.,]+)\"?\s*([WwOo])',
+            text
+        )
         if match_dms:
-            coords = f"{match_dms.group(1)} {match_dms.group(2)}"
+            lat = dms_to_decimal(match_dms.group(1), match_dms.group(2), match_dms.group(3), match_dms.group(4))
+            lon = dms_to_decimal(match_dms.group(5), match_dms.group(6), match_dms.group(7), match_dms.group(8))
+            coords = f"{lat:.6f}, {lon:.6f}"
 
     # 3. Se houver link do Google Maps e ainda não encontramos coordenadas no texto, tenta resolver o link encurtado
     if found_url and not coords and "maps.app.goo.gl" in found_url:
@@ -291,6 +350,8 @@ def resolve_coordinates_and_map_info(text: str, map_url: str = "") -> Tuple[str,
                     coords = f"{m_latlng.group(1)}, {m_latlng.group(2)}"
         except Exception:
             pass
+
+    coords = enforce_rs_coordinate_signs(coords)
 
     return found_url, coords
 

@@ -226,14 +226,17 @@ class EtlService:
                     response_dict["map_url"] = r_map
                     response_dict["coordinates"] = r_coords
 
-            # Classificação determinística de bm_group SEMPRE ativa (não só no modo sem-IA):
-            # a resposta livre da LLM para esse campo não é confiável (ex: prisões por tráfico
-            # caindo em "Outros"). classify_bm_group já prioriza filename+assunto sobre o conteúdo.
-            response_dict["bm_group"] = classify_bm_group(
-                filename=filename,
-                subject=response_dict.get("subject", ""),
-                content=final_content
-            )
+                # Reclassifica com o 'subject' já preenchido pelo fallback acima: tanto o
+                # LlmPipeline (Pass 3) quanto o DeterministicPipeline já chamam classify_bm_group
+                # internamente, mas o DeterministicPipeline pode ter classificado com 'subject'
+                # ainda vazio antes do fallback de 2 linhas acima ser aplicado — reclassificar
+                # aqui pega esse ganho sem duplicar a chamada no caminho Ollama (IA), onde o
+                # Pass 1 (SummaryExtractor) já resolve o subject antes do Passo 3 classificar.
+                response_dict["bm_group"] = classify_bm_group(
+                    filename=filename,
+                    subject=response_dict.get("subject", ""),
+                    content=final_content
+                )
 
             # 5. Filtragem e Enriquecimento Híbrido de Participantes (Sanitização + Anti-PM + Enriquecimento)
             from backend.engine.cleaners.text_cleaner import clean_person_name

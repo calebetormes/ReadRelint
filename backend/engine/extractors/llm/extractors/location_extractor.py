@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.cleaners.text_cleaner import dms_to_decimal, enforce_rs_coordinate_signs, normalize_line_broken_sign
 from backend.engine.extractors.llm.llm_processor import ILlmProcessor
 from backend.engine.extractors.llm.schemas.location_schema import LocationExtraction
 
@@ -44,25 +45,6 @@ def sanitize_address_field(text: str) -> str:
     s = re.sub(r'^[,\.–—\-:;()]+|[,\.–—\-:;()]+$', '', s).strip()
 
     return s
-
-
-def normalize_line_broken_sign(text: str) -> str:
-    """
-    Remove a quebra de linha que o PyMuPDF às vezes insere entre um sinal de "-" isolado
-    no fim de uma linha e o dígito que continua na linha seguinte (ex: "-\\n28.7" -> "-28.7").
-    Sem essa correção, o sinal negativo da coordenada se perde na extração.
-    """
-    if not text:
-        return text
-    return re.sub(r'-\s*\n\s*(\d)', r'-\1', text)
-
-
-def dms_to_decimal(degrees: str, minutes: str, seconds: str, hemisphere: str) -> float:
-    """Converte uma coordenada em graus/minutos/segundos (DMS) para decimal."""
-    value = float(degrees) + float(minutes) / 60 + float(seconds.replace(",", ".")) / 3600
-    if hemisphere.upper() in ("S", "W", "O"):
-        value = -value
-    return value
 
 
 def check_raw_text_geo_sources(text: str) -> Tuple[bool, bool, str, str]:
@@ -328,37 +310,6 @@ def resolve_police_unit(municipality: str, text: str) -> str:
     return resolve_battalion_by_municipality(municipality)
 
 
-RS_LATITUDE_RANGE = (-34.0, -27.0)
-RS_LONGITUDE_RANGE = (-58.0, -49.0)
-
-
-def enforce_rs_coordinate_signs(coordinates: str) -> str:
-    """
-    Valida o formato decimal estrito e força o sinal negativo em latitude/longitude:
-    100% dos RELINTs são do Rio Grande do Sul (hemisfério sul/oeste), então qualquer
-    coordenada válida aqui É sempre negativa nos dois eixos. Corrige tanto a perda de
-    sinal por quebra de linha do PDF quanto documentos que nunca digitaram o sinal.
-    Descarta (retorna "") qualquer valor fora do formato decimal ou fora da área do RS
-    (inclui placeholders textuais como 'N/A', 'Sem informação', links não resolvidos, etc.).
-    """
-    if not coordinates:
-        return ""
-
-    match = re.match(r'^-?(\d{1,2}\.\d{3,})\s*,\s*-?(\d{1,2}\.\d{3,})$', coordinates.strip())
-    if not match:
-        return ""
-
-    lat_str, lon_str = f"-{match.group(1)}", f"-{match.group(2)}"
-    lat, lon = float(lat_str), float(lon_str)
-
-    if not (RS_LATITUDE_RANGE[0] <= lat <= RS_LATITUDE_RANGE[1]):
-        return ""
-    if not (RS_LONGITUDE_RANGE[0] <= lon <= RS_LONGITUDE_RANGE[1]):
-        return ""
-
-    return f"{lat_str}, {lon_str}"
-
-
 class LocationExtractor:
     """
     Extrator cognitivo dedicado para geolocalização, endereçamento e coordenadas.
@@ -504,7 +455,12 @@ class LocationExtractor:
                 query = urllib.parse.quote_plus(formatted_addr)
                 data["map_url"] = f"https://www.google.com/maps/search/?api=1&query={query}"
 
-        # 6. Fixa o nível de precisão estrito
+        # 6. Fixa o nível de precisão, rebaixando se as coordenadas foram descartadas no passo
+        # anterior (ex: fora da faixa geográfica do RS) — evita badge "alta" sem coordenada real.
+        # Usa has_raw_map_url (link real encontrado no texto bruto), não data["map_url"], que a
+        # esta altura já pode ter sido sintetizado como link de busca pelo passo 5 acima.
+        if not data["coordinates"] and precision_level == "alta":
+            precision_level = "media" if has_raw_map_url else "baixa"
         data["geo_precision"] = precision_level
 
         return data

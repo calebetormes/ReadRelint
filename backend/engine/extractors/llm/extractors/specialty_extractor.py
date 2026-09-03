@@ -43,6 +43,19 @@ SPECIALTY_SCHEMAS: Dict[str, Type[BaseModel]] = {
     # ficam de fora deste registro e nunca chamam a LLM.
 }
 
+# União de TODOS os campos que este extrator pode produzir (determinísticos + os de cada
+# schema de especialidade). O chamador (LlmPipeline) usa esta lista para sobrescrever
+# incondicionalmente 'result.data', garantindo que nenhuma resposta crua e sem guardrail do
+# Pass 1 legado (ex: 'motivation' fora do enum) sobreviva quando o Passo 3 descarta seu campo.
+ALL_SPECIALTY_FIELDS: Tuple[str, ...] = tuple(sorted({
+    "location_type", "hostage_victim", "injured_victims", "recovered",
+    *(field_name for schema in {
+        HomicideSpecialtyExtraction, DrugTraffickingSpecialtyExtraction,
+        EstablishmentRobberySpecialtyExtraction, VehicleSpecialtyExtraction,
+        PedestrianRobberySpecialtyExtraction,
+    } for field_name in schema.model_fields)
+}))
+
 # Campos livres validados por evidência literal no texto (descarta alucinação sem sustentação)
 FREE_TEXT_FIELDS = (
     "drug_quantity", "drug_types", "establishment_type",
@@ -64,10 +77,22 @@ def _match_enum(value: str, valid_options: Tuple[str, ...]) -> str:
 
 
 def _has_negation_nearby(text: str, keyword_match: "re.Match", window: int = 40) -> bool:
-    """Verifica se há uma negação (não/sem) logo antes da ocorrência do termo, para evitar falso positivo."""
+    """
+    Verifica se há uma negação (não/sem) na MESMA oração do termo encontrado, para evitar
+    falso positivo de uma negação em oração anterior (ex: "O suspeito não foi localizado,
+    mas a vítima sofreu lesões" não deve negar "lesões").
+    """
     start = max(0, keyword_match.start() - window)
-    prefix = text[start:keyword_match.start()].lower()
-    return bool(re.search(r'\b(?:sem|n[ãa]o)\b', prefix))
+    prefix = text[start:keyword_match.start()]
+
+    # Restringe a busca à oração atual: pula tudo até a última quebra de oração
+    # (pontuação ou conjunção adversativa) dentro da janela.
+    clause_end = 0
+    for boundary in re.finditer(r'[.,;]|\bmas\b|\bpor[ée]m\b', prefix, re.IGNORECASE):
+        clause_end = boundary.end()
+    prefix = prefix[clause_end:]
+
+    return bool(re.search(r'\b(?:sem|n[ãa]o)\b', prefix.lower()))
 
 
 def detect_injured_victims(text: str) -> int:

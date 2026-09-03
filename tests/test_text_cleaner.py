@@ -114,7 +114,8 @@ def test_extract_map_url_and_coordinates():
 
     text_coords = "Ocorrência no ponto -28.26123, -53.49123 na zona rural."
     found_url, coords = resolve_coordinates_and_map_info(text_coords)
-    assert coords == "-28.26123, -53.49123"
+    # Normalizado para 6 casas decimais (padrão Google Maps)
+    assert coords == "-28.261230, -53.491230"
 
 
 def test_extract_subject_fallback():

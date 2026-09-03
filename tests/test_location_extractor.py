@@ -76,7 +76,7 @@ def test_enforce_rs_coordinate_signs_forces_negative_latitude():
 
 
 def test_enforce_rs_coordinate_signs_forces_negative_on_both_axes():
-    assert enforce_rs_coordinate_signs("28.6914035686101, 53.62326597234348") == "-28.6914035686101, -53.62326597234348"
+    assert enforce_rs_coordinate_signs("28.6914035686101, 53.62326597234348") == "-28.691404, -53.623266"
 
 
 def test_enforce_rs_coordinate_signs_rejects_placeholder_text():
@@ -89,8 +89,11 @@ def test_enforce_rs_coordinate_signs_rejects_out_of_range_values():
     assert enforce_rs_coordinate_signs("5.1234, -53.1234") == ""
 
 
-def test_enforce_rs_coordinate_signs_accepts_valid_value_unchanged():
-    assert enforce_rs_coordinate_signs("-28.2612, -53.4912") == "-28.2612, -53.4912"
+def test_enforce_rs_coordinate_signs_normalizes_to_six_decimals():
+    # Padrão Google Maps: sempre 6 casas decimais — completa com zero quando falta precisão...
+    assert enforce_rs_coordinate_signs("-28.2612, -53.4912") == "-28.261200, -53.491200"
+    # ...e trunca/arredonda quando o documento tinha mais dígitos do que o padrão.
+    assert enforce_rs_coordinate_signs("-28.6914035686101, -53.62326597234348") == "-28.691404, -53.623266"
 
 
 # ---------------------------------------------------------------------------

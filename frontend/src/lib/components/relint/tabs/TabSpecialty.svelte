@@ -83,11 +83,15 @@
 
   // Garante que o objeto de detalhes exista para o binding funcionar mesmo em registros
   // antigos processados antes da tabela de especialidade ser preenchida com dado real.
-  const details = $derived.by(() => {
-    if (!specialty) return null;
-    if (!relint[specialty.detailsKey]) relint[specialty.detailsKey] = {};
-    return relint[specialty.detailsKey];
+  // A mutação do prop `relint` precisa acontecer num $effect (nunca dentro de um $derived,
+  // que o Svelte 5 proíbe e lança `state_unsafe_mutation`).
+  $effect(() => {
+    if (specialty && !relint[specialty.detailsKey]) {
+      relint[specialty.detailsKey] = {};
+    }
   });
+
+  const details = $derived(specialty ? relint[specialty.detailsKey] : null);
 </script>
 
 <div class="tab-specialty">
